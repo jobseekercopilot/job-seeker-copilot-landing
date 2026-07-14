@@ -3,6 +3,7 @@ import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { BUSINESS_CONTACT_DETAILS } from '../../config/business-contact-details';
+import { EARLY_ACCESS_OFFER_CONFIG, formatOfferTokenAmount } from '../../config/early-access-offer';
 import { PUBLIC_APP_CONFIG } from '../../config/public-app-config';
 import { EmailSubscriptionService } from '../../services/email-subscription.service';
 
@@ -19,6 +20,8 @@ export class EmailSignupFormComponent {
   private readonly subscriptionService = inject(EmailSubscriptionService);
   protected readonly contact = BUSINESS_CONTACT_DETAILS;
   protected readonly config = inject(PUBLIC_APP_CONFIG);
+  protected readonly offer = inject(EARLY_ACCESS_OFFER_CONFIG);
+  protected readonly formattedBonusTokens = formatOfferTokenAmount(this.offer.bonusTokens);
   private formStartedAt = Date.now();
 
   readonly context = input<'hero' | 'footer'>('hero');

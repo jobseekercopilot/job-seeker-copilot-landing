@@ -1,0 +1,17 @@
+@if (offer.offerEnabled) {
+  <aside
+    class="offer-panel"
+    [class.offer-panel-final]="context() === 'final'"
+    aria-label="Early-access waitlist offer">
+    <div class="offer-badges" aria-label="Offer highlights">
+      <span>{{ offer.offerLabel }}</span>
+      <span>{{ formattedBonusTokens }} bonus tokens</span>
+      <span>For eligible waitlist members</span>
+    </div>
+    <p class="offer-summary">{{ offer.offerSummary }}</p>
+    <p class="offer-eligibility">
+      {{ offer.eligibilitySummary }}
+      <a [routerLink]="offer.termsRoute" fragment="early-access-offer">Read the early-access offer terms.</a>
+    </p>
+  </aside>
+}

@@ -4,9 +4,10 @@
   <section class="hero" aria-labelledby="hero-heading">
     <div class="hero-grid container">
       <div class="hero-copy">
-        <span class="status-pill"><i aria-hidden="true"></i>Coming soon · Early access list open</span>
+        <span class="status-pill"><i aria-hidden="true"></i>Coming soon · Waitlist open</span>
         <h1 id="hero-heading">Your whole job search, <span>working together.</span></h1>
         <p class="hero-lead">Find roles across supported job sites, generate a tailored CV and cover letter together for each opportunity, keep the latest versions organised and track what happens next.</p>
+        <app-waitlist-offer context="hero" />
         <app-email-signup-form context="hero" />
         <div class="hero-reassurance" aria-label="Product highlights">
           <span><i aria-hidden="true">✓</i>One calm workspace</span>
@@ -71,9 +72,10 @@
   <section id="waitlist" class="final-cta" aria-labelledby="waitlist-heading">
     <div class="container final-cta-inner">
       <div>
-        <span class="cta-kicker">Be among the first to know</span>
+        <span class="cta-kicker">Waitlist open</span>
         <h2 id="waitlist-heading">Ready for a more organised job search?</h2>
-        <p>Enter your email and we’ll let you know when Job Seeker Copilot is ready for early access.</p>
+        <p>Register your interest now. Invitations and product account creation happen separately.</p>
+        <app-waitlist-offer context="final" />
       </div>
       <app-email-signup-form context="footer" />
     </div>

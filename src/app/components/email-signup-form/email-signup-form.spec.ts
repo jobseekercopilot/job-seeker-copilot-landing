@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { Observable, of, Subject, throwError } from 'rxjs';
+import { DEFAULT_EARLY_ACCESS_OFFER_CONFIG, EARLY_ACCESS_OFFER_CONFIG } from '../../config/early-access-offer';
 import { DEFAULT_PUBLIC_APP_CONFIG, PUBLIC_APP_CONFIG } from '../../config/public-app-config';
 import { EmailSubscriptionService, SubscriptionResult } from '../../services/email-subscription.service';
 import { EmailSignupFormComponent } from './email-signup-form';
@@ -25,6 +26,7 @@ describe('EmailSignupFormComponent', () => {
       imports: [EmailSignupFormComponent],
       providers: [
         provideRouter([]),
+        { provide: EARLY_ACCESS_OFFER_CONFIG, useValue: DEFAULT_EARLY_ACCESS_OFFER_CONFIG },
         { provide: PUBLIC_APP_CONFIG, useValue: DEFAULT_PUBLIC_APP_CONFIG },
         { provide: EmailSubscriptionService, useClass: SubscriptionServiceStub },
       ],
@@ -48,8 +50,9 @@ describe('EmailSignupFormComponent', () => {
     submitForm();
 
     expect(service.calls).toBe(1);
-    expect(fixture.nativeElement.textContent).toContain('Check your inbox for a message from updates@jobseekercopilot.com');
-    expect(fixture.nativeElement.textContent).toContain('confirm your email to finish joining the waiting list');
+    expect(fixture.nativeElement.textContent).toContain('Check your inbox to confirm your email');
+    expect(fixture.nativeElement.textContent).toContain('20,000 bonus tokens when an eligible account is created');
+    expect(fixture.nativeElement.textContent).not.toContain('tokens have been credited');
   });
 
   it('states that the email was not stored when the endpoint is not configured', () => {
@@ -58,6 +61,7 @@ describe('EmailSignupFormComponent', () => {
     submitForm();
 
     expect(fixture.nativeElement.textContent).toContain('Your email has not been stored');
+    expect(fixture.nativeElement.textContent).not.toContain('bonus tokens');
   });
 
   it('shows a recoverable error when the endpoint fails', () => {

@@ -26,6 +26,7 @@
       <section>
         <h2>3. How we use information</h2>
         <p>We use waitlist email addresses to send a confirmation email and, only after confirmation, important Job Seeker Copilot availability and early-access updates. Each update will support unsubscribe. We use contact-form information only to understand and respond to the enquiry; sending a contact message does not add anyone to the waiting list. Technical information may be used to operate, secure and improve the website.</p>
+        <p>The early-access offer does not add any fields to the waiting-list form. We use the same submitted email address and confirmation status to manage waitlist communications and potential early-access eligibility; we do not ask for employment details, phone numbers, CVs, referrals or profiling information for this offer.</p>
         <p>Where UK data-protection law applies, the intended lawful bases are consent for optional waitlist communications and our legitimate interests in responding to enquiries, protecting the service and understanding basic website performance. You may withdraw consent to waitlist updates at any time.</p>
       </section>
       <section>
@@ -77,6 +78,21 @@
         <h2>2. Early-access list</h2>
         <p>Joining the waitlist records your interest in product updates. It does not create a product account, guarantee access, reserve a place in a particular release or commit us to a launch date. You may ask to leave the list at any time.</p>
       </section>
+      @if (offer.offerEnabled) {
+        <section id="early-access-offer">
+          <h2>2A. Early-access offer terms</h2>
+          <p class="offer-status"><strong>Owner reviewed.</strong> No separate promotional start, end or invitation date is specified. The offer applies only while it is enabled and displayed on this website.</p>
+          <p>This promotional offer applies only to eligible confirmed waitlist participants selected for the early-access programme. Joining the waitlist does not guarantee selection, immediate access or an invitation on a particular date.</p>
+          <ul>
+            <li>Email confirmation may be required before a participant can be considered eligible.</li>
+            <li>The bonus is limited to {{ formattedBonusTokens }} tokens per eligible person or account and is credited only when the eligible early-access account is created.</li>
+            <li>Duplicate, fraudulent or automated registrations may be excluded.</li>
+            <li>Promotional tokens are non-transferable, have no cash value and cannot be refunded or exchanged for money.</li>
+            <li>The offer may be amended or withdrawn before tokens are credited. Any material change affecting participants who have already qualified should be communicated fairly.</li>
+            <li>Use of promotional tokens remains subject to the product Terms &amp; Conditions.</li>
+          </ul>
+        </section>
+      }
       <section>
         <h2>3. Acceptable use</h2>
         <p>You must use the website lawfully and must not:</p>

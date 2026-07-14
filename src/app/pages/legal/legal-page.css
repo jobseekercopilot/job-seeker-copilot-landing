@@ -43,6 +43,14 @@ h1 {
   padding: 8px 11px;
 }
 
+.offer-status {
+  background: #effcf6;
+  border: 1px solid #a7e3c7;
+  border-radius: 8px;
+  color: #135c45 !important;
+  padding: 12px 14px;
+}
+
 .legal-card section + section {
   border-top: 1px solid #edf1f5;
   margin-top: 34px;
