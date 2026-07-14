@@ -73,6 +73,8 @@ The message identifies Job Seeker Copilot, explains why it was sent, includes th
 
 The stack creates the `jobseekercopilot.com` SES domain identity and three Easy DKIM CNAME records in the existing Route 53 hosted zone. It creates an EventBridge configuration-set destination for sends, rejects, hard bounces, complaints, deliveries, rendering failures and delivery delays. A Lambda records `BOUNCED` or `COMPLAINED`, or safe delivery metadata, without logging recipient addresses.
 
+The sending roles grant `ses:SendEmail` only against the configured domain identity and the exact waitlist configuration set, constrained to the configured sender address.
+
 ## SES deployment modes
 
 ### Local/test
