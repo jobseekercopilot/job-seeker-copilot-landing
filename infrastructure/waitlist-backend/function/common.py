@@ -250,7 +250,6 @@ def send_confirmation_email(recipient: str, raw_token: str) -> None:
     ses_client().send_email(
         FromEmailAddress=sender,
         Destination={"ToAddresses": [recipient]},
-        ReplyToAddresses=[support],
         Content={"Simple": {
             "Subject": {"Data": subject, "Charset": "UTF-8"},
             "Body": {
