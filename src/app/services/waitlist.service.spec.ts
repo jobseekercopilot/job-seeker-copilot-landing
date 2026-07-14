@@ -22,20 +22,29 @@ describe('WaitlistService', () => {
     const request = TestBed.inject(HttpTestingController).expectOne('/api/waitlist');
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toEqual({ email: 'person@example.com' });
-    request.flush({ success: true, code: 'WAITLIST_CREATED', message: 'Saved.' }, { status: 201, statusText: 'Created' });
-    expect(status).toBe('joined');
+    request.flush({ success: true, code: 'WAITLIST_PENDING_CONFIRMATION', message: 'Check your inbox.' }, { status: 201, statusText: 'Created' });
+    expect(status).toBe('pending-confirmation');
   });
 
-  it('maps a conditional-write conflict to a duplicate validation result', () => {
+  it('maps an existing pending record without claiming confirmation', () => {
     configure({ enableLiveSubmissions: true, waitlistApiUrl: '/api/waitlist' });
     let status = '';
     TestBed.inject(WaitlistService).join('person@example.com').subscribe(result => status = result.status);
 
-    TestBed.inject(HttpTestingController).expectOne('/api/waitlist').flush(
-      { success: false, code: 'EMAIL_ALREADY_REGISTERED', message: 'Already registered.' },
-      { status: 409, statusText: 'Conflict' },
-    );
-    expect(status).toBe('duplicate');
+    TestBed.inject(HttpTestingController).expectOne('/api/waitlist').flush({
+      success: true, code: 'WAITLIST_CONFIRMATION_REQUIRED', message: 'Check your inbox.',
+    });
+    expect(status).toBe('confirmation-required');
+  });
+
+  it('maps a confirmed record to a neutral already-confirmed result', () => {
+    configure({ enableLiveSubmissions: true, waitlistApiUrl: '/api/waitlist' });
+    let status = '';
+    TestBed.inject(WaitlistService).join('person@example.com').subscribe(result => status = result.status);
+    TestBed.inject(HttpTestingController).expectOne('/api/waitlist').flush({
+      success: true, code: 'WAITLIST_ALREADY_CONFIRMED', message: 'No action needed.',
+    });
+    expect(status).toBe('already-confirmed');
   });
 
   it('maps backend email rejection to a validation result', () => {
@@ -58,6 +67,21 @@ describe('WaitlistService', () => {
     TestBed.inject(HttpTestingController).expectOne('/api/waitlist')
       .flush({ success: false, code: 'UNKNOWN', message: 'Not persisted.' });
     expect(error).toBeInstanceOf(Error);
+  });
+
+  it('maps email delivery failure and API throttling without claiming success', () => {
+    configure({ enableLiveSubmissions: true, waitlistApiUrl: '/api/waitlist' });
+    const statuses: string[] = [];
+    const service = TestBed.inject(WaitlistService);
+    const http = TestBed.inject(HttpTestingController);
+    service.join('person@example.com').subscribe(result => statuses.push(result.status));
+    http.expectOne('/api/waitlist').flush(
+      { success: false, code: 'CONFIRMATION_EMAIL_TEMPORARILY_UNAVAILABLE', message: 'Try later.' },
+      { status: 503, statusText: 'Unavailable' },
+    );
+    service.join('person@example.com').subscribe(result => statuses.push(result.status));
+    http.expectOne('/api/waitlist').flush({}, { status: 429, statusText: 'Too Many Requests' });
+    expect(statuses).toEqual(['email-delivery-error', 'rate-limited']);
   });
 
   it('rejects invalid emails before calling HTTP', () => {

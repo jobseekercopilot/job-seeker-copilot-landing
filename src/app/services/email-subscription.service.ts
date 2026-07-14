@@ -1,6 +1,6 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, map, of } from 'rxjs';
+import { Observable, catchError, map, of, throwError } from 'rxjs';
 import { PUBLIC_APP_CONFIG } from '../config/public-app-config';
 
 interface ApiResponse {
@@ -17,6 +17,7 @@ export type WaitlistActionResult =
   | { status: 'resent' }
   | { status: 'invalid' }
   | { status: 'expired' }
+  | { status: 'rate-limited' }
   | { status: 'backend-disabled' };
 
 @Injectable({ providedIn: 'root' })
@@ -25,45 +26,56 @@ export class EmailSubscriptionService {
   private readonly config = inject(PUBLIC_APP_CONFIG);
 
   confirm(token: string): Observable<WaitlistActionResult> {
-    return this.getAction(this.config.waitlistConfirmationApiUrl, token, response => {
-      if (response.code === 'ALREADY_CONFIRMED') return 'already-confirmed';
-      if (response.code === 'TOKEN_EXPIRED') return 'expired';
-      if (response.code === 'INVALID_TOKEN') return 'invalid';
-      return 'confirmed';
-    });
+    if (!this.isEnabled(this.config.waitlistConfirmationApiUrl)) return of({ status: 'backend-disabled' });
+    return this.http.post<ApiResponse>(this.config.waitlistConfirmationApiUrl, { token }).pipe(
+      map(response => {
+        if (response.success && response.code === 'WAITLIST_CONFIRMED') return { status: 'confirmed' as const };
+        if (response.success && response.code === 'WAITLIST_ALREADY_CONFIRMED') return { status: 'already-confirmed' as const };
+        throw new Error('The confirmation API returned an unexpected result.');
+      }),
+      catchError(error => this.mapConfirmationError(error)),
+    );
   }
 
-  resend(token: string): Observable<WaitlistActionResult> {
-    if (!this.isEnabled(this.config.waitlistResendApiUrl)) {
-      return of({ status: 'backend-disabled' });
-    }
-    return this.http.post<ApiResponse>(this.config.waitlistResendApiUrl, { token }).pipe(
-      map(() => ({ status: 'resent' as const })),
+  resend(email: string): Observable<WaitlistActionResult> {
+    const normalisedEmail = email.trim().toLowerCase();
+    if (!this.isValidEmail(normalisedEmail)) throw new Error('A valid email address is required.');
+    if (!this.isEnabled(this.config.waitlistResendApiUrl)) return of({ status: 'backend-disabled' });
+    return this.http.post<ApiResponse>(this.config.waitlistResendApiUrl, { email: normalisedEmail }).pipe(
+      map(response => {
+        if (response.success && response.code === 'WAITLIST_RESEND_ACCEPTED') return { status: 'resent' as const };
+        throw new Error('The resend API returned an unexpected result.');
+      }),
+      catchError(error => error instanceof HttpErrorResponse && error.status === 429
+        ? of({ status: 'rate-limited' as const })
+        : throwError(() => error)),
     );
   }
 
   unsubscribe(token: string): Observable<WaitlistActionResult> {
-    return this.getAction(this.config.waitlistUnsubscribeApiUrl, token, response => {
-      if (response.code === 'ALREADY_UNSUBSCRIBED') return 'already-unsubscribed';
-      if (response.code === 'TOKEN_EXPIRED') return 'expired';
-      if (response.code === 'INVALID_TOKEN') return 'invalid';
-      return 'unsubscribed';
-    });
+    if (!this.isEnabled(this.config.waitlistUnsubscribeApiUrl)) return of({ status: 'backend-disabled' });
+    const params = new HttpParams().set('token', token);
+    return this.http.get<ApiResponse>(this.config.waitlistUnsubscribeApiUrl, { params }).pipe(
+      map(response => ({ status: response.code === 'ALREADY_UNSUBSCRIBED'
+        ? 'already-unsubscribed' as const
+        : 'unsubscribed' as const })),
+    );
   }
 
-  private getAction(
-    endpoint: string,
-    token: string,
-    result: (response: ApiResponse) => WaitlistActionResult['status'],
-  ): Observable<WaitlistActionResult> {
-    if (!this.isEnabled(endpoint)) return of({ status: 'backend-disabled' });
-    const params = new HttpParams().set('token', token);
-    return this.http.get<ApiResponse>(endpoint, { params }).pipe(
-      map(response => ({ status: result(response) } as WaitlistActionResult)),
-    );
+  private mapConfirmationError(error: unknown): Observable<WaitlistActionResult> {
+    if (error instanceof HttpErrorResponse) {
+      if (error.error?.code === 'CONFIRMATION_TOKEN_EXPIRED') return of({ status: 'expired' });
+      if (error.error?.code === 'CONFIRMATION_TOKEN_INVALID') return of({ status: 'invalid' });
+      if (error.status === 429) return of({ status: 'rate-limited' });
+    }
+    return throwError(() => error);
   }
 
   private isEnabled(endpoint: string): boolean {
     return this.config.enableLiveSubmissions && endpoint.trim().length > 0;
+  }
+
+  private isValidEmail(email: string): boolean {
+    return email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   }
 }

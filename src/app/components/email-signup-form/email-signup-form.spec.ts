@@ -8,7 +8,7 @@ import { WaitlistResult, WaitlistService } from '../../services/waitlist.service
 import { EmailSignupFormComponent } from './email-signup-form';
 
 class WaitlistServiceStub {
-  response: Observable<WaitlistResult> = of({ status: 'joined' });
+  response: Observable<WaitlistResult> = of({ status: 'pending-confirmation' });
   calls = 0;
 
   join(): Observable<WaitlistResult> {
@@ -45,14 +45,15 @@ describe('EmailSignupFormComponent', () => {
     expect(emailInput().getAttribute('aria-invalid')).toBe('true');
   });
 
-  it('shows success only after the API confirms persistence', () => {
+  it('asks for confirmation without claiming that joining is complete', () => {
     setEmail('person@example.com');
     submitForm();
 
     expect(service.calls).toBe(1);
-    expect(fixture.nativeElement.textContent).toContain('Your email has been saved to the waitlist');
-    expect(fixture.nativeElement.textContent).toContain('20,000 bonus tokens when an eligible account is created');
-    expect(fixture.nativeElement.textContent).not.toContain('tokens have been credited');
+    expect(fixture.nativeElement.textContent).toContain('Check your inbox to confirm your email address');
+    expect(fixture.nativeElement.textContent).toContain('Joining is not complete');
+    expect(fixture.nativeElement.textContent).not.toContain('You are now subscribed');
+    expect(fixture.nativeElement.textContent).not.toContain('tokens credited');
   });
 
   it('states that the email was not stored when the endpoint is not configured', () => {
@@ -72,12 +73,12 @@ describe('EmailSignupFormComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('We couldn’t add you just now.');
   });
 
-  it('shows a validation error for a duplicate without implying a new record', () => {
-    service.response = of({ status: 'duplicate' });
+  it('handles an existing pending address without implying confirmation', () => {
+    service.response = of({ status: 'confirmation-required' });
     setEmail('person@example.com');
     submitForm();
 
-    expect(fixture.nativeElement.textContent).toContain('already registered for the waitlist');
+    expect(fixture.nativeElement.textContent).toContain('still needs confirmation');
   });
 
   it('shows a validation message when the API rejects the email format', () => {
@@ -98,7 +99,7 @@ describe('EmailSignupFormComponent', () => {
     expect(service.calls).toBe(1);
     expect((fixture.nativeElement.querySelector('button[type="submit"]') as HTMLButtonElement).disabled).toBe(true);
     expect(fixture.nativeElement.textContent).toContain('Joining…');
-    pending.next({ status: 'joined' });
+    pending.next({ status: 'pending-confirmation' });
     pending.complete();
     fixture.detectChanges();
   });

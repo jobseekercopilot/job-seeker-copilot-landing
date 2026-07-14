@@ -10,9 +10,13 @@ interface WaitlistApiResponse {
 }
 
 export type WaitlistResult =
-  | { status: 'joined' }
-  | { status: 'duplicate' }
+  | { status: 'pending-confirmation' }
+  | { status: 'already-confirmed' }
+  | { status: 'confirmation-required' }
+  | { status: 'resubscription-required' }
   | { status: 'validation-error' }
+  | { status: 'email-delivery-error' }
+  | { status: 'rate-limited' }
   | { status: 'backend-disabled' };
 
 @Injectable({ providedIn: 'root' })
@@ -31,17 +35,22 @@ export class WaitlistService {
 
     return this.http.post<WaitlistApiResponse>(this.config.waitlistApiUrl, { email: normalisedEmail }).pipe(
       map(response => {
-        if (response.success === true && response.code === 'WAITLIST_CREATED') {
-          return { status: 'joined' as const };
-        }
+        if (response.success !== true) throw new Error('The waitlist API did not accept the request.');
+        if (response.code === 'WAITLIST_PENDING_CONFIRMATION') return { status: 'pending-confirmation' as const };
+        if (response.code === 'WAITLIST_ALREADY_CONFIRMED') return { status: 'already-confirmed' as const };
+        if (response.code === 'WAITLIST_CONFIRMATION_REQUIRED') return { status: 'confirmation-required' as const };
+        if (response.code === 'WAITLIST_RESUBSCRIPTION_REQUIRED') return { status: 'resubscription-required' as const };
         throw new Error('The waitlist API did not confirm persistence.');
       }),
       catchError(error => {
-        if (error instanceof HttpErrorResponse && error.status === 409 && error.error?.code === 'EMAIL_ALREADY_REGISTERED') {
-          return of({ status: 'duplicate' as const });
-        }
         if (error instanceof HttpErrorResponse && error.status === 400 && error.error?.code === 'INVALID_EMAIL') {
           return of({ status: 'validation-error' as const });
+        }
+        if (error instanceof HttpErrorResponse && error.status === 429) {
+          return of({ status: 'rate-limited' as const });
+        }
+        if (error instanceof HttpErrorResponse && error.error?.code === 'CONFIRMATION_EMAIL_TEMPORARILY_UNAVAILABLE') {
+          return of({ status: 'email-delivery-error' as const });
         }
         return throwError(() => error);
       }),

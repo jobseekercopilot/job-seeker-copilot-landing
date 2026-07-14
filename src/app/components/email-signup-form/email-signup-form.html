@@ -27,16 +27,24 @@
       <p class="message message-error">Enter your email address to join the list.</p>
     } @else if (email.touched && (email.hasError('email') || email.hasError('maxlength'))) {
       <p class="message message-error">Enter a valid email address.</p>
-    } @else if (state() === 'success') {
+    } @else if (state() === 'pending-confirmation') {
       @if (offer.offerEnabled) {
-        <p class="message message-success">Your email has been saved to the waitlist. Eligible members may receive priority early access and {{ formattedBonusTokens }} bonus tokens when an eligible account is created.</p>
+        <p class="message message-success">Check your inbox to confirm your email address. Joining is not complete until you use the confirmation link. Once confirmed, you may be eligible for priority early access and the promotional {{ formattedBonusTokens }}-token offer, subject to the early-access terms.</p>
       } @else {
-        <p class="message message-success">Your email has been saved to the waitlist.</p>
+        <p class="message message-success">Check your inbox to confirm your email address. Joining is not complete until you use the confirmation link.</p>
       }
-    } @else if (state() === 'duplicate') {
-      <p class="message message-error">That email is already registered for the waitlist.</p>
+    } @else if (state() === 'already-confirmed') {
+      <p class="message message-info">This address does not need another confirmation email.</p>
+    } @else if (state() === 'confirmation-required') {
+      <p class="message message-info">This address still needs confirmation. Check your inbox or use the resend option on the confirmation page.</p>
+    } @else if (state() === 'resubscription-required') {
+      <p class="message message-info">This address was previously unsubscribed. A fresh re-subscription flow is required and is not yet available.</p>
     } @else if (state() === 'validation-error') {
       <p class="message message-error">Enter a valid email address.</p>
+    } @else if (state() === 'email-delivery-error') {
+      <p class="message message-error">Your request is pending, but the confirmation email could not be sent. Please try again later.</p>
+    } @else if (state() === 'rate-limited') {
+      <p class="message message-error">Too many requests were made. Please wait before trying again.</p>
     } @else if (state() === 'error') {
       <p class="message message-error">We couldn’t add you just now. Please try again in a moment.</p>
     } @else if (state() === 'backend-disabled' || developmentDisabled) {
@@ -44,7 +52,7 @@
     } @else if (productionDisabled) {
       <p class="message message-info">Online signup is temporarily unavailable.</p>
     } @else {
-      <p class="privacy-note">We’ll use your email only for Job Seeker Copilot launch and early-access updates. <a routerLink="/privacy">Privacy notice</a>.</p>
+      <p class="privacy-note">We’ll send one confirmation email first. You join the waiting list only after using its secure link. <a routerLink="/privacy">Privacy notice</a>.</p>
     }
     <p class="sender-note">Launch notifications will be sent from <a [href]="'mailto:' + contact.productUpdates">{{ contact.productUpdates }}</a>.</p>
   </div>
