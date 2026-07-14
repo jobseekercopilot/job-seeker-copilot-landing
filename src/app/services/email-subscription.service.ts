@@ -9,16 +9,6 @@ interface ApiResponse {
   message: string;
 }
 
-export interface SubscriptionRequestMetadata {
-  website: string;
-  formStartedAt: number;
-}
-
-export type SubscriptionResult =
-  | { status: 'pending-confirmation' }
-  | { status: 'already-subscribed' }
-  | { status: 'backend-disabled' };
-
 export type WaitlistActionResult =
   | { status: 'confirmed' }
   | { status: 'already-confirmed' }
@@ -33,29 +23,6 @@ export type WaitlistActionResult =
 export class EmailSubscriptionService {
   private readonly http = inject(HttpClient);
   private readonly config = inject(PUBLIC_APP_CONFIG);
-
-  subscribe(email: string, metadata: SubscriptionRequestMetadata): Observable<SubscriptionResult> {
-    const normalisedEmail = email.trim().toLowerCase();
-    if (!this.isValidEmail(normalisedEmail)) {
-      throw new Error('A valid email address is required.');
-    }
-
-    if (!this.isEnabled(this.config.waitlistApiUrl)) {
-      return of({ status: 'backend-disabled' });
-    }
-
-    return this.http.post<ApiResponse>(this.config.waitlistApiUrl, {
-      email: normalisedEmail,
-      source: 'landing-page',
-      consentVersion: this.config.consentVersion,
-      website: metadata.website,
-      formStartedAt: metadata.formStartedAt,
-    }).pipe(map(response => ({
-      status: response.code === 'ALREADY_SUBSCRIBED'
-        ? 'already-subscribed'
-        : 'pending-confirmation',
-    })));
-  }
 
   confirm(token: string): Observable<WaitlistActionResult> {
     return this.getAction(this.config.waitlistConfirmationApiUrl, token, response => {
@@ -98,9 +65,5 @@ export class EmailSubscriptionService {
 
   private isEnabled(endpoint: string): boolean {
     return this.config.enableLiveSubmissions && endpoint.trim().length > 0;
-  }
-
-  private isValidEmail(email: string): boolean {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   }
 }

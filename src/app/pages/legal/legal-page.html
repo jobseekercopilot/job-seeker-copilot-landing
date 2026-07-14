@@ -17,7 +17,7 @@
         <h2>2. Information we collect</h2>
         <p>We collect only the information needed for the service you choose to use:</p>
         <ul>
-          <li><strong>Waitlist details:</strong> the email address you submit, confirmation and unsubscribe status, consent version and trusted timestamps for product availability and early-access updates.</li>
+          <li><strong>Waitlist details:</strong> the email address you submit, registration status, source and creation timestamp for product availability and early-access updates.</li>
           <li><strong>Contact details:</strong> your name, email address, message subject and message when you use the contact form.</li>
           <li><strong>Technical information:</strong> limited server, security and diagnostic information such as IP address, browser type, requested pages and timestamps may be processed by our hosting provider.</li>
         </ul>
@@ -25,8 +25,8 @@
       </section>
       <section>
         <h2>3. How we use information</h2>
-        <p>We use waitlist email addresses to send a confirmation email and, only after confirmation, important Job Seeker Copilot availability and early-access updates. Each update will support unsubscribe. We use contact-form information only to understand and respond to the enquiry; sending a contact message does not add anyone to the waiting list. Technical information may be used to operate, secure and improve the website.</p>
-        <p>The early-access offer does not add any fields to the waiting-list form. We use the same submitted email address and confirmation status to manage waitlist communications and potential early-access eligibility; we do not ask for employment details, phone numbers, CVs, referrals or profiling information for this offer.</p>
+        <p>We use waitlist email addresses to record interest and send important Job Seeker Copilot availability and early-access updates when messaging is enabled. Each future update will support unsubscribe. We use contact-form information only to understand and respond to the enquiry; sending a contact message does not add anyone to the waiting list. Technical information may be used to operate, secure and improve the website.</p>
+        <p>The early-access offer does not add any fields to the waiting-list form. We use the same submitted email address and registration status to manage waitlist communications and potential early-access eligibility; we do not ask for employment details, phone numbers, CVs, referrals or profiling information for this offer.</p>
         <p>Where UK data-protection law applies, the intended lawful bases are consent for optional waitlist communications and our legitimate interests in responding to enquiries, protecting the service and understanding basic website performance. You may withdraw consent to waitlist updates at any time.</p>
       </section>
       <section>
@@ -35,12 +35,12 @@
       </section>
       <section>
         <h2>5. Storage, sharing and international transfers</h2>
-        <p>Waitlist addresses and consent records are intended to be stored in Amazon DynamoDB and processed by Amazon SES for email delivery when those services are configured. Contact messages are intended to be delivered through Amazon SES to an authorised private mailbox; optional short-term database storage is disabled by default and will be disclosed here if enabled. Access is limited to authorised operators and contracted providers that host, deliver or secure the service. We may also disclose information when required by law. We do not sell personal information.</p>
+        <p>Waitlist addresses, registration status, source and creation timestamps are stored in Amazon DynamoDB. Amazon SES may process addresses later for waitlist email delivery when messaging is configured. Contact messages are intended to be delivered through Amazon SES to an authorised private mailbox; optional short-term database storage is disabled by default and will be disclosed here if enabled. Access is limited to authorised operators and contracted providers that host, deliver or secure the service. We may also disclose information when required by law. We do not sell personal information.</p>
         <p>If a provider processes information outside the UK, we will use an approved transfer mechanism and appropriate safeguards where required.</p>
       </section>
       <section>
         <h2>6. How long we keep information</h2>
-        <p>Unconfirmed waitlist records are designed to expire after a configurable short period (initial infrastructure default: seven days). Confirmed and unsubscribed records will be kept only while the early-access list and suppression record remain necessary, or until an approved deletion request, under a final retention schedule that must be set before launch. Contact messages will normally exist in the receiving mailbox and be retained only as long as needed to respond, keep an appropriate business record and meet legal obligations. If optional database storage is enabled, it will use a configurable expiry. Security logs are retained for a limited operational period.</p>
+        <p>Waitlist records will be kept only while the early-access list and any necessary suppression record remain necessary, or until an approved deletion request, under a final retention schedule that must be set before launch communications begin. Contact messages will normally exist in the receiving mailbox and be retained only as long as needed to respond, keep an appropriate business record and meet legal obligations. If optional database storage is enabled, it will use a configurable expiry. Security logs are retained for a limited operational period.</p>
       </section>
       <section>
         <h2>7. Security</h2>

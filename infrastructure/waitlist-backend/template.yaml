@@ -1,0 +1,135 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Production waitlist API for the Job Seeker Copilot landing page
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: development
+    AllowedValues: [development, production]
+    Description: Selects the permitted browser origin policy.
+  WaitlistTableName:
+    Type: String
+    Default: JobSeekerCopilotWaitlist
+    AllowedPattern: '^[A-Za-z0-9_.-]{3,255}$'
+    Description: Existing DynamoDB table with an email String partition key. This stack never creates the table.
+  AmplifyBranchName:
+    Type: String
+    Default: develop
+    AllowedPattern: '^[a-z0-9-]+$'
+    Description: Branch prefix allowed for development Amplify origins.
+  ProductionOrigin:
+    Type: String
+    Default: https://jobseekercopilot.com
+    AllowedPattern: '^https://[A-Za-z0-9.-]+$'
+    Description: Exact browser origin allowed when EnvironmentName is production.
+
+Globals:
+  Function:
+    Runtime: python3.12
+    Architectures: [arm64]
+    MemorySize: 256
+    Timeout: 6
+    Environment:
+      Variables:
+        ENVIRONMENT_NAME: !Ref EnvironmentName
+        WAITLIST_TABLE_NAME: !Ref WaitlistTableName
+        AMPLIFY_BRANCH_NAME: !Ref AmplifyBranchName
+        PRODUCTION_ORIGIN: !Ref ProductionOrigin
+
+Resources:
+  WaitlistApiAccessLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      RetentionInDays: 30
+
+  WaitlistApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      Name: JobSeekerCopilotWaitlistApi
+      StageName: '$default'
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 10
+        ThrottlingRateLimit: 5
+      AccessLogSettings:
+        DestinationArn: !GetAtt WaitlistApiAccessLogGroup.Arn
+        Format: '{"requestId":"$context.requestId","routeKey":"$context.routeKey","status":"$context.status","responseLength":"$context.responseLength","integrationError":"$context.integrationErrorMessage"}'
+
+  WaitlistFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: /aws/lambda/JobSeekerCopilotWaitlist
+      RetentionInDays: 30
+
+  WaitlistExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: Least-privilege execution role for the Job Seeker Copilot waitlist Lambda.
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: WriteOnlyToExistingWaitlistTable
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: ConditionalWaitlistPut
+                Effect: Allow
+                Action: dynamodb:PutItem
+                Resource: !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${WaitlistTableName}
+        - PolicyName: WriteOnlyToWaitlistLambdaLogs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: WriteFunctionLogs
+                Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !GetAtt WaitlistFunctionLogGroup.Arn
+
+  WaitlistFunction:
+    Type: AWS::Serverless::Function
+    DependsOn: WaitlistFunctionLogGroup
+    Properties:
+      FunctionName: JobSeekerCopilotWaitlist
+      Description: Validates and conditionally persists landing-page waitlist registrations.
+      CodeUri: function/
+      Handler: app.handler
+      Role: !GetAtt WaitlistExecutionRole.Arn
+      Events:
+        PostWaitlist:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref WaitlistApi
+            Method: POST
+            Path: /waitlist
+            PayloadFormatVersion: '2.0'
+        OptionsWaitlist:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref WaitlistApi
+            Method: OPTIONS
+            Path: /waitlist
+            PayloadFormatVersion: '2.0'
+
+Outputs:
+  ApiEndpoint:
+    Description: POST endpoint used by the Angular WAITLIST_API_URL runtime variable.
+    Value: !Sub https://${WaitlistApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/waitlist
+  ApiId:
+    Value: !Ref WaitlistApi
+  LambdaName:
+    Value: !Ref WaitlistFunction
+  LambdaExecutionRoleName:
+    Value: !Ref WaitlistExecutionRole
+  DynamoDbPermission:
+    Value: !Sub dynamodb:PutItem on arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${WaitlistTableName}

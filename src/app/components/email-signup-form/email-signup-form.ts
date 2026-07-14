@@ -5,9 +5,9 @@ import { finalize } from 'rxjs';
 import { BUSINESS_CONTACT_DETAILS } from '../../config/business-contact-details';
 import { EARLY_ACCESS_OFFER_CONFIG, formatOfferTokenAmount } from '../../config/early-access-offer';
 import { PUBLIC_APP_CONFIG } from '../../config/public-app-config';
-import { EmailSubscriptionService } from '../../services/email-subscription.service';
+import { WaitlistService } from '../../services/waitlist.service';
 
-type FormState = 'idle' | 'pending-confirmation' | 'already-subscribed' | 'error' | 'backend-disabled';
+type FormState = 'idle' | 'success' | 'duplicate' | 'validation-error' | 'error' | 'backend-disabled';
 
 @Component({
   selector: 'app-email-signup-form',
@@ -17,12 +17,11 @@ type FormState = 'idle' | 'pending-confirmation' | 'already-subscribed' | 'error
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EmailSignupFormComponent {
-  private readonly subscriptionService = inject(EmailSubscriptionService);
+  private readonly waitlistService = inject(WaitlistService);
   protected readonly contact = BUSINESS_CONTACT_DETAILS;
   protected readonly config = inject(PUBLIC_APP_CONFIG);
   protected readonly offer = inject(EARLY_ACCESS_OFFER_CONFIG);
   protected readonly formattedBonusTokens = formatOfferTokenAmount(this.offer.bonusTokens);
-  private formStartedAt = Date.now();
 
   readonly context = input<'hero' | 'footer'>('hero');
   protected readonly email = new FormControl('', {
@@ -43,21 +42,23 @@ export class EmailSignupFormComponent {
       this.email.markAsTouched();
       return;
     }
+    if (this.website.value) {
+      this.state.set('error');
+      return;
+    }
 
     this.submitting.set(true);
     this.state.set('idle');
 
-    this.subscriptionService.subscribe(this.email.value, {
-      website: this.website.value,
-      formStartedAt: this.formStartedAt,
-    }).pipe(
+    this.waitlistService.join(this.email.value).pipe(
       finalize(() => this.submitting.set(false)),
     ).subscribe({
       next: result => {
-        this.state.set(result.status);
-        if (result.status === 'pending-confirmation' || result.status === 'already-subscribed') {
+        if (result.status === 'joined') {
+          this.state.set('success');
           this.email.reset();
-          this.formStartedAt = Date.now();
+        } else {
+          this.state.set(result.status);
         }
       },
       error: () => this.state.set('error'),
