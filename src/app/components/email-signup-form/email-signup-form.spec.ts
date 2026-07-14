@@ -48,7 +48,8 @@ describe('EmailSignupFormComponent', () => {
     submitForm();
 
     expect(service.calls).toBe(1);
-    expect(fixture.nativeElement.textContent).toContain('Check your inbox and confirm your email');
+    expect(fixture.nativeElement.textContent).toContain('Check your inbox for a message from updates@jobseekercopilot.com');
+    expect(fixture.nativeElement.textContent).toContain('confirm your email to finish joining the waiting list');
   });
 
   it('states that the email was not stored when the endpoint is not configured', () => {

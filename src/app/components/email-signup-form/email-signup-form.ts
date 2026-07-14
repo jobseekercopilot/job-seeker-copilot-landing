@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, input, signal } from '@angu
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
+import { BUSINESS_CONTACT_DETAILS } from '../../config/business-contact-details';
 import { PUBLIC_APP_CONFIG } from '../../config/public-app-config';
 import { EmailSubscriptionService } from '../../services/email-subscription.service';
 
@@ -16,6 +17,7 @@ type FormState = 'idle' | 'pending-confirmation' | 'already-subscribed' | 'error
 })
 export class EmailSignupFormComponent {
   private readonly subscriptionService = inject(EmailSubscriptionService);
+  protected readonly contact = BUSINESS_CONTACT_DETAILS;
   protected readonly config = inject(PUBLIC_APP_CONFIG);
   private formStartedAt = Date.now();
 

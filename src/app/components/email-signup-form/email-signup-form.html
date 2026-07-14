@@ -28,7 +28,7 @@
     } @else if (email.touched && (email.hasError('email') || email.hasError('maxlength'))) {
       <p class="message message-error">Enter a valid email address.</p>
     } @else if (state() === 'pending-confirmation') {
-      <p class="message message-success">Check your inbox and confirm your email to finish joining the waiting list.</p>
+      <p class="message message-success">Check your inbox for a message from {{ contact.productUpdates }} and confirm your email to finish joining the waiting list.</p>
     } @else if (state() === 'already-subscribed') {
       <p class="message message-info">That address is already subscribed. There is nothing else you need to do.</p>
     } @else if (state() === 'error') {
@@ -40,5 +40,6 @@
     } @else {
       <p class="privacy-note">We’ll use your email only for Job Seeker Copilot launch and early-access updates. You’ll confirm by email. <a routerLink="/privacy">Privacy notice</a>.</p>
     }
+    <p class="sender-note">Launch notifications will be sent from <a [href]="'mailto:' + contact.productUpdates">{{ contact.productUpdates }}</a>.</p>
   </div>
 </form>

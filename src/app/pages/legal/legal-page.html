@@ -56,7 +56,7 @@
       <section>
         <h2>10. Changes and contact</h2>
         <p>We may update this policy as Job Seeker Copilot develops or its providers change. The effective date above will be updated when material changes are published.</p>
-        <p>Privacy questions, stored-data export requests and deletion requests can be sent through the <a routerLink="/contact">Contact page</a>. Waiting-list messages will include a link that immediately marks the address unsubscribed without requiring an account.</p>
+        <p>Privacy questions, stored-data export requests and deletion requests can be sent to <a [href]="'mailto:' + contact.privacy">{{ contact.privacy }}</a>. Waiting-list messages will include a link that immediately marks the address unsubscribed without requiring an account.</p>
       </section>
       <a class="button button-secondary return-link" routerLink="/">Return to the landing page</a>
     </article>
@@ -115,7 +115,7 @@
       <section>
         <h2>10. Changes, governing law and contact</h2>
         <p>We may update these terms as the website and product develop. These terms are governed by the laws of England and Wales, and the courts of England and Wales will have jurisdiction, subject to any mandatory consumer rights.</p>
-        <p>Questions about these terms can be sent through the <a routerLink="/contact">Contact page</a>.</p>
+        <p>Questions about these terms can be sent to <a [href]="'mailto:' + contact.legal">{{ contact.legal }}</a>.</p>
       </section>
       <a class="button button-secondary return-link" routerLink="/">Return to the landing page</a>
     </article>
@@ -146,7 +146,7 @@
       </section>
       <section>
         <h2>Report an accessibility problem</h2>
-        <p>If something makes this website or product difficult to use, please describe the page, task, device and assistive technology involved through the <a routerLink="/contact">Contact page</a>. Feedback will help prioritise and verify future improvements. Please do not include sensitive job-search information unless it is needed to explain the issue.</p>
+        <p>If something makes this website or product difficult to use, email <a [href]="'mailto:' + contact.generalEnquiries">{{ contact.generalEnquiries }}</a> with the page, task, device and assistive technology involved. Feedback will help prioritise and verify future improvements. Please do not include sensitive job-search information unless it is needed to explain the issue.</p>
       </section>
       <section>
         <h2>Statement review</h2>
@@ -160,10 +160,31 @@
         <span class="eyebrow">Contact</span>
         <h1 id="contact-heading">Contact Job Seeker Copilot</h1>
         <p class="lead">Have a question, feedback or an interest in Job Seeker Copilot? Send a message using the form.</p>
+        <div class="contact-addresses" aria-labelledby="contact-addresses-heading">
+          <h2 id="contact-addresses-heading">Email the right team</h2>
+          <dl>
+            <div>
+              <dt>General enquiries</dt>
+              <dd><a [href]="'mailto:' + contact.generalEnquiries">{{ contact.generalEnquiries }}</a></dd>
+            </div>
+            <div>
+              <dt>Support</dt>
+              <dd><a [href]="'mailto:' + contact.support">{{ contact.support }}</a></dd>
+            </div>
+            <div>
+              <dt>Privacy enquiries</dt>
+              <dd><a [href]="'mailto:' + contact.privacy">{{ contact.privacy }}</a></dd>
+            </div>
+            <div>
+              <dt>Legal enquiries</dt>
+              <dd><a [href]="'mailto:' + contact.legal">{{ contact.legal }}</a></dd>
+            </div>
+          </dl>
+        </div>
         <div class="contact-guidance">
           <h2>Before you send</h2>
           <ul>
-            <li>Use the form for product, accessibility, privacy, early-access or partnership enquiries.</li>
+            <li>Use the form for product, accessibility, early-access or partnership enquiries.</li>
             <li>Do not include passwords, payment details, CVs or sensitive application information.</li>
             <li>Submitting a message does not add your address to the waiting list.</li>
           </ul>

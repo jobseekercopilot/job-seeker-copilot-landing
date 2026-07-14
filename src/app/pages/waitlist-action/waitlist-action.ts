@@ -3,6 +3,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { FooterComponent } from '../../components/footer/footer';
 import { HeaderComponent } from '../../components/header/header';
+import { BUSINESS_CONTACT_DETAILS } from '../../config/business-contact-details';
 import { EmailSubscriptionService } from '../../services/email-subscription.service';
 
 type ActionKind = 'confirm' | 'unsubscribe';
@@ -19,6 +20,7 @@ type ActionState = 'working' | 'confirmed' | 'already-confirmed' | 'unsubscribed
 export class WaitlistActionPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly service = inject(EmailSubscriptionService);
+  protected readonly contact = BUSINESS_CONTACT_DETAILS;
   protected readonly action = this.route.snapshot.data['action'] as ActionKind;
   protected readonly state = signal<ActionState>('working');
   protected readonly resending = signal(false);
