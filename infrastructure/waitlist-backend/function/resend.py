@@ -2,6 +2,7 @@ import logging
 
 from common import (
     RequestError,
+    aws_error_code,
     enforce_origin,
     is_options,
     log_result,
@@ -41,8 +42,8 @@ def handler(event, context):
         try:
             send_confirmation_email(email, raw_token)
             mark_confirmation_sent(email, hashed)
-        except Exception:
-            LOGGER.error("Resend delivery failed")
+        except Exception as exc:
+            LOGGER.error("Resend delivery failed: %s", aws_error_code(exc) or "unknown")
             metric("ConfirmationSendFailures")
             try:
                 mark_confirmation_failure(email, hashed)

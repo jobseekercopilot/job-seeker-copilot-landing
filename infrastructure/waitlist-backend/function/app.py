@@ -77,8 +77,8 @@ def _send(event, context, email, raw_token, hashed, status_code):
     try:
         send_confirmation_email(email, raw_token)
         mark_confirmation_sent(email, hashed)
-    except Exception:
-        LOGGER.error("Confirmation delivery failed")
+    except Exception as exc:
+        LOGGER.error("Confirmation delivery failed: %s", aws_error_code(exc) or "unknown")
         metric("ConfirmationSendFailures")
         try:
             mark_confirmation_failure(email, hashed)
