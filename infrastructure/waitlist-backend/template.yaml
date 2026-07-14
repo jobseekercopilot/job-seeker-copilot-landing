@@ -20,6 +20,10 @@ Parameters:
     Type: String
     Default: https://develop.d3gd9ezfa3aujn.amplifyapp.com
     AllowedPattern: '^https://[A-Za-z0-9.-]+$'
+  FeatureOrigin:
+    Type: String
+    Default: https://feature-waitlist-double-opt-in.d3gd9ezfa3aujn.amplifyapp.com
+    AllowedPattern: '^https://[A-Za-z0-9.-]+$'
   ProductionOrigin:
     Type: String
     Default: https://jobseekercopilot.com
@@ -92,6 +96,7 @@ Globals:
       Variables:
         ENVIRONMENT_NAME: !Ref EnvironmentName
         DEVELOPMENT_ORIGIN: !Ref DevelopmentOrigin
+        FEATURE_ORIGIN: !Ref FeatureOrigin
         PRODUCTION_ORIGIN: !Ref ProductionOrigin
         WAITLIST_TABLE_NAME: !Ref WaitlistTableName
         TOKEN_TABLE_NAME: !Ref TokenTable

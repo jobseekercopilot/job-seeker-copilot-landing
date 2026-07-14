@@ -49,7 +49,7 @@ All JSON API calls use exact-origin CORS and return typed, public-safe responses
 | `POST` | `/waitlist/resend` | Accept `{ "email": "..." }` with neutral response |
 | `OPTIONS` | each route | Exact-origin preflight |
 
-Development allows only `https://develop.d3gd9ezfa3aujn.amplifyapp.com`. Production allows only `https://jobseekercopilot.com`. There is no wildcard origin and no public subscriber-list endpoint.
+Development allows only `https://develop.d3gd9ezfa3aujn.amplifyapp.com` and the temporary `https://feature-waitlist-double-opt-in.d3gd9ezfa3aujn.amplifyapp.com` test branch. Production allows only `https://jobseekercopilot.com`. There is no wildcard origin and no public subscriber-list endpoint.
 
 Confirmation links have this format:
 
@@ -133,8 +133,9 @@ sam deploy \
     EnvironmentName=development \
     WaitlistTableName=JobSeekerCopilotWaitlist \
     DevelopmentOrigin=https://develop.d3gd9ezfa3aujn.amplifyapp.com \
+    FeatureOrigin=https://feature-waitlist-double-opt-in.d3gd9ezfa3aujn.amplifyapp.com \
     ProductionOrigin=https://jobseekercopilot.com \
-    PublicSiteUrl=https://develop.d3gd9ezfa3aujn.amplifyapp.com \
+    PublicSiteUrl=https://feature-waitlist-double-opt-in.d3gd9ezfa3aujn.amplifyapp.com \
   --no-execute-changeset
 ```
 

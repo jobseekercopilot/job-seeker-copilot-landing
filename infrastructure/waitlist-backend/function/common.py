@@ -166,10 +166,17 @@ def headers(event: dict[str, Any]) -> dict[str, str]:
 
 def origin_allowed(origin: str) -> bool:
     environment = os.getenv("ENVIRONMENT_NAME", "development").strip().lower()
-    setting = "PRODUCTION_ORIGIN" if environment == "production" else "DEVELOPMENT_ORIGIN"
     if environment not in {"development", "production"}:
         return False
-    return origin == os.getenv(setting, "").strip().rstrip("/")
+    settings = ("PRODUCTION_ORIGIN",) if environment == "production" else (
+        "DEVELOPMENT_ORIGIN", "FEATURE_ORIGIN",
+    )
+    allowed_origins = {
+        os.getenv(setting, "").strip().rstrip("/")
+        for setting in settings
+        if os.getenv(setting, "").strip()
+    }
+    return origin in allowed_origins
 
 
 def subscriber_table():

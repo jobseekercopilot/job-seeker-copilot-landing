@@ -23,6 +23,7 @@ class Context:
 BASE_ENV = {
     "ENVIRONMENT_NAME": "development",
     "DEVELOPMENT_ORIGIN": "https://develop.d3gd9ezfa3aujn.amplifyapp.com",
+    "FEATURE_ORIGIN": "https://feature-waitlist-double-opt-in.d3gd9ezfa3aujn.amplifyapp.com",
     "PRODUCTION_ORIGIN": "https://jobseekercopilot.com",
     "WAITLIST_TABLE_NAME": "waitlist",
     "TOKEN_TABLE_NAME": "tokens",
@@ -269,10 +270,12 @@ class EventAndSecurityTests(unittest.TestCase):
         self.assertNotIn("person@example.com", output)
         self.assertNotIn(raw, output)
 
-    def test_cors_allows_only_exact_staging_and_production_origins(self):
+    def test_cors_allows_only_exact_staging_feature_and_production_origins(self):
         allowed = app.handler(event({}, method="OPTIONS"), Context())
+        feature = app.handler(event({}, origin=BASE_ENV["FEATURE_ORIGIN"], method="OPTIONS"), Context())
         denied = app.handler(event({}, origin="https://develop.attacker.amplifyapp.com", method="OPTIONS"), Context())
         self.assertEqual(allowed["headers"]["Access-Control-Allow-Origin"], BASE_ENV["DEVELOPMENT_ORIGIN"])
+        self.assertEqual(feature["headers"]["Access-Control-Allow-Origin"], BASE_ENV["FEATURE_ORIGIN"])
         self.assertEqual(denied["statusCode"], 403)
         self.assertNotIn("Access-Control-Allow-Origin", denied["headers"])
         with patch.dict(os.environ, {**BASE_ENV, "ENVIRONMENT_NAME": "production"}, clear=True):
