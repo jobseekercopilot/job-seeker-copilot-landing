@@ -1,0 +1,85 @@
+:host {
+  display: block;
+}
+
+.offer-panel {
+  background: #f7fbff;
+  border: 1px solid #b7d1f8;
+  border-left: 4px solid var(--colour-primary);
+  border-radius: 12px;
+  margin-bottom: 24px;
+  padding: 18px 20px;
+}
+
+.offer-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 12px;
+}
+
+.offer-badges span {
+  background: #dbeafe;
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  color: #153e75;
+  font-size: 0.67rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  padding: 6px 9px;
+}
+
+.offer-summary {
+  color: var(--colour-text);
+  font-size: 0.91rem;
+  font-weight: 750;
+  line-height: 1.5;
+  margin: 0 0 7px;
+}
+
+.offer-eligibility {
+  color: var(--colour-text-muted);
+  font-size: 0.72rem;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.offer-eligibility a {
+  color: var(--colour-primary);
+  font-weight: 750;
+}
+
+.offer-panel-final {
+  background: rgb(255 255 255 / 9%);
+  border-color: rgb(147 197 253 / 58%);
+  border-left-color: #5eead4;
+}
+
+.offer-panel-final .offer-badges span {
+  background: rgb(219 234 254 / 14%);
+  border-color: rgb(191 219 254 / 34%);
+  color: #eff6ff;
+}
+
+.offer-panel-final .offer-summary {
+  color: #ffffff;
+}
+
+.offer-panel-final .offer-eligibility {
+  color: #d7e3f3;
+}
+
+.offer-panel-final .offer-eligibility a {
+  color: #99f6e4;
+}
+
+@media (max-width: 560px) {
+  .offer-panel {
+    padding: 16px;
+  }
+
+  .offer-badges {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

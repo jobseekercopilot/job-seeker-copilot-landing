@@ -127,6 +127,46 @@
   width: 100%;
 }
 
+.early-access-credit-note {
+  align-items: center;
+  background: #f7fbff;
+  border: 1px solid #b7d1f8;
+  border-radius: var(--radius-card);
+  display: grid;
+  gap: 24px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin-top: 24px;
+  padding: clamp(22px, 4vw, 32px);
+}
+
+.promotion-label {
+  color: #174ea6;
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 850;
+  letter-spacing: 0.09em;
+  margin-bottom: 7px;
+  text-transform: uppercase;
+}
+
+.early-access-credit-note h3 {
+  font-size: clamp(1.15rem, 2.4vw, 1.45rem);
+  margin-bottom: 7px;
+}
+
+.early-access-credit-note p {
+  color: var(--colour-text-soft);
+  font-size: 0.83rem;
+  margin: 0 0 5px;
+}
+
+.early-access-credit-note small {
+  color: var(--colour-text-muted);
+  display: block;
+  font-size: 0.7rem;
+  line-height: 1.5;
+}
+
 .pricing-note {
   color: var(--colour-text-muted);
   font-size: 0.75rem;
@@ -152,6 +192,11 @@
 
 @media (max-width: 680px) {
   .pricing-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .early-access-credit-note {
+    align-items: start;
     grid-template-columns: 1fr;
   }
 }

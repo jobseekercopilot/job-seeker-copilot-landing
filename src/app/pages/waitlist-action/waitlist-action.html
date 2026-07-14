@@ -9,7 +9,11 @@
     } @else if (state() === 'confirmed') {
       <span class="eyebrow success">Email confirmed</span>
       <h1 id="action-title">You’re on the waiting list.</h1>
-      <p>Thanks for confirming. Important Job Seeker Copilot availability and early-access updates will come from {{ contact.productUpdates }}.</p>
+      @if (offer.offerEnabled) {
+        <p>Thanks for confirming. Confirmed waitlist members may receive priority early access and {{ formattedBonusTokens }} bonus tokens when an eligible account is created. Selection is not guaranteed.</p>
+      } @else {
+        <p>Thanks for confirming. Important Job Seeker Copilot availability and early-access updates will come from {{ contact.productUpdates }}.</p>
+      }
     } @else if (state() === 'already-confirmed') {
       <span class="eyebrow success">Already confirmed</span>
       <h1 id="action-title">You’re already on the list.</h1>
@@ -21,7 +25,7 @@
     } @else if (state() === 'resent') {
       <span class="eyebrow success">Email sent</span>
       <h1 id="action-title">Check your inbox.</h1>
-      <p>We sent a new confirmation link from {{ contact.productUpdates }}. The old link will no longer work.</p>
+      <p>We sent a new confirmation link from {{ contact.productUpdates }}. The old link will no longer work. No bonus tokens are credited by requesting another link.</p>
     } @else if (state() === 'expired') {
       <span class="eyebrow warning">Link expired</span>
       <h1 id="action-title">This link is no longer active.</h1>

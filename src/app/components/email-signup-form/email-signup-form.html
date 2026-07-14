@@ -28,7 +28,11 @@
     } @else if (email.touched && (email.hasError('email') || email.hasError('maxlength'))) {
       <p class="message message-error">Enter a valid email address.</p>
     } @else if (state() === 'pending-confirmation') {
-      <p class="message message-success">Check your inbox for a message from {{ contact.productUpdates }} and confirm your email to finish joining the waiting list.</p>
+      @if (offer.offerEnabled) {
+        <p class="message message-success">Check your inbox to confirm your email. Confirmed waitlist members may receive priority early access and {{ formattedBonusTokens }} bonus tokens when an eligible account is created.</p>
+      } @else {
+        <p class="message message-success">Check your inbox for a message from {{ contact.productUpdates }} and confirm your email to finish joining the waiting list.</p>
+      }
     } @else if (state() === 'already-subscribed') {
       <p class="message message-info">That address is already subscribed. There is nothing else you need to do.</p>
     } @else if (state() === 'error') {

@@ -274,6 +274,10 @@
   margin-bottom: 0;
 }
 
+.final-cta app-waitlist-offer {
+  margin-top: 24px;
+}
+
 @media (max-width: 1040px) {
   .hero-grid {
     align-items: start;

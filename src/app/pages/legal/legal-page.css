@@ -43,6 +43,14 @@ h1 {
   padding: 8px 11px;
 }
 
+.draft-notice {
+  background: #fff8e6;
+  border: 1px solid #f2d28b;
+  border-radius: 8px;
+  color: #714b00 !important;
+  padding: 12px 14px;
+}
+
 .legal-card section + section {
   border-top: 1px solid #edf1f5;
   margin-top: 34px;

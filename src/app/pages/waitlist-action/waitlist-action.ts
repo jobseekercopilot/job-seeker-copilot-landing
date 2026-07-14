@@ -4,6 +4,7 @@ import { finalize } from 'rxjs';
 import { FooterComponent } from '../../components/footer/footer';
 import { HeaderComponent } from '../../components/header/header';
 import { BUSINESS_CONTACT_DETAILS } from '../../config/business-contact-details';
+import { EARLY_ACCESS_OFFER_CONFIG, formatOfferTokenAmount } from '../../config/early-access-offer';
 import { EmailSubscriptionService } from '../../services/email-subscription.service';
 
 type ActionKind = 'confirm' | 'unsubscribe';
@@ -21,6 +22,8 @@ export class WaitlistActionPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly service = inject(EmailSubscriptionService);
   protected readonly contact = BUSINESS_CONTACT_DETAILS;
+  protected readonly offer = inject(EARLY_ACCESS_OFFER_CONFIG);
+  protected readonly formattedBonusTokens = formatOfferTokenAmount(this.offer.bonusTokens);
   protected readonly action = this.route.snapshot.data['action'] as ActionKind;
   protected readonly state = signal<ActionState>('working');
   protected readonly resending = signal(false);

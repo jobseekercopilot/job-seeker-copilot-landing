@@ -9,12 +9,14 @@ import { LabourMarketSectionComponent } from '../../components/labour-market-sec
 import { PricingSectionComponent } from '../../components/pricing-section/pricing-section';
 import { RoadmapSectionComponent } from '../../components/roadmap-section/roadmap-section';
 import { ScreenshotFrameComponent } from '../../components/screenshot-frame/screenshot-frame';
+import { WaitlistOfferComponent } from '../../components/waitlist-offer/waitlist-offer';
 
 @Component({
   selector: 'app-home-page',
   imports: [
     HeaderComponent,
     EmailSignupFormComponent,
+    WaitlistOfferComponent,
     ScreenshotFrameComponent,
     HowItWorksComponent,
     FeatureSectionComponent,
