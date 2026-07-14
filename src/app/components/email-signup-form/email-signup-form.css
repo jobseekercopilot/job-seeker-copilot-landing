@@ -1,0 +1,131 @@
+:host {
+  display: block;
+  width: 100%;
+}
+
+.signup-form {
+  max-width: 680px;
+}
+
+.form-row {
+  align-items: end;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) max-content;
+}
+
+.field-wrap {
+  display: grid;
+  gap: 7px;
+}
+
+label {
+  color: var(--colour-text);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.required-label {
+  color: var(--colour-text-muted);
+  font-size: 0.68rem;
+  font-weight: 650;
+}
+
+input {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-control);
+  color: var(--colour-text);
+  min-height: 52px;
+  padding: 12px 15px;
+  width: 100%;
+}
+
+input:hover {
+  border-color: #94a3b8;
+}
+
+input[aria-invalid="true"] {
+  border-color: var(--colour-danger);
+}
+
+button {
+  font-size: 0.75rem;
+  min-height: 52px;
+  min-width: 0;
+  padding-inline: 12px;
+  white-space: nowrap;
+}
+
+button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+  transform: none;
+}
+
+.form-messages {
+  min-height: 34px;
+  padding-top: 9px;
+}
+
+.privacy-note,
+.message {
+  font-size: 0.78rem;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.privacy-note {
+  color: var(--colour-text-muted);
+}
+
+.privacy-note a {
+  font-weight: 700;
+}
+
+.message {
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.message-error {
+  background: var(--colour-danger-soft);
+  color: var(--colour-danger);
+}
+
+.message-success {
+  background: var(--colour-teal-soft);
+  color: #08635d;
+}
+
+.message-info {
+  background: var(--colour-primary-soft);
+  color: #174ea6;
+}
+
+.signup-form-footer .privacy-note,
+.signup-form-footer label {
+  color: #dbeafe;
+}
+
+.signup-form-footer .privacy-note a {
+  color: #ffffff;
+}
+
+@media (max-width: 560px) {
+  .form-row {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
+  button {
+    width: 100%;
+  }
+}
+.honeypot {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}

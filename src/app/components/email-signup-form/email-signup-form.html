@@ -1,0 +1,44 @@
+<form class="signup-form" [class.signup-form-footer]="context() === 'footer'" (submit)="submit($event)" novalidate>
+  <div class="honeypot" aria-hidden="true">
+    <label [for]="'waitlist-website-' + context()">Leave this field empty</label>
+    <input [id]="'waitlist-website-' + context()" type="text" tabindex="-1" autocomplete="off" [formControl]="website">
+  </div>
+  <div class="form-row">
+    <div class="field-wrap">
+      <label [for]="'waitlist-email-' + context()">Email address <span class="required-label">(required)</span></label>
+      <input
+        [id]="'waitlist-email-' + context()"
+        type="email"
+        inputmode="email"
+        autocomplete="email"
+        maxlength="254"
+        required
+        [formControl]="email"
+        [attr.aria-invalid]="email.invalid && email.touched"
+        [attr.aria-describedby]="'waitlist-message-' + context()">
+    </div>
+    <button class="button button-primary" type="submit" [disabled]="submitting() || productionDisabled">
+      @if (submitting()) { Joining… } @else { Notify me when it is ready }
+    </button>
+  </div>
+
+  <div class="form-messages" [id]="'waitlist-message-' + context()" role="status" aria-live="polite" aria-atomic="true">
+    @if (email.touched && email.hasError('required')) {
+      <p class="message message-error">Enter your email address to join the list.</p>
+    } @else if (email.touched && (email.hasError('email') || email.hasError('maxlength'))) {
+      <p class="message message-error">Enter a valid email address.</p>
+    } @else if (state() === 'pending-confirmation') {
+      <p class="message message-success">Check your inbox and confirm your email to finish joining the waiting list.</p>
+    } @else if (state() === 'already-subscribed') {
+      <p class="message message-info">That address is already subscribed. There is nothing else you need to do.</p>
+    } @else if (state() === 'error') {
+      <p class="message message-error">We couldn’t add you just now. Please try again in a moment.</p>
+    } @else if (state() === 'backend-disabled' || developmentDisabled) {
+      <p class="message message-info">This form is running in development mode and is not connected to the live mailing list. Your email has not been stored.</p>
+    } @else if (productionDisabled) {
+      <p class="message message-info">Online signup is temporarily unavailable.</p>
+    } @else {
+      <p class="privacy-note">We’ll use your email only for Job Seeker Copilot launch and early-access updates. You’ll confirm by email. <a routerLink="/privacy">Privacy notice</a>.</p>
+    }
+  </div>
+</form>

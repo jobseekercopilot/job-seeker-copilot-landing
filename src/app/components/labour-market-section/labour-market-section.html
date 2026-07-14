@@ -1,0 +1,42 @@
+<section id="uk-job-market" class="section labour-market" aria-labelledby="labour-market-heading">
+  <div class="container">
+    <div class="section-copy">
+      <span class="eyebrow">UK labour market</span>
+      <h2 id="labour-market-heading" class="section-heading">The challenge facing UK job seekers.</h2>
+      <p class="section-intro">Finding work can involve searching across several websites, preparing different application documents and tracking multiple opportunities. Job Seeker Copilot is designed to bring those activities together in one organised workspace.</p>
+      <p class="context-note">These figures provide national context only. They do not measure Job Seeker Copilot’s effectiveness, imply government endorsement or predict an individual job-search outcome.</p>
+    </div>
+
+    <div class="statistics-grid" aria-label="Selected UK labour-market statistics">
+      @for (statistic of content.statistics; track statistic.label) {
+        <article class="statistic-card">
+          <p class="statistic-value">{{ statistic.value }}</p>
+          <h3>{{ statistic.label }}</h3>
+          <p class="statistic-description">{{ statistic.description }}</p>
+          <p class="statistic-period"><strong>Measurement period:</strong> {{ statistic.period }}</p>
+          <p class="statistic-source">
+            Source:
+            <a [href]="statistic.sourceUrl" target="_blank" rel="noopener noreferrer">
+              {{ statistic.sourceName }}<span class="sr-only"> — {{ statistic.sourceTitle }} (opens in a new tab)</span>
+            </a>
+          </p>
+        </article>
+      }
+    </div>
+
+    <div class="source-panel">
+      <div>
+        <strong>Source: Office for National Statistics</strong>
+        <p>Last updated from the ONS UK labour-market releases published {{ content.publicationDate }}. Figures last checked {{ content.lastReviewed }}.</p>
+        <p class="quality-note">The employment and unemployment estimates are Labour Force Survey statistics classified by the ONS as official statistics in development, so short-term changes should be interpreted with care.</p>
+      </div>
+      <nav aria-label="Official labour-market sources">
+        @for (source of content.sources; track source.title) {
+          <a [href]="source.url" target="_blank" rel="noopener noreferrer">
+            {{ source.title }} <span aria-hidden="true">↗</span><span class="sr-only"> (opens in a new tab)</span>
+          </a>
+        }
+      </nav>
+    </div>
+  </div>
+</section>

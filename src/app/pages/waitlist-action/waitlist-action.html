@@ -1,0 +1,50 @@
+<app-header />
+<main id="main-content" class="action-main" tabindex="-1">
+  <section class="action-card" aria-labelledby="action-title" aria-live="polite">
+    <img src="/brand/jobseeker-copilot-logo.svg" width="52" height="52" alt="">
+    @if (state() === 'working') {
+      <span class="eyebrow">Please wait</span>
+      <h1 id="action-title">{{ action === 'confirm' ? 'Confirming your email…' : 'Updating your subscription…' }}</h1>
+      <p>We’re securely checking your link.</p>
+    } @else if (state() === 'confirmed') {
+      <span class="eyebrow success">Email confirmed</span>
+      <h1 id="action-title">You’re on the waiting list.</h1>
+      <p>Thanks for confirming. We’ll only send important Job Seeker Copilot availability and early-access updates.</p>
+    } @else if (state() === 'already-confirmed') {
+      <span class="eyebrow success">Already confirmed</span>
+      <h1 id="action-title">You’re already on the list.</h1>
+      <p>This confirmation link has already been used. There is nothing else you need to do.</p>
+    } @else if (state() === 'unsubscribed' || state() === 'already-unsubscribed') {
+      <span class="eyebrow success">Subscription updated</span>
+      <h1 id="action-title">You’ve been removed from the waiting list.</h1>
+      <p>You won’t receive further waiting-list updates. You can join again from the landing page at any time.</p>
+    } @else if (state() === 'resent') {
+      <span class="eyebrow success">Email sent</span>
+      <h1 id="action-title">Check your inbox.</h1>
+      <p>We sent a new confirmation link. The old link will no longer work.</p>
+    } @else if (state() === 'expired') {
+      <span class="eyebrow warning">Link expired</span>
+      <h1 id="action-title">This link is no longer active.</h1>
+      <p>Confirmation links expire to protect your email address.</p>
+      @if (action === 'confirm') {
+        <button class="button button-primary" type="button" (click)="resend()" [disabled]="resending()">
+          {{ resending() ? 'Sending…' : 'Send a new confirmation link' }}
+        </button>
+      }
+    } @else if (state() === 'backend-disabled') {
+      <span class="eyebrow warning">Development mode</span>
+      <h1 id="action-title">The waiting list is not connected.</h1>
+      <p>No subscription has been changed. Live confirmation will be enabled when the backend is deployed.</p>
+    } @else if (state() === 'invalid') {
+      <span class="eyebrow warning">Invalid link</span>
+      <h1 id="action-title">We couldn’t recognise this link.</h1>
+      <p>It may be incomplete, replaced by a newer link or already used.</p>
+    } @else {
+      <span class="eyebrow warning">Temporary problem</span>
+      <h1 id="action-title">We couldn’t update your subscription.</h1>
+      <p>Please try the link again shortly. If the problem continues, contact support.</p>
+    }
+    <a class="button button-secondary" routerLink="/">Return to Job Seeker Copilot</a>
+  </section>
+</main>
+<app-footer />

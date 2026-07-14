@@ -1,0 +1,31 @@
+<header class="site-header">
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <div class="container header-inner">
+    <a class="brand" routerLink="/" aria-label="Job Seeker Copilot home" (click)="closeMenu()">
+      <img src="/brand/jobseeker-copilot-logo.svg" width="40" height="40" alt="" aria-hidden="true">
+      <span class="brand-copy">
+        <strong>Job Seeker Copilot</strong>
+        <small>Your job search workspace</small>
+      </span>
+    </a>
+
+    <button
+      class="menu-button"
+      type="button"
+      aria-controls="primary-navigation"
+      [attr.aria-expanded]="menuOpen()"
+      (click)="toggleMenu()">
+      <span class="sr-only">Toggle navigation</span>
+      <span></span><span></span><span></span>
+    </button>
+
+    <nav id="primary-navigation" class="primary-navigation" [class.is-open]="menuOpen()" aria-label="Primary navigation">
+      <a routerLink="/" fragment="features" (click)="closeMenu()">Features</a>
+      <a routerLink="/" fragment="how-it-works" (click)="closeMenu()">How it works</a>
+      <a routerLink="/" fragment="uk-job-market" (click)="closeMenu()">UK job market</a>
+      <a routerLink="/" fragment="accessibility" (click)="closeMenu()">Accessibility</a>
+      <a routerLink="/contact" (click)="closeMenu()">Contact</a>
+      <a class="button button-primary nav-cta" routerLink="/" fragment="waitlist" (click)="closeMenu()">Join the waitlist</a>
+    </nav>
+  </div>
+</header>

@@ -1,0 +1,27 @@
+<section id="roadmap" class="section roadmap-section" aria-labelledby="roadmap-heading">
+  <div class="container">
+    <div class="roadmap-heading">
+      <div>
+        <span class="planned-pill"><i aria-hidden="true"></i>Planned functionality</span>
+        <h2 id="roadmap-heading" class="section-heading">What’s coming next.</h2>
+      </div>
+      <p>We’re continuously expanding Job Seeker Copilot with new tools designed to support every stage of your job search. These ideas are on the roadmap and are not available in the current product yet.</p>
+    </div>
+
+    <div class="roadmap-grid">
+      @for (item of items; track item.title) {
+        <article class="roadmap-card">
+          <span class="roadmap-marker">{{ item.marker }}</span>
+          <h3>{{ item.title }}</h3>
+          <p>{{ item.copy }}</p>
+          <small>Planned</small>
+        </article>
+      }
+    </div>
+
+    <div class="roadmap-cta">
+      <span>Want to follow the product as it grows?</span>
+      <a class="button button-primary" routerLink="/" fragment="waitlist">Get product updates</a>
+    </div>
+  </div>
+</section>

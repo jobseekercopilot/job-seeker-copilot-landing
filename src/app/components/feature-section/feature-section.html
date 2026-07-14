@@ -1,0 +1,20 @@
+<article [id]="feature().id" class="feature" [class.feature-reversed]="reversed()" [attr.data-tone]="feature().tone">
+  <div class="feature-visual">
+    <span class="visual-wash" aria-hidden="true"></span>
+    <app-screenshot-frame
+      [src]="feature().imageSrc"
+      [alt]="feature().imageAlt"
+      [label]="feature().imageLabel" />
+  </div>
+  <div class="feature-copy">
+    <span class="feature-number">{{ feature().number }}</span>
+    <span class="eyebrow">{{ feature().eyebrow }}</span>
+    <h3>{{ feature().title }}</h3>
+    <p>{{ feature().copy }}</p>
+    <ul>
+      @for (point of feature().points; track point) {
+        <li><span aria-hidden="true">✓</span>{{ point }}</li>
+      }
+    </ul>
+  </div>
+</article>

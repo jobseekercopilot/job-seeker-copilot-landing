@@ -1,0 +1,132 @@
+.contact-form {
+  display: grid;
+  gap: 20px;
+}
+
+.field-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.field {
+  display: grid;
+  gap: 7px;
+}
+
+label {
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.required-label {
+  color: var(--colour-text-muted);
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+
+input,
+textarea {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-control);
+  color: var(--colour-text);
+  padding: 12px 14px;
+  width: 100%;
+}
+
+input {
+  min-height: 50px;
+}
+
+textarea {
+  min-height: 160px;
+  resize: vertical;
+}
+
+input[aria-invalid="true"],
+textarea[aria-invalid="true"] {
+  border-color: var(--colour-danger);
+}
+
+.field small {
+  color: var(--colour-danger);
+  font-size: 0.72rem;
+}
+
+.contact-actions {
+  align-items: center;
+  display: flex;
+  gap: 20px;
+}
+
+.contact-actions button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.contact-actions p {
+  color: var(--colour-text-muted);
+  font-size: 0.72rem;
+  margin: 0;
+}
+
+.contact-actions a {
+  font-weight: 750;
+}
+
+button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.form-status {
+  min-height: 24px;
+}
+
+.form-status p {
+  border-radius: 8px;
+  font-size: 0.8rem;
+  margin: 0;
+  padding: 10px 12px;
+}
+
+.status-success {
+  background: var(--colour-teal-soft);
+  color: var(--colour-teal);
+}
+
+.status-info {
+  background: var(--colour-primary-soft);
+  color: #174ea6;
+}
+
+.status-error {
+  background: var(--colour-danger-soft);
+  color: var(--colour-danger);
+}
+
+@media (max-width: 600px) {
+  .field-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .contact-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+.honeypot {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.field .character-count {
+  display: block;
+  margin-top: 0.35rem;
+  color: var(--colour-text-muted);
+  text-align: right;
+}

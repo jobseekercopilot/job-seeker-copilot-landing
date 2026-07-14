@@ -1,0 +1,23 @@
+<section id="how-it-works" class="section workflow-section" aria-labelledby="workflow-heading">
+  <div class="container">
+    <div class="workflow-heading-wrap">
+      <div>
+        <span class="eyebrow">One connected workflow</span>
+        <h2 id="workflow-heading" class="section-heading">From finding a role to following it through.</h2>
+      </div>
+      <p class="section-intro">Job Seeker Copilot keeps the moving parts of a job search connected, so you can spend less time reconstructing where everything belongs.</p>
+    </div>
+
+    <ol class="steps">
+      @for (step of steps; track step.title; let index = $index) {
+        <li>
+          <span class="step-number">0{{ index + 1 }}</span>
+          <div>
+            <h3>{{ step.title }}</h3>
+            <p>{{ step.copy }}</p>
+          </div>
+        </li>
+      }
+    </ol>
+  </div>
+</section>

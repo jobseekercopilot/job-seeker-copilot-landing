@@ -1,0 +1,83 @@
+<app-header />
+
+<main id="main-content" tabindex="-1">
+  <section class="hero" aria-labelledby="hero-heading">
+    <div class="hero-grid container">
+      <div class="hero-copy">
+        <span class="status-pill"><i aria-hidden="true"></i>Coming soon · Early access list open</span>
+        <h1 id="hero-heading">Your whole job search, <span>working together.</span></h1>
+        <p class="hero-lead">Find roles across supported job sites, generate a tailored CV and cover letter together for each opportunity, keep the latest versions organised and track what happens next.</p>
+        <app-email-signup-form context="hero" />
+        <div class="hero-reassurance" aria-label="Product highlights">
+          <span><i aria-hidden="true">✓</i>One calm workspace</span>
+          <span><i aria-hidden="true">✓</i>Job-specific documents</span>
+          <span><i aria-hidden="true">✓</i>Built for real job searches</span>
+        </div>
+      </div>
+
+      <div class="hero-visual">
+        <span class="hero-orbit hero-orbit-one" aria-hidden="true"></span>
+        <span class="hero-orbit hero-orbit-two" aria-hidden="true"></span>
+        <app-screenshot-frame
+          src="/screenshots/application-tracking.webp"
+          alt="Job Seeker Copilot workspace showing applications and their progress"
+          label="Job Seeker Copilot workspace"
+          [eager]="true" />
+        <div class="floating-note floating-note-top">
+          <span class="note-icon note-icon-blue" aria-hidden="true">✓</span>
+          <span><strong>Application organised</strong><small>Documents stay connected</small></span>
+        </div>
+        <div class="floating-note floating-note-bottom">
+          <span class="note-icon note-icon-teal" aria-hidden="true">→</span>
+          <span><strong>Next step visible</strong><small>Know what needs attention</small></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="problem-strip" aria-labelledby="problem-heading">
+    <div class="container problem-grid">
+      <div>
+        <span class="eyebrow">A clearer way to keep moving</span>
+        <h2 id="problem-heading">A job search should not feel like detective work.</h2>
+      </div>
+      <p>When roles, documents and updates live in different places, simple questions become difficult: Which CV did I use? Did I apply? What needs a follow-up? Job Seeker Copilot brings those answers into one workspace.</p>
+    </div>
+  </section>
+
+  <app-how-it-works />
+
+  <section id="features" class="features" aria-labelledby="features-heading">
+    <div class="container features-intro">
+      <span class="current-pill"><i aria-hidden="true"></i>Available in the current product</span>
+      <h2 id="features-heading" class="section-heading">The core job-search workflow, connected today.</h2>
+      <p class="section-intro">These are working product capabilities: multi-site search, paired application-document generation with replacement versions, and application tracking.</p>
+    </div>
+    <div class="container">
+      @for (feature of features; track feature.id; let odd = $odd) {
+        <app-feature-section [feature]="feature" [reversed]="odd" />
+      }
+    </div>
+  </section>
+
+  <app-roadmap-section />
+
+  <app-pricing-section />
+
+  <app-labour-market-section />
+
+  <app-accessibility-section />
+
+  <section id="waitlist" class="final-cta" aria-labelledby="waitlist-heading">
+    <div class="container final-cta-inner">
+      <div>
+        <span class="cta-kicker">Be among the first to know</span>
+        <h2 id="waitlist-heading">Ready for a more organised job search?</h2>
+        <p>Enter your email and we’ll let you know when Job Seeker Copilot is ready for early access.</p>
+      </div>
+      <app-email-signup-form context="footer" />
+    </div>
+  </section>
+</main>
+
+<app-footer />

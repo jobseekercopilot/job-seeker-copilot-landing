@@ -1,0 +1,369 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Job Seeker Copilot landing-page waitlist and contact APIs
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: production
+    AllowedValues: [development, test, production]
+  EnableLiveSubmissions:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+  AllowedOrigins:
+    Type: String
+    Description: Comma-separated exact HTTPS origins allowed to call the APIs.
+  PublicSiteUrl:
+    Type: String
+    Description: Public landing-page base URL, without a trailing slash.
+  SubscriberHashPepper:
+    Type: String
+    NoEcho: true
+    MinLength: 32
+    Description: Random secret used to derive non-reversible subscriber identifiers.
+  WaitlistSenderEmail:
+    Type: String
+    Description: SES-verified From address for waiting-list email.
+  ContactSenderEmail:
+    Type: String
+    Description: SES-verified From address for contact email.
+  ContactRecipientEmail:
+    Type: String
+    NoEcho: true
+    Description: Private monitored mailbox that receives contact submissions.
+  ReplyToEmail:
+    Type: String
+    Description: Monitored Reply-To address for waiting-list messages.
+  PublicSupportEmail:
+    Type: String
+    Description: Public support address shown in email templates.
+  EnableWaitlistEmail:
+    Type: String
+    Default: 'true'
+    AllowedValues: ['true', 'false']
+  StoreContactSubmissions:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+  SendContactAcknowledgement:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+  ConfirmationTokenTtlHours:
+    Type: Number
+    Default: 24
+    MinValue: 1
+    MaxValue: 168
+  UnconfirmedRetentionDays:
+    Type: Number
+    Default: 7
+    MinValue: 1
+    MaxValue: 30
+  ContactRetentionDays:
+    Type: Number
+    Default: 90
+    MinValue: 1
+    MaxValue: 365
+  MinimumFormCompletionMs:
+    Type: Number
+    Default: 1200
+    MinValue: 0
+    MaxValue: 10000
+  ConsentVersion:
+    Type: String
+    MinLength: 1
+    MaxLength: 80
+    Description: Approved waiting-list consent notice version; must match the public frontend configuration.
+  ContactMessageMaxLength:
+    Type: Number
+    Default: 3000
+    MinValue: 500
+    MaxValue: 10000
+
+Conditions:
+  StoreContactSubmissionsCondition: !Equals [!Ref StoreContactSubmissions, 'true']
+
+Globals:
+  Function:
+    Runtime: python3.12
+    Architectures: [arm64]
+    MemorySize: 256
+    Timeout: 10
+    Tracing: Active
+    Environment:
+      Variables:
+        ENVIRONMENT_NAME: !Ref EnvironmentName
+        ENABLE_LIVE_SUBMISSIONS: !Ref EnableLiveSubmissions
+        ALLOWED_ORIGINS: !Ref AllowedOrigins
+        PUBLIC_SITE_URL: !Ref PublicSiteUrl
+        PUBLIC_SUPPORT_EMAIL: !Ref PublicSupportEmail
+        REPLY_TO_EMAIL: !Ref ReplyToEmail
+        POWERTOOLS_SERVICE_NAME: job-seeker-copilot-landing
+
+Resources:
+  ApiAccessLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      RetentionInDays: 30
+
+  LandingApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: v1
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 20
+        ThrottlingRateLimit: 10
+      AccessLogSettings:
+        DestinationArn: !GetAtt ApiAccessLogGroup.Arn
+        Format: '{"requestId":"$context.requestId","routeKey":"$context.routeKey","status":"$context.status","responseLength":"$context.responseLength","integrationError":"$context.integrationErrorMessage"}'
+
+  WaitlistTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: subscriberId
+          AttributeType: S
+        - AttributeName: confirmationTokenHash
+          AttributeType: S
+        - AttributeName: unsubscribeTokenHash
+          AttributeType: S
+      KeySchema:
+        - AttributeName: subscriberId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: ConfirmationTokenHashIndex
+          KeySchema:
+            - AttributeName: confirmationTokenHash
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: UnsubscribeTokenHashIndex
+          KeySchema:
+            - AttributeName: unsubscribeTokenHash
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+      TimeToLiveSpecification:
+        AttributeName: expiresAtEpoch
+        Enabled: true
+      Tags:
+        - Key: Application
+          Value: job-seeker-copilot-landing
+        - Key: DataClassification
+          Value: personal
+
+  ContactSubmissionsTable:
+    Type: AWS::DynamoDB::Table
+    Condition: StoreContactSubmissionsCondition
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: submissionId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: submissionId
+          KeyType: HASH
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+      TimeToLiveSpecification:
+        AttributeName: expiresAtEpoch
+        Enabled: true
+      Tags:
+        - Key: Application
+          Value: job-seeker-copilot-landing
+        - Key: DataClassification
+          Value: personal
+
+  WaitlistSubmitFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/
+      Handler: waitlist_submit.handler
+      Environment:
+        Variables:
+          WAITLIST_TABLE_NAME: !Ref WaitlistTable
+          SUBSCRIBER_HASH_PEPPER: !Ref SubscriberHashPepper
+          WAITLIST_SENDER_EMAIL: !Ref WaitlistSenderEmail
+          ENABLE_WAITLIST_EMAIL: !Ref EnableWaitlistEmail
+          CONFIRMATION_TOKEN_TTL_HOURS: !Ref ConfirmationTokenTtlHours
+          UNCONFIRMED_RETENTION_DAYS: !Ref UnconfirmedRetentionDays
+          MINIMUM_FORM_COMPLETION_MS: !Ref MinimumFormCompletionMs
+          CONSENT_VERSION: !Ref ConsentVersion
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [dynamodb:GetItem, dynamodb:PutItem, dynamodb:UpdateItem, dynamodb:DeleteItem]
+              Resource: !GetAtt WaitlistTable.Arn
+            - Effect: Allow
+              Action: ses:SendEmail
+              Resource: !Sub 'arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${WaitlistSenderEmail}'
+      Events:
+        Submit:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref LandingApi
+            Method: POST
+            Path: /waitlist
+            RouteSettings:
+              ThrottlingBurstLimit: 8
+              ThrottlingRateLimit: 4
+
+  WaitlistConfirmFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/
+      Handler: waitlist_confirm.handler
+      Environment:
+        Variables:
+          WAITLIST_TABLE_NAME: !Ref WaitlistTable
+          SUBSCRIBER_HASH_PEPPER: !Ref SubscriberHashPepper
+          WAITLIST_SENDER_EMAIL: !Ref WaitlistSenderEmail
+          ENABLE_WAITLIST_EMAIL: !Ref EnableWaitlistEmail
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [dynamodb:Query, dynamodb:UpdateItem]
+              Resource:
+                - !GetAtt WaitlistTable.Arn
+                - !Sub '${WaitlistTable.Arn}/index/ConfirmationTokenHashIndex'
+            - Effect: Allow
+              Action: ses:SendEmail
+              Resource: !Sub 'arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${WaitlistSenderEmail}'
+      Events:
+        Confirm:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref LandingApi
+            Method: GET
+            Path: /waitlist/confirm
+
+  WaitlistResendFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/
+      Handler: waitlist_resend.handler
+      Environment:
+        Variables:
+          WAITLIST_TABLE_NAME: !Ref WaitlistTable
+          WAITLIST_SENDER_EMAIL: !Ref WaitlistSenderEmail
+          ENABLE_WAITLIST_EMAIL: !Ref EnableWaitlistEmail
+          CONFIRMATION_TOKEN_TTL_HOURS: !Ref ConfirmationTokenTtlHours
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [dynamodb:Query, dynamodb:UpdateItem]
+              Resource:
+                - !GetAtt WaitlistTable.Arn
+                - !Sub '${WaitlistTable.Arn}/index/ConfirmationTokenHashIndex'
+            - Effect: Allow
+              Action: ses:SendEmail
+              Resource: !Sub 'arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${WaitlistSenderEmail}'
+      Events:
+        Resend:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref LandingApi
+            Method: POST
+            Path: /waitlist/resend
+            RouteSettings:
+              ThrottlingBurstLimit: 4
+              ThrottlingRateLimit: 2
+
+  WaitlistUnsubscribeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/
+      Handler: waitlist_unsubscribe.handler
+      Environment:
+        Variables:
+          WAITLIST_TABLE_NAME: !Ref WaitlistTable
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [dynamodb:Query, dynamodb:UpdateItem]
+              Resource:
+                - !GetAtt WaitlistTable.Arn
+                - !Sub '${WaitlistTable.Arn}/index/UnsubscribeTokenHashIndex'
+      Events:
+        Unsubscribe:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref LandingApi
+            Method: GET
+            Path: /waitlist/unsubscribe
+
+  ContactSubmitFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/
+      Handler: contact_submit.handler
+      Environment:
+        Variables:
+          CONTACT_SENDER_EMAIL: !Ref ContactSenderEmail
+          CONTACT_RECIPIENT_EMAIL: !Ref ContactRecipientEmail
+          CONTACT_TABLE_NAME: !If [StoreContactSubmissionsCondition, !Ref ContactSubmissionsTable, '']
+          STORE_CONTACT_SUBMISSIONS: !Ref StoreContactSubmissions
+          CONTACT_RETENTION_DAYS: !Ref ContactRetentionDays
+          SEND_CONTACT_ACKNOWLEDGEMENT: !Ref SendContactAcknowledgement
+          MINIMUM_FORM_COMPLETION_MS: !Ref MinimumFormCompletionMs
+          CONTACT_MESSAGE_MAX_LENGTH: !Ref ContactMessageMaxLength
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: ses:SendEmail
+              Resource: !Sub 'arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${ContactSenderEmail}'
+            - Effect: Allow
+              Action: dynamodb:PutItem
+              Resource: !If
+                - StoreContactSubmissionsCondition
+                - !GetAtt ContactSubmissionsTable.Arn
+                - !Sub 'arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/contact-storage-disabled'
+      Events:
+        Contact:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref LandingApi
+            Method: POST
+            Path: /contact
+            RouteSettings:
+              ThrottlingBurstLimit: 6
+              ThrottlingRateLimit: 3
+
+  CorsOptionsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/
+      Handler: cors_options.handler
+      Events:
+        Options:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref LandingApi
+            Method: OPTIONS
+            Path: /{proxy+}
+
+Outputs:
+  ApiBaseUrl:
+    Description: Base URL for the landing-page API stage.
+    Value: !Sub 'https://${LandingApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/v1'
+  WaitlistTableName:
+    Description: Retained waiting-list DynamoDB table.
+    Value: !Ref WaitlistTable
+  ContactTableName:
+    Condition: StoreContactSubmissionsCondition
+    Description: Retained contact-submission DynamoDB table.
+    Value: !Ref ContactSubmissionsTable

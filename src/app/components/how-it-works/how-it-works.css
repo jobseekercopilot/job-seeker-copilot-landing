@@ -1,0 +1,105 @@
+.workflow-section {
+  background: #ffffff;
+  border-block: 1px solid var(--colour-border);
+}
+
+.workflow-heading-wrap {
+  align-items: end;
+  display: grid;
+  gap: 48px;
+  grid-template-columns: 1.1fr 0.9fr;
+  margin-bottom: 60px;
+}
+
+.workflow-heading-wrap h2,
+.workflow-heading-wrap p {
+  margin-bottom: 0;
+}
+
+.steps {
+  counter-reset: workflow;
+  display: grid;
+  gap: 0;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.steps li {
+  border-top: 1px solid var(--colour-border);
+  padding: 26px 22px 0 0;
+  position: relative;
+}
+
+.steps li:not(:last-child)::after {
+  background: var(--colour-primary);
+  border: 4px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--colour-border-strong);
+  content: "";
+  height: 11px;
+  position: absolute;
+  right: 18px;
+  top: -6px;
+  width: 11px;
+}
+
+.step-number {
+  color: var(--colour-primary);
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.1em;
+  margin-bottom: 22px;
+}
+
+.steps h3 {
+  font-size: 1rem;
+  margin-bottom: 9px;
+}
+
+.steps p {
+  color: var(--colour-text-soft);
+  font-size: 0.87rem;
+  line-height: 1.55;
+  margin: 0;
+}
+
+@media (max-width: 980px) {
+  .workflow-heading-wrap {
+    align-items: start;
+    gap: 20px;
+    grid-template-columns: 1fr;
+  }
+
+  .steps {
+    gap: 24px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .steps li:not(:last-child)::after {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .workflow-heading-wrap {
+    margin-bottom: 38px;
+  }
+
+  .steps {
+    grid-template-columns: 1fr;
+  }
+
+  .steps li {
+    display: grid;
+    gap: 18px;
+    grid-template-columns: 42px 1fr;
+    padding-top: 20px;
+  }
+
+  .step-number {
+    margin: 0;
+  }
+}

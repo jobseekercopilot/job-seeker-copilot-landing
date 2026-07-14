@@ -1,0 +1,44 @@
+<form class="contact-form" [formGroup]="form" (submit)="submit($event)" novalidate>
+  <div class="honeypot" aria-hidden="true">
+    <label for="contact-website">Leave this field empty</label>
+    <input id="contact-website" type="text" tabindex="-1" autocomplete="off" formControlName="website">
+  </div>
+  <div class="field-grid">
+    <div class="field">
+      <label for="contact-name">Name <span class="required-label">(required)</span></label>
+      <input id="contact-name" type="text" autocomplete="name" maxlength="120" required formControlName="name" [attr.aria-invalid]="form.controls.name.invalid && form.controls.name.touched" [attr.aria-describedby]="form.controls.name.invalid && form.controls.name.touched ? 'contact-name-error' : null">
+      @if (form.controls.name.invalid && form.controls.name.touched) { <small id="contact-name-error">Enter your name using no more than 120 characters.</small> }
+    </div>
+    <div class="field">
+      <label for="contact-email">Email address <span class="required-label">(required)</span></label>
+      <input id="contact-email" type="email" inputmode="email" autocomplete="email" maxlength="254" required formControlName="email" [attr.aria-invalid]="form.controls.email.invalid && form.controls.email.touched" [attr.aria-describedby]="form.controls.email.invalid && form.controls.email.touched ? 'contact-email-error' : null">
+      @if (form.controls.email.invalid && form.controls.email.touched) { <small id="contact-email-error">Enter a valid email address.</small> }
+    </div>
+  </div>
+  <div class="field">
+    <label for="contact-subject">Subject <span class="required-label">(required)</span></label>
+    <input id="contact-subject" type="text" autocomplete="off" maxlength="160" required formControlName="subject" [attr.aria-invalid]="form.controls.subject.invalid && form.controls.subject.touched" [attr.aria-describedby]="form.controls.subject.invalid && form.controls.subject.touched ? 'contact-subject-error' : null">
+    @if (form.controls.subject.invalid && form.controls.subject.touched) { <small id="contact-subject-error">Tell us what your message is about using no more than 160 characters.</small> }
+  </div>
+  <div class="field">
+    <label for="contact-message">Message <span class="required-label">(required)</span></label>
+    <textarea id="contact-message" rows="7" [attr.maxlength]="config.contactMessageMaxLength" required formControlName="message" [attr.aria-invalid]="form.controls.message.invalid && form.controls.message.touched" [attr.aria-describedby]="form.controls.message.invalid && form.controls.message.touched ? 'contact-message-error contact-message-count' : 'contact-message-count'"></textarea>
+    @if (form.controls.message.invalid && form.controls.message.touched) { <small id="contact-message-error">Enter a message between 10 and {{ config.contactMessageMaxLength }} characters.</small> }
+    <small id="contact-message-count" class="character-count">{{ form.controls.message.value.length }} / {{ config.contactMessageMaxLength }} characters</small>
+  </div>
+  <div class="contact-actions">
+    <button class="button button-primary" type="submit" [disabled]="submitting() || productionDisabled">{{ submitting() ? 'Sending…' : 'Send message' }}</button>
+    <p>We’ll use these details only to respond to your enquiry. Read our <a routerLink="/privacy">Privacy Policy</a>.</p>
+  </div>
+  <div class="form-status" role="status" aria-live="polite" aria-atomic="true">
+    @if (state() === 'sent') {
+      <p class="status-success">Thanks for getting in touch. Your message has been sent.</p>
+    } @else if (state() === 'error') {
+      <p class="status-error">Your message could not be sent. Please try again later.</p>
+    } @else if (state() === 'backend-disabled' || developmentDisabled) {
+      <p class="status-info">This form is running in development mode and is not connected to the live contact service. Your message has not been sent.</p>
+    } @else if (productionDisabled) {
+      <p class="status-info">Online contact is temporarily unavailable.</p>
+    }
+  </div>
+</form>

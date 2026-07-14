@@ -1,0 +1,127 @@
+.labour-market {
+  background:
+    radial-gradient(circle at 94% 10%, rgb(219 234 254 / 70%), transparent 28%),
+    #f8fafc;
+  border-block: 1px solid var(--colour-border);
+}
+
+.section-copy {
+  max-width: 790px;
+}
+
+.context-note {
+  border-left: 3px solid #7ba8ef;
+  color: var(--colour-text-soft);
+  font-size: 0.86rem;
+  margin: 26px 0 0;
+  max-width: 740px;
+  padding-left: 16px;
+}
+
+.statistics-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 48px;
+}
+
+.statistic-card {
+  background: #fff;
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-small);
+  display: flex;
+  flex-direction: column;
+  min-height: 330px;
+  min-width: 0;
+  padding: clamp(22px, 3vw, 30px);
+  container-type: inline-size;
+}
+
+.statistic-value {
+  color: #164fb0;
+  font-size: clamp(2.35rem, 18cqi, 4rem);
+  font-variant-numeric: tabular-nums;
+  font-weight: 850;
+  letter-spacing: -0.06em;
+  line-height: 1;
+  margin-bottom: 20px;
+  max-width: 100%;
+}
+
+.statistic-card h3 {
+  font-size: 1.05rem;
+  margin-bottom: 10px;
+}
+
+.statistic-description,
+.statistic-period,
+.statistic-source {
+  color: var(--colour-text-soft);
+  font-size: 0.76rem;
+}
+
+.statistic-description {
+  flex: 1;
+}
+
+.statistic-period {
+  border-top: 1px solid var(--colour-border);
+  margin: 16px 0 9px;
+  padding-top: 14px;
+}
+
+.statistic-source {
+  margin: 0;
+}
+
+.statistic-source a,
+.source-panel a {
+  color: #0f4fce;
+  font-weight: 750;
+}
+
+.source-panel {
+  align-items: start;
+  background: #eef5ff;
+  border: 1px solid #c7d9f7;
+  border-radius: var(--radius-card);
+  display: grid;
+  gap: 30px;
+  grid-template-columns: 1.15fr 0.85fr;
+  margin-top: 24px;
+  padding: 24px;
+}
+
+.source-panel strong {
+  font-size: 0.88rem;
+}
+
+.source-panel p {
+  color: #46566d;
+  font-size: 0.76rem;
+  margin: 6px 0 0;
+}
+
+.source-panel .quality-note {
+  color: #5f6f84;
+}
+
+.source-panel nav {
+  display: grid;
+  gap: 8px;
+}
+
+.source-panel nav a {
+  font-size: 0.78rem;
+}
+
+@media (max-width: 1020px) {
+  .statistics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 680px) {
+  .statistics-grid,
+  .source-panel { grid-template-columns: 1fr; }
+  .statistic-card { min-height: 0; }
+}

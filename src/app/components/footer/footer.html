@@ -1,0 +1,31 @@
+<footer class="site-footer">
+  <div class="container footer-main">
+    <a class="footer-brand" routerLink="/" aria-label="Job Seeker Copilot home">
+      <img src="/brand/jobseeker-copilot-logo.svg" width="42" height="42" alt="" aria-hidden="true">
+      <span><strong>Job Seeker Copilot</strong><small>Your job search workspace</small></span>
+    </a>
+    <nav aria-label="Footer navigation">
+      <div>
+        <strong>Explore</strong>
+        <a routerLink="/" fragment="features">Features</a>
+        <a routerLink="/" fragment="how-it-works">How it works</a>
+        <a routerLink="/" fragment="roadmap">Roadmap</a>
+        <a routerLink="/" fragment="pricing">Pricing</a>
+        <a routerLink="/" fragment="uk-job-market">UK job market</a>
+        <a routerLink="/" fragment="accessibility">Accessibility</a>
+        <a routerLink="/" fragment="waitlist">Waiting list</a>
+      </div>
+      <div>
+        <strong>Information</strong>
+        <a routerLink="/privacy">Privacy</a>
+        <a routerLink="/terms">Terms</a>
+        <a routerLink="/accessibility">Accessibility Statement</a>
+        <a routerLink="/contact">Contact</a>
+      </div>
+    </nav>
+  </div>
+  <div class="container footer-bottom">
+    <p>© {{ year }} {{ config.copyrightNotice }}.</p>
+    <p>Independent job-search planning and application support.</p>
+  </div>
+</footer>

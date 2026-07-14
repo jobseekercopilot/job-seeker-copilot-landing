@@ -1,0 +1,17 @@
+<figure class="browser-frame">
+  <div class="browser-bar" aria-hidden="true">
+    <span class="browser-dots"><i></i><i></i><i></i></span>
+    <span class="browser-label">{{ label() }}</span>
+    <span class="browser-spacer"></span>
+  </div>
+  <div class="image-shell">
+    <img
+      [src]="src()"
+      [alt]="alt()"
+      width="840"
+      height="900"
+      [attr.loading]="eager() ? 'eager' : 'lazy'"
+      [attr.fetchpriority]="eager() ? 'high' : 'auto'"
+      decoding="async">
+  </div>
+</figure>

@@ -1,0 +1,180 @@
+<app-header />
+<main id="main-content" class="legal-main" tabindex="-1" [class.contact-main]="page === 'contact'">
+  @if (page === 'privacy') {
+    <article class="container legal-card">
+      <header class="legal-header">
+        <span class="eyebrow">Privacy</span>
+        <h1>Privacy Policy</h1>
+        <p class="lead">This policy explains how Job Seeker Copilot handles personal information collected through this pre-launch website.</p>
+        <p class="effective-date">Effective {{ effectiveDate }}.</p>
+      </header>
+
+      <section>
+        <h2>1. Who this policy applies to</h2>
+        <p>This policy applies when you visit the Job Seeker Copilot landing page, join the early-access list or send us an enquiry. The main Job Seeker Copilot product is still in development; a separate product privacy notice will be provided before public accounts are opened.</p>
+      </section>
+      <section>
+        <h2>2. Information we collect</h2>
+        <p>We collect only the information needed for the service you choose to use:</p>
+        <ul>
+          <li><strong>Waitlist details:</strong> the email address you submit, confirmation and unsubscribe status, consent version and trusted timestamps for product availability and early-access updates.</li>
+          <li><strong>Contact details:</strong> your name, email address, message subject and message when you use the contact form.</li>
+          <li><strong>Technical information:</strong> limited server, security and diagnostic information such as IP address, browser type, requested pages and timestamps may be processed by our hosting provider.</li>
+        </ul>
+        <p>We do not ask for a password, payment information, CV, employment history or application documents on this website.</p>
+      </section>
+      <section>
+        <h2>3. How we use information</h2>
+        <p>We use waitlist email addresses to send a confirmation email and, only after confirmation, important Job Seeker Copilot availability and early-access updates. Each update will support unsubscribe. We use contact-form information only to understand and respond to the enquiry; sending a contact message does not add anyone to the waiting list. Technical information may be used to operate, secure and improve the website.</p>
+        <p>Where UK data-protection law applies, the intended lawful bases are consent for optional waitlist communications and our legitimate interests in responding to enquiries, protecting the service and understanding basic website performance. You may withdraw consent to waitlist updates at any time.</p>
+      </section>
+      <section>
+        <h2>4. Cookies and similar technologies</h2>
+        <p>This version of the website does not intentionally use advertising or analytics cookies. Essential infrastructure may use short-lived technical storage or process request information to deliver and secure the site. If analytics, advertising or other non-essential cookies are introduced, this policy and any consent controls will be updated before they are enabled.</p>
+      </section>
+      <section>
+        <h2>5. Storage, sharing and international transfers</h2>
+        <p>Waitlist addresses and consent records are intended to be stored in Amazon DynamoDB and processed by Amazon SES for email delivery when those services are configured. Contact messages are intended to be delivered through Amazon SES to an authorised private mailbox; optional short-term database storage is disabled by default and will be disclosed here if enabled. Access is limited to authorised operators and contracted providers that host, deliver or secure the service. We may also disclose information when required by law. We do not sell personal information.</p>
+        <p>If a provider processes information outside the UK, we will use an approved transfer mechanism and appropriate safeguards where required.</p>
+      </section>
+      <section>
+        <h2>6. How long we keep information</h2>
+        <p>Unconfirmed waitlist records are designed to expire after a configurable short period (initial infrastructure default: seven days). Confirmed and unsubscribed records will be kept only while the early-access list and suppression record remain necessary, or until an approved deletion request, under a final retention schedule that must be set before launch. Contact messages will normally exist in the receiving mailbox and be retained only as long as needed to respond, keep an appropriate business record and meet legal obligations. If optional database storage is enabled, it will use a configurable expiry. Security logs are retained for a limited operational period.</p>
+      </section>
+      <section>
+        <h2>7. Security</h2>
+        <p>We use proportionate technical and organisational measures to protect personal information, including access controls, HTTPS in production and restricted use of service credentials. No internet service is completely secure, so we cannot guarantee absolute security.</p>
+      </section>
+      <section>
+        <h2>8. Your rights</h2>
+        <p>Depending on your circumstances, UK data-protection law may give you rights to request access, correction, deletion, restriction or transfer of your personal information, to object to certain processing and to withdraw consent. You may also complain to the UK Information Commissioner’s Office at <a href="https://ico.org.uk/make-a-complaint/" rel="noreferrer">ico.org.uk</a>.</p>
+      </section>
+      <section>
+        <h2>9. Children</h2>
+        <p>This website is intended for people managing their own job search and is not directed at children under 16. Please do not submit a child’s personal information.</p>
+      </section>
+      <section>
+        <h2>10. Changes and contact</h2>
+        <p>We may update this policy as Job Seeker Copilot develops or its providers change. The effective date above will be updated when material changes are published.</p>
+        <p>Privacy questions, stored-data export requests and deletion requests can be sent through the <a routerLink="/contact">Contact page</a>. Waiting-list messages will include a link that immediately marks the address unsubscribed without requiring an account.</p>
+      </section>
+      <a class="button button-secondary return-link" routerLink="/">Return to the landing page</a>
+    </article>
+  } @else if (page === 'terms') {
+    <article class="container legal-card">
+      <header class="legal-header">
+        <span class="eyebrow">Legal</span>
+        <h1>Terms &amp; Conditions</h1>
+        <p class="lead">These terms govern use of the Job Seeker Copilot pre-launch website and early-access list.</p>
+        <p class="effective-date">Effective {{ effectiveDate }}.</p>
+      </header>
+
+      <section>
+        <h2>1. About these terms</h2>
+        <p>By using this website, you agree to these terms. If you do not agree, please do not use the website or submit information through its forms. Job Seeker Copilot is currently in development and is not being offered as a fully available public service through this website.</p>
+      </section>
+      <section>
+        <h2>2. Early-access list</h2>
+        <p>Joining the waitlist records your interest in product updates. It does not create a product account, guarantee access, reserve a place in a particular release or commit us to a launch date. You may ask to leave the list at any time.</p>
+      </section>
+      <section>
+        <h2>3. Acceptable use</h2>
+        <p>You must use the website lawfully and must not:</p>
+        <ul>
+          <li>attempt to gain unauthorised access to the website, its infrastructure or another person’s information;</li>
+          <li>introduce malware, interfere with service operation or overwhelm forms or endpoints with automated requests;</li>
+          <li>submit false, abusive, unlawful or infringing material;</li>
+          <li>scrape, copy or commercially exploit substantial parts of the website without written permission; or</li>
+          <li>misrepresent an association with Job Seeker Copilot.</li>
+        </ul>
+      </section>
+      <section>
+        <h2>4. Intellectual property</h2>
+        <p>The website, Job Seeker Copilot name, logo, design, copy, software and product images are owned by or licensed to Job Seeker Copilot and are protected by intellectual-property law. You may view and use the website for personal, non-commercial purposes. No other rights are granted.</p>
+      </section>
+      <section>
+        <h2>5. Product information and pricing</h2>
+        <p>Feature descriptions, roadmap items, AI Credit pricing and generation estimates describe the current development direction and application configuration. They may change before or after launch. Planned features are not commitments, and no release dates are promised.</p>
+      </section>
+      <section>
+        <h2>6. Job-search information</h2>
+        <p>Job Seeker Copilot is intended to help organise a job search and prepare application materials. It does not provide recruitment, legal or professional career advice and cannot guarantee the accuracy of third-party job listings, interviews, offers or employment outcomes. Users remain responsible for reviewing documents and deciding what to submit to an employer.</p>
+      </section>
+      <section>
+        <h2>7. Third-party services and links</h2>
+        <p>The website may refer or link to third-party job sources, hosting services or other websites. Those services operate under their own terms and privacy policies. We are not responsible for third-party content, availability or practices.</p>
+      </section>
+      <section>
+        <h2>8. Service availability</h2>
+        <p>We may change, suspend or withdraw any part of the pre-launch website without notice. We aim to keep information useful and the website available, but we do not promise uninterrupted, secure or error-free operation.</p>
+      </section>
+      <section>
+        <h2>9. Limitation of liability</h2>
+        <p>To the fullest extent permitted by law, we are not liable for indirect or consequential loss, loss of opportunity, loss of data or loss arising from reliance on pre-launch information or third-party content. Nothing in these terms excludes liability that cannot legally be excluded, including liability for death or personal injury caused by negligence, fraud or fraudulent misrepresentation. Consumer rights that apply by law are not affected.</p>
+      </section>
+      <section>
+        <h2>10. Changes, governing law and contact</h2>
+        <p>We may update these terms as the website and product develop. These terms are governed by the laws of England and Wales, and the courts of England and Wales will have jurisdiction, subject to any mandatory consumer rights.</p>
+        <p>Questions about these terms can be sent through the <a routerLink="/contact">Contact page</a>.</p>
+      </section>
+      <a class="button button-secondary return-link" routerLink="/">Return to the landing page</a>
+    </article>
+  } @else if (page === 'accessibility') {
+    <article class="container legal-card">
+      <header class="legal-header">
+        <span class="eyebrow">Accessibility</span>
+        <h1>Accessibility Statement</h1>
+        <p class="lead">Job Seeker Copilot is being developed with the aim of making job-search planning and application support usable by as many people as possible.</p>
+        <p class="effective-date">Last reviewed {{ effectiveDate }}. Accessibility is an active area of development, not a certification claim.</p>
+      </header>
+
+      <section>
+        <h2>Our current position</h2>
+        <p>Job Seeker Copilot and this public website are still under active development. Accessibility is an ongoing priority, and improvements will continue before and after the beta release. We do not currently claim conformance with WCAG, formal certification or independent accessibility approval.</p>
+      </section>
+      <section>
+        <h2>What this website currently supports</h2>
+        <p>The landing page uses semantic headings and landmarks, visible form labels, keyboard-operable controls, clear focus indicators, responsive layouts, status announcements for forms and reduced-motion preferences. These measures improve access but do not establish full accessibility or product-wide compliance.</p>
+      </section>
+      <section>
+        <h2>Development goals</h2>
+        <p>Future work will focus on clear and consistent navigation, readable typography, colour contrast, accessible forms, keyboard-only use, screen-reader compatibility, reduced-motion support and plain English. The longer-term target is to work towards WCAG 2.2 Level AA.</p>
+      </section>
+      <section>
+        <h2>Testing and continuous improvement</h2>
+        <p>Planned testing includes automated accessibility checks, keyboard-only journeys, screen-reader testing, colour-contrast review and usability feedback from people with different access needs. New product functionality will need continuing review rather than a one-off assessment.</p>
+      </section>
+      <section>
+        <h2>Report an accessibility problem</h2>
+        <p>If something makes this website or product difficult to use, please describe the page, task, device and assistive technology involved through the <a routerLink="/contact">Contact page</a>. Feedback will help prioritise and verify future improvements. Please do not include sensitive job-search information unless it is needed to explain the issue.</p>
+      </section>
+      <section>
+        <h2>Statement review</h2>
+        <p>This statement will be reviewed as the service changes, after meaningful accessibility testing and before public launch. Any future conformance claim will be based on evidence available at that time.</p>
+      </section>
+      <a class="button button-secondary return-link" routerLink="/">Return to the landing page</a>
+    </article>
+  } @else {
+    <div class="container contact-layout">
+      <section class="contact-copy" aria-labelledby="contact-heading">
+        <span class="eyebrow">Contact</span>
+        <h1 id="contact-heading">Contact Job Seeker Copilot</h1>
+        <p class="lead">Have a question, feedback or an interest in Job Seeker Copilot? Send a message using the form.</p>
+        <div class="contact-guidance">
+          <h2>Before you send</h2>
+          <ul>
+            <li>Use the form for product, accessibility, privacy, early-access or partnership enquiries.</li>
+            <li>Do not include passwords, payment details, CVs or sensitive application information.</li>
+            <li>Submitting a message does not add your address to the waiting list.</li>
+          </ul>
+        </div>
+      </section>
+      <section class="contact-card" aria-label="Send a message">
+        <h2>Send a message</h2>
+        <p>Complete the form below and we’ll respond using the email address you provide.</p>
+        <app-contact-form />
+      </section>
+    </div>
+  }
+</main>
+<app-footer />
