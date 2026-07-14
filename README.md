@@ -21,7 +21,6 @@ Quality checks:
 npm run lint
 npm test
 npm run build
-python3 -m unittest discover -s infrastructure/tests -v
 ```
 
 `npm run build` is the production build. Angular writes deployable browser files to:
@@ -41,7 +40,7 @@ Copy `.env.example` only as a reference for variable names. Browser configuratio
 Important switches:
 
 - `PUBLIC_ENVIRONMENT_NAME` must be `development`, `test` or `production`.
-- `ENABLE_LIVE_SUBMISSIONS` must remain `false` until the API and email path have been verified.
+- `ENABLE_LIVE_SUBMISSIONS` must remain `false` until the waitlist API has passed a real persistence test.
 - `WAITLIST_API_URL`, `WAITLIST_CONFIRMATION_API_URL`, `WAITLIST_RESEND_API_URL`, `WAITLIST_UNSUBSCRIBE_API_URL` and `CONTACT_API_URL` are full public route URLs.
 - main-application, registration, sign-in, pricing, legal and support URLs are separately configurable because the final domain layout is undecided.
 - anti-bot fields reserve public provider configuration only. The backend controls remain independent.
@@ -53,12 +52,12 @@ If live submissions are disabled in a production config, buttons are disabled an
 Every API returns JSON in this shape:
 
 ```json
-{"success":true,"code":"WAITLIST_PENDING_CONFIRMATION","message":"Check your inbox to confirm your email."}
+{"success":true,"code":"WAITLIST_CREATED","message":"Your email has been saved to the waitlist."}
 ```
 
-The waitlist is double opt-in. A successful initial POST means “pending confirmation”, not “subscribed”. Confirmation and unsubscribe links contain opaque tokens, never email addresses. The contact API uses a fixed verified sender and the visitor address only as `Reply-To`.
+The production `POST /waitlist` contract reports success only after DynamoDB confirms a conditional write. Duplicate email keys return HTTP 409 and are never overwritten. The dedicated implementation and deployment guide are in [infrastructure/waitlist-backend/README.md](./infrastructure/waitlist-backend/README.md). The separate contact API design uses a fixed verified sender and the visitor address only as `Reply-To`.
 
-Forms send a hidden honeypot and a client timing value as weak automation signals. API Gateway throttling, server-side validation and per-subscriber resend limits are authoritative. See [infrastructure/README.md](./infrastructure/README.md) for route details and future WAF/CAPTCHA options.
+The waitlist form retains a hidden honeypot as a weak client-side automation signal. API Gateway throttling, Lambda validation and the DynamoDB condition are authoritative. See [infrastructure/waitlist-backend/README.md](./infrastructure/waitlist-backend/README.md) for deployment details and `infrastructure/README.md` for future contact, email-confirmation and WAF/CAPTCHA work.
 
 ## AWS Amplify Hosting preparation
 
@@ -70,15 +69,15 @@ When an Amplify app is created later:
 2. add an SPA rewrite from `/<*>` to `/index.html` with HTTP 200 so `/privacy`, `/terms`, `/contact`, `/waitlist/confirm` and `/waitlist/unsubscribe` survive browser refreshes;
 3. set exact API CORS origins to the final Amplify/custom domain;
 4. inspect the built `config/app-config.json` and bundles to confirm there are no localhost URLs, private mailboxes or secrets;
-5. keep live submission disabled until SES, API and end-to-end confirmation tests pass.
+5. keep live submission disabled until the API, CORS and DynamoDB persistence path pass an end-to-end test.
 
 `amplify.yml` does not assume an Amplify application or AWS account already exists.
 
 ## Serverless infrastructure
 
-The isolated `infrastructure/` directory uses AWS SAM because the backend is a small event-driven Python Lambda stack and this repository had no existing infrastructure standard. It creates definitions for HTTP API Gateway, Lambda, DynamoDB, SES permissions and logs, but does not deploy them. No Docker workflow is required.
+The production waitlist stack in `infrastructure/waitlist-backend/` uses AWS SAM and references the existing `JobSeekerCopilotWaitlist` table without creating or deleting it. It defines an HTTP API, Python Lambda, explicit least-privilege execution role and retained logs. The broader undeployed design in `infrastructure/template.yaml` remains separate for future contact and email-confirmation work.
 
-Deployment preparation, required values, email-domain work, costs, troubleshooting and teardown are documented in [infrastructure/README.md](./infrastructure/README.md). Data access/deletion procedures are in [infrastructure/docs/data-operations.md](./infrastructure/docs/data-operations.md).
+Production waitlist deployment is documented in [infrastructure/waitlist-backend/README.md](./infrastructure/waitlist-backend/README.md). Broader email-domain work, contact APIs, costs and data operations remain documented in [infrastructure/README.md](./infrastructure/README.md) and [infrastructure/docs/data-operations.md](./infrastructure/docs/data-operations.md).
 
 ## Public content and screenshots
 

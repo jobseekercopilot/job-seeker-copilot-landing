@@ -8,7 +8,9 @@
     "config:generate": "node scripts/generate-runtime-config.mjs",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test --watch=false",
+    "test": "npm run test:frontend && npm run test:backend",
+    "test:frontend": "ng test --watch=false",
+    "test:backend": "python3 -m unittest discover -s infrastructure/waitlist-backend/tests -v",
     "test:a11y": "node scripts/accessibility-check.mjs",
     "lint": "ng lint"
   },

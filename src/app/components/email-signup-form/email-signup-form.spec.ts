@@ -4,14 +4,14 @@ import { provideRouter } from '@angular/router';
 import { Observable, of, Subject, throwError } from 'rxjs';
 import { DEFAULT_EARLY_ACCESS_OFFER_CONFIG, EARLY_ACCESS_OFFER_CONFIG } from '../../config/early-access-offer';
 import { DEFAULT_PUBLIC_APP_CONFIG, PUBLIC_APP_CONFIG } from '../../config/public-app-config';
-import { EmailSubscriptionService, SubscriptionResult } from '../../services/email-subscription.service';
+import { WaitlistResult, WaitlistService } from '../../services/waitlist.service';
 import { EmailSignupFormComponent } from './email-signup-form';
 
-class SubscriptionServiceStub {
-  response: Observable<SubscriptionResult> = of({ status: 'pending-confirmation' });
+class WaitlistServiceStub {
+  response: Observable<WaitlistResult> = of({ status: 'joined' });
   calls = 0;
 
-  subscribe(): Observable<SubscriptionResult> {
+  join(): Observable<WaitlistResult> {
     this.calls += 1;
     return this.response;
   }
@@ -19,7 +19,7 @@ class SubscriptionServiceStub {
 
 describe('EmailSignupFormComponent', () => {
   let fixture: ComponentFixture<EmailSignupFormComponent>;
-  let service: SubscriptionServiceStub;
+  let service: WaitlistServiceStub;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -28,12 +28,12 @@ describe('EmailSignupFormComponent', () => {
         provideRouter([]),
         { provide: EARLY_ACCESS_OFFER_CONFIG, useValue: DEFAULT_EARLY_ACCESS_OFFER_CONFIG },
         { provide: PUBLIC_APP_CONFIG, useValue: DEFAULT_PUBLIC_APP_CONFIG },
-        { provide: EmailSubscriptionService, useClass: SubscriptionServiceStub },
+        { provide: WaitlistService, useClass: WaitlistServiceStub },
       ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(EmailSignupFormComponent);
-    service = TestBed.inject(EmailSubscriptionService) as unknown as SubscriptionServiceStub;
+    service = TestBed.inject(WaitlistService) as unknown as WaitlistServiceStub;
     fixture.detectChanges();
   });
 
@@ -45,12 +45,12 @@ describe('EmailSignupFormComponent', () => {
     expect(emailInput().getAttribute('aria-invalid')).toBe('true');
   });
 
-  it('asks the visitor to complete double opt-in after a successful request', () => {
+  it('shows success only after the API confirms persistence', () => {
     setEmail('person@example.com');
     submitForm();
 
     expect(service.calls).toBe(1);
-    expect(fixture.nativeElement.textContent).toContain('Check your inbox to confirm your email');
+    expect(fixture.nativeElement.textContent).toContain('Your email has been saved to the waitlist');
     expect(fixture.nativeElement.textContent).toContain('20,000 bonus tokens when an eligible account is created');
     expect(fixture.nativeElement.textContent).not.toContain('tokens have been credited');
   });
@@ -72,16 +72,24 @@ describe('EmailSignupFormComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('We couldn’t add you just now.');
   });
 
-  it('handles an already-subscribed response without implying a new record', () => {
-    service.response = of({ status: 'already-subscribed' });
+  it('shows a validation error for a duplicate without implying a new record', () => {
+    service.response = of({ status: 'duplicate' });
     setEmail('person@example.com');
     submitForm();
 
-    expect(fixture.nativeElement.textContent).toContain('already subscribed');
+    expect(fixture.nativeElement.textContent).toContain('already registered for the waitlist');
+  });
+
+  it('shows a validation message when the API rejects the email format', () => {
+    service.response = of({ status: 'validation-error' });
+    setEmail('person@example.com');
+    submitForm();
+
+    expect(fixture.nativeElement.textContent).toContain('Enter a valid email address.');
   });
 
   it('disables and deduplicates submission while a request is active', () => {
-    const pending = new Subject<SubscriptionResult>();
+    const pending = new Subject<WaitlistResult>();
     service.response = pending;
     setEmail('person@example.com');
     submitForm();
@@ -90,7 +98,7 @@ describe('EmailSignupFormComponent', () => {
     expect(service.calls).toBe(1);
     expect((fixture.nativeElement.querySelector('button[type="submit"]') as HTMLButtonElement).disabled).toBe(true);
     expect(fixture.nativeElement.textContent).toContain('Joining…');
-    pending.next({ status: 'pending-confirmation' });
+    pending.next({ status: 'joined' });
     pending.complete();
     fixture.detectChanges();
   });
