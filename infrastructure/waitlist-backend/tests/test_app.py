@@ -73,7 +73,7 @@ class TokenTests(unittest.TestCase):
         error.response = {"Error": {"Message": (
             "not authorized on resource arn:aws:ses:eu-west-2:123:identity/private@example.com"
         )}}
-        self.assertEqual(common.aws_error_scope(error), "email-identity")
+        self.assertEqual(common.aws_error_scope(error), "other-email-identity")
 
     @patch.dict(os.environ, BASE_ENV, clear=True)
     def test_confirmation_email_has_html_text_expiry_and_privacy_without_email_in_url(self):

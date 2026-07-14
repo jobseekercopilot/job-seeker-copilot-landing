@@ -283,7 +283,13 @@ def aws_error_scope(error: Exception) -> str:
         return "configuration-set"
     if ":identity/" in message:
         identity = message.split(":identity/", 1)[1].split()[0]
-        return "email-identity" if "@" in identity else "domain-identity"
+        if "@" not in identity:
+            return "domain-identity"
+        if identity == os.getenv("WAITLIST_SENDER_EMAIL", ""):
+            return "sender-email-identity"
+        if identity == os.getenv("PUBLIC_SUPPORT_EMAIL", ""):
+            return "support-email-identity"
+        return "other-email-identity"
     if "ses:SendEmail" in message:
         return "send-email"
     return "unknown"

@@ -266,6 +266,7 @@ Resources:
                 Resource:
                   - !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesDomainIdentity}
                   - !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${WaitlistSenderEmail}
+                  - !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${PublicSupportEmail}
                 Condition:
                   StringEquals:
                     ses:FromAddress: !Ref WaitlistSenderEmail
