@@ -263,10 +263,7 @@ Resources:
             Statement:
               - Effect: Allow
                 Action: ses:SendEmail
-                Resource:
-                  - !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesDomainIdentity}
-                  - !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${WaitlistSenderEmail}
-                  - !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${PublicSupportEmail}
+                Resource: !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesDomainIdentity}
                 Condition:
                   StringEquals:
                     ses:FromAddress: !Ref WaitlistSenderEmail
