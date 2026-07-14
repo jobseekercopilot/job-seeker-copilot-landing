@@ -82,6 +82,7 @@ class TokenTests(unittest.TestCase):
         with patch.object(common, "ses_client", return_value=ses):
             common.send_confirmation_email("person@example.com", raw)
         request = ses.send_email.call_args.kwargs
+        self.assertEqual(request["FromEmailAddress"], "updates@jobseekercopilot.com")
         self.assertEqual(request["ConfigurationSetName"], "WaitlistEmails")
         self.assertEqual(request["Content"]["Simple"]["Subject"]["Data"], "Confirm your Job Seeker Copilot waitlist email")
         text = request["Content"]["Simple"]["Body"]["Text"]["Data"]

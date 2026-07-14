@@ -248,7 +248,7 @@ def send_confirmation_email(recipient: str, raw_token: str) -> None:
         f'{escape(support)}</p></div>'
     )
     ses_client().send_email(
-        FromEmailAddress=f"Job Seeker Copilot <{sender}>",
+        FromEmailAddress=sender,
         Destination={"ToAddresses": [recipient]},
         ReplyToAddresses=[support],
         Content={"Simple": {
