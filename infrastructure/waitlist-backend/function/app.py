@@ -3,6 +3,7 @@ import logging
 from common import (
     RequestError,
     aws_error_code,
+    aws_error_scope,
     enforce_origin,
     is_options,
     log_result,
@@ -78,7 +79,11 @@ def _send(event, context, email, raw_token, hashed, status_code):
         send_confirmation_email(email, raw_token)
         mark_confirmation_sent(email, hashed)
     except Exception as exc:
-        LOGGER.error("Confirmation delivery failed: %s", aws_error_code(exc) or "unknown")
+        LOGGER.error(
+            "Confirmation delivery failed: %s (%s)",
+            aws_error_code(exc) or "unknown",
+            aws_error_scope(exc),
+        )
         metric("ConfirmationSendFailures")
         try:
             mark_confirmation_failure(email, hashed)

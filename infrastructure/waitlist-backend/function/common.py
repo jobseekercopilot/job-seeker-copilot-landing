@@ -276,6 +276,19 @@ def aws_error_code(error: Exception) -> str:
     return str((value.get("Error") or {}).get("Code", "")) if isinstance(value, dict) else ""
 
 
+def aws_error_scope(error: Exception) -> str:
+    value = getattr(error, "response", {})
+    message = str((value.get("Error") or {}).get("Message", "")) if isinstance(value, dict) else ""
+    if "configuration-set/" in message:
+        return "configuration-set"
+    if ":identity/" in message:
+        identity = message.split(":identity/", 1)[1].split()[0]
+        return "email-identity" if "@" in identity else "domain-identity"
+    if "ses:SendEmail" in message:
+        return "send-email"
+    return "unknown"
+
+
 def log_result(context: Any, operation: str, status: int, outcome: str) -> None:
     LOGGER.info(json.dumps({
         "requestId": getattr(context, "aws_request_id", "unknown"),
