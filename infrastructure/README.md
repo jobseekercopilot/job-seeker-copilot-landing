@@ -80,6 +80,14 @@ The guided prompts must provide environment/stack/region and every parameter wit
 
 Required owner-supplied parameters include exact HTTPS origins, public site URL, hash pepper, verified sender addresses, private recipient, reply-to and public support address. The template contains no account IDs, regions, domains, emails or secrets.
 
+The production mailbox mapping is:
+
+- `WaitlistSenderEmail`: `updates@jobseekercopilot.com`
+- `ContactSenderEmail` and `ContactRecipientEmail`: `hello@jobseekercopilot.com`
+- `ReplyToEmail` and `PublicSupportEmail`: `support@jobseekercopilot.com`
+
+Confirm that each sender identity is verified in the deployment region and each recipient is monitored before enabling live submissions.
+
 ## Teardown and retained data
 
 After an authorised deployment, SAM-managed compute/API resources can be removed with:

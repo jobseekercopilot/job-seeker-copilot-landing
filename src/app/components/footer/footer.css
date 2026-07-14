@@ -81,6 +81,14 @@ nav a:hover {
   margin: 0;
 }
 
+.footer-bottom a {
+  color: #b9c5d4;
+}
+
+.footer-bottom a:hover {
+  color: #ffffff;
+}
+
 @media (max-width: 680px) {
   .footer-main {
     display: grid;

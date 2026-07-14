@@ -9,7 +9,7 @@
     } @else if (state() === 'confirmed') {
       <span class="eyebrow success">Email confirmed</span>
       <h1 id="action-title">You’re on the waiting list.</h1>
-      <p>Thanks for confirming. We’ll only send important Job Seeker Copilot availability and early-access updates.</p>
+      <p>Thanks for confirming. Important Job Seeker Copilot availability and early-access updates will come from {{ contact.productUpdates }}.</p>
     } @else if (state() === 'already-confirmed') {
       <span class="eyebrow success">Already confirmed</span>
       <h1 id="action-title">You’re already on the list.</h1>
@@ -21,7 +21,7 @@
     } @else if (state() === 'resent') {
       <span class="eyebrow success">Email sent</span>
       <h1 id="action-title">Check your inbox.</h1>
-      <p>We sent a new confirmation link. The old link will no longer work.</p>
+      <p>We sent a new confirmation link from {{ contact.productUpdates }}. The old link will no longer work.</p>
     } @else if (state() === 'expired') {
       <span class="eyebrow warning">Link expired</span>
       <h1 id="action-title">This link is no longer active.</h1>
@@ -42,7 +42,7 @@
     } @else {
       <span class="eyebrow warning">Temporary problem</span>
       <h1 id="action-title">We couldn’t update your subscription.</h1>
-      <p>Please try the link again shortly. If the problem continues, contact support.</p>
+      <p>Please try the link again shortly. If the problem continues, email <a [href]="'mailto:' + contact.support">{{ contact.support }}</a>.</p>
     }
     <a class="button button-secondary" routerLink="/">Return to Job Seeker Copilot</a>
   </section>
