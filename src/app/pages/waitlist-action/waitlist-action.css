@@ -43,6 +43,34 @@
 .eyebrow.success { color: #08775d; }
 .eyebrow.warning { color: #9a6200; }
 
+.resend-form {
+  border-top: 1px solid var(--colour-border);
+  margin: 30px auto;
+  max-width: 480px;
+  padding-top: 26px;
+  text-align: left;
+}
+
+.resend-form label {
+  display: block;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.resend-form input {
+  border: 1px solid var(--colour-border);
+  border-radius: 8px;
+  font: inherit;
+  min-height: 48px;
+  padding: 10px 12px;
+  width: 100%;
+}
+
+.resend-form .button { margin: 14px 0 0; }
+.action-card .resend-note,
+.action-card .field-error { font-size: .9rem; margin: 10px 0 0; }
+.action-card .field-error { color: #a12424; }
+
 @media (max-width: 560px) {
   .action-card .button {
     display: block;

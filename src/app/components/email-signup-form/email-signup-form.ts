@@ -7,7 +7,9 @@ import { EARLY_ACCESS_OFFER_CONFIG, formatOfferTokenAmount } from '../../config/
 import { PUBLIC_APP_CONFIG } from '../../config/public-app-config';
 import { WaitlistService } from '../../services/waitlist.service';
 
-type FormState = 'idle' | 'success' | 'duplicate' | 'validation-error' | 'error' | 'backend-disabled';
+type FormState = 'idle' | 'pending-confirmation' | 'already-confirmed' | 'confirmation-required' |
+  'resubscription-required' | 'validation-error' | 'email-delivery-error' | 'rate-limited' |
+  'error' | 'backend-disabled';
 
 @Component({
   selector: 'app-email-signup-form',
@@ -54,8 +56,8 @@ export class EmailSignupFormComponent {
       finalize(() => this.submitting.set(false)),
     ).subscribe({
       next: result => {
-        if (result.status === 'joined') {
-          this.state.set('success');
+        if (result.status === 'pending-confirmation' || result.status === 'already-confirmed') {
+          this.state.set(result.status);
           this.email.reset();
         } else {
           this.state.set(result.status);

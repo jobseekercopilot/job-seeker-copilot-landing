@@ -1,41 +1,105 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Production waitlist API for the Job Seeker Copilot landing page
+Description: SES double-opt-in waitlist API for Job Seeker Copilot
 
 Parameters:
   EnvironmentName:
     Type: String
     Default: development
     AllowedValues: [development, production]
-    Description: Selects the permitted browser origin policy.
   WaitlistTableName:
     Type: String
     Default: JobSeekerCopilotWaitlist
     AllowedPattern: '^[A-Za-z0-9_.-]{3,255}$'
-    Description: Existing DynamoDB table with an email String partition key. This stack never creates the table.
-  AmplifyBranchName:
+    Description: Existing external table keyed by email. It is never created, replaced, or deleted by this stack.
+  TokenTableName:
     Type: String
-    Default: develop
-    AllowedPattern: '^[a-z0-9-]+$'
-    Description: Branch prefix allowed for development Amplify origins.
+    Default: JobSeekerCopilotWaitlistTokens
+    AllowedPattern: '^[A-Za-z0-9_.-]{3,255}$'
+  DevelopmentOrigin:
+    Type: String
+    Default: https://develop.d3gd9ezfa3aujn.amplifyapp.com
+    AllowedPattern: '^https://[A-Za-z0-9.-]+$'
+  FeatureOrigin:
+    Type: String
+    Default: https://feature-waitlist-double-opt-in.d3gd9ezfa3aujn.amplifyapp.com
+    AllowedPattern: '^https://[A-Za-z0-9.-]+$'
   ProductionOrigin:
     Type: String
     Default: https://jobseekercopilot.com
     AllowedPattern: '^https://[A-Za-z0-9.-]+$'
-    Description: Exact browser origin allowed when EnvironmentName is production.
+  PublicSiteUrl:
+    Type: String
+    Default: https://develop.d3gd9ezfa3aujn.amplifyapp.com
+    AllowedPattern: '^https://[A-Za-z0-9.-]+$'
+  SesDomainIdentity:
+    Type: String
+    Default: jobseekercopilot.com
+    AllowedPattern: '^[A-Za-z0-9.-]+$'
+  Route53HostedZoneId:
+    Type: String
+    Default: Z0582639PCVP9LP3RNMY
+    AllowedPattern: '^[A-Z0-9]+$'
+  WaitlistSenderEmail:
+    Type: String
+    Default: updates@jobseekercopilot.com
+  PublicSupportEmail:
+    Type: String
+    Default: support@jobseekercopilot.com
+  SesConfigurationSetName:
+    Type: String
+    Default: JobSeekerCopilotWaitlistEmails
+    AllowedPattern: '^[A-Za-z0-9_-]{1,64}$'
+  ConfirmationTokenTtlSeconds:
+    Type: Number
+    Default: 172800
+    MinValue: 3600
+    MaxValue: 604800
+  ConfirmationResendCooldownSeconds:
+    Type: Number
+    Default: 900
+    MinValue: 60
+    MaxValue: 86400
+  MaxConfirmationSends:
+    Type: Number
+    Default: 5
+    MinValue: 1
+    MaxValue: 20
+  ConfirmationSendWindowSeconds:
+    Type: Number
+    Default: 86400
+    MinValue: 3600
+    MaxValue: 604800
+  PendingRetentionSeconds:
+    Type: Number
+    Default: 2592000
+    MinValue: 86400
+    MaxValue: 7776000
+  UsedTokenRetentionSeconds:
+    Type: Number
+    Default: 604800
+    MinValue: 86400
+    MaxValue: 2592000
+  ConsentVersion:
+    Type: String
+    Default: '1.0'
+    MinLength: 1
+    MaxLength: 40
 
 Globals:
   Function:
     Runtime: python3.12
     Architectures: [arm64]
     MemorySize: 256
-    Timeout: 6
+    Timeout: 8
     Environment:
       Variables:
         ENVIRONMENT_NAME: !Ref EnvironmentName
-        WAITLIST_TABLE_NAME: !Ref WaitlistTableName
-        AMPLIFY_BRANCH_NAME: !Ref AmplifyBranchName
+        DEVELOPMENT_ORIGIN: !Ref DevelopmentOrigin
+        FEATURE_ORIGIN: !Ref FeatureOrigin
         PRODUCTION_ORIGIN: !Ref ProductionOrigin
+        WAITLIST_TABLE_NAME: !Ref WaitlistTableName
+        TOKEN_TABLE_NAME: !Ref TokenTable
 
 Resources:
   WaitlistApiAccessLogGroup:
@@ -53,9 +117,87 @@ Resources:
       DefaultRouteSettings:
         ThrottlingBurstLimit: 10
         ThrottlingRateLimit: 5
+        DetailedMetricsEnabled: true
       AccessLogSettings:
         DestinationArn: !GetAtt WaitlistApiAccessLogGroup.Arn
         Format: '{"requestId":"$context.requestId","routeKey":"$context.routeKey","status":"$context.status","responseLength":"$context.responseLength","integrationError":"$context.integrationErrorMessage"}'
+
+  TokenTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      TableName: !Ref TokenTableName
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: tokenHash
+          AttributeType: S
+      KeySchema:
+        - AttributeName: tokenHash
+          KeyType: HASH
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+      TimeToLiveSpecification:
+        AttributeName: deleteAfter
+        Enabled: true
+      Tags:
+        - Key: Application
+          Value: JobSeekerCopilot
+        - Key: DataClassification
+          Value: personal-operational
+
+  WaitlistEmailConfigurationSet:
+    Type: AWS::SES::ConfigurationSet
+    Properties:
+      Name: !Ref SesConfigurationSetName
+      ReputationOptions:
+        ReputationMetricsEnabled: true
+      SendingOptions:
+        SendingEnabled: true
+      SuppressionOptions:
+        SuppressedReasons: [BOUNCE, COMPLAINT]
+
+  WaitlistEmailIdentity:
+    Type: AWS::SES::EmailIdentity
+    Properties:
+      EmailIdentity: !Ref SesDomainIdentity
+      ConfigurationSetAttributes:
+        ConfigurationSetName: !Ref WaitlistEmailConfigurationSet
+      DkimSigningAttributes:
+        NextSigningKeyLength: RSA_2048_BIT
+      FeedbackAttributes:
+        EmailForwardingEnabled: false
+
+  WaitlistDkimRecords:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneId: !Ref Route53HostedZoneId
+      RecordSets:
+        - Name: !GetAtt WaitlistEmailIdentity.DkimDNSTokenName1
+          Type: CNAME
+          TTL: 1800
+          ResourceRecords: [!GetAtt WaitlistEmailIdentity.DkimDNSTokenValue1]
+        - Name: !GetAtt WaitlistEmailIdentity.DkimDNSTokenName2
+          Type: CNAME
+          TTL: 1800
+          ResourceRecords: [!GetAtt WaitlistEmailIdentity.DkimDNSTokenValue2]
+        - Name: !GetAtt WaitlistEmailIdentity.DkimDNSTokenName3
+          Type: CNAME
+          TTL: 1800
+          ResourceRecords: [!GetAtt WaitlistEmailIdentity.DkimDNSTokenValue3]
+
+  WaitlistSesEventDestination:
+    Type: AWS::SES::ConfigurationSetEventDestination
+    Properties:
+      ConfigurationSetName: !Ref WaitlistEmailConfigurationSet
+      EventDestination:
+        Name: WaitlistEvents
+        Enabled: true
+        MatchingEventTypes: [SEND, REJECT, BOUNCE, COMPLAINT, DELIVERY, RENDERING_FAILURE, DELIVERY_DELAY]
+        EventBridgeDestination:
+          EventBusArn: !Sub arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:event-bus/default
 
   WaitlistFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -64,72 +206,403 @@ Resources:
     Properties:
       LogGroupName: /aws/lambda/JobSeekerCopilotWaitlist
       RetentionInDays: 30
+  ConfirmationFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: /aws/lambda/JobSeekerCopilotWaitlistConfirm
+      RetentionInDays: 30
+  ResendFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: /aws/lambda/JobSeekerCopilotWaitlistResend
+      RetentionInDays: 30
+  SesEventsFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: /aws/lambda/JobSeekerCopilotWaitlistSesEvents
+      RetentionInDays: 30
+  TtlFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: /aws/lambda/JobSeekerCopilotWaitlistTtlConfiguration
+      RetentionInDays: 30
 
   WaitlistExecutionRole:
     Type: AWS::IAM::Role
     Properties:
-      Description: Least-privilege execution role for the Job Seeker Copilot waitlist Lambda.
-      AssumeRolePolicyDocument:
+      Description: Least-privilege role for pending subscription creation and confirmation delivery.
+      AssumeRolePolicyDocument: &LambdaTrust
         Version: '2012-10-17'
         Statement:
           - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
+            Principal: {Service: lambda.amazonaws.com}
             Action: sts:AssumeRole
       Policies:
-        - PolicyName: WriteOnlyToExistingWaitlistTable
+        - PolicyName: WaitlistSubscriptionData
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
-              - Sid: ConditionalWaitlistPut
-                Effect: Allow
-                Action: dynamodb:PutItem
+              - Effect: Allow
+                Action: [dynamodb:GetItem, dynamodb:PutItem, dynamodb:UpdateItem]
                 Resource: !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${WaitlistTableName}
-        - PolicyName: WriteOnlyToWaitlistLambdaLogs
+              - Effect: Allow
+                Action: [dynamodb:PutItem, dynamodb:DeleteItem]
+                Resource: !GetAtt TokenTable.Arn
+        - &SendEmailPolicy
+          PolicyName: SendWaitlistConfirmationOnly
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
-              - Sid: WriteFunctionLogs
-                Effect: Allow
-                Action:
-                  - logs:CreateLogStream
-                  - logs:PutLogEvents
+              - Effect: Allow
+                Action: ses:SendEmail
+                Resource: !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesDomainIdentity}
+                Condition:
+                  StringEquals:
+                    ses:FromAddress: !Ref WaitlistSenderEmail
+              - Effect: Allow
+                Action: ses:SendEmail
+                Resource: !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:configuration-set/${SesConfigurationSetName}
+        - PolicyName: WriteWaitlistFunctionLogs
+          PolicyDocument: &WaitlistLogPolicy
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
                 Resource: !GetAtt WaitlistFunctionLogGroup.Arn
+
+  ConfirmationExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: Least-privilege role for atomic single-use confirmation.
+      AssumeRolePolicyDocument: *LambdaTrust
+      Policies:
+        - PolicyName: ConfirmWaitlistRecord
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: dynamodb:UpdateItem
+                Resource: !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${WaitlistTableName}
+              - Effect: Allow
+                Action: [dynamodb:GetItem, dynamodb:UpdateItem]
+                Resource: !GetAtt TokenTable.Arn
+        - PolicyName: WriteConfirmationLogs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !GetAtt ConfirmationFunctionLogGroup.Arn
+
+  ResendExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: Least-privilege role for controlled confirmation resends.
+      AssumeRolePolicyDocument: *LambdaTrust
+      Policies:
+        - PolicyName: RotatePendingConfirmation
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [dynamodb:GetItem, dynamodb:UpdateItem]
+                Resource: !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${WaitlistTableName}
+              - Effect: Allow
+                Action: [dynamodb:PutItem, dynamodb:DeleteItem]
+                Resource: !GetAtt TokenTable.Arn
+        - *SendEmailPolicy
+        - PolicyName: WriteResendLogs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !GetAtt ResendFunctionLogGroup.Arn
+
+  SesEventsExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: Least-privilege role for SES delivery, bounce, and complaint state updates.
+      AssumeRolePolicyDocument: *LambdaTrust
+      Policies:
+        - PolicyName: RecordSesOutcome
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: dynamodb:UpdateItem
+                Resource: !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${WaitlistTableName}
+        - PolicyName: WriteSesEventLogs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !GetAtt SesEventsFunctionLogGroup.Arn
+
+  TtlConfigurationExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: Configures only pendingExpiresAt TTL on the external waitlist table; delete is a no-op.
+      AssumeRolePolicyDocument: *LambdaTrust
+      Policies:
+        - PolicyName: ConfigurePendingRecordTtl
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [dynamodb:DescribeTimeToLive, dynamodb:UpdateTimeToLive]
+                Resource: !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${WaitlistTableName}
+        - PolicyName: WriteTtlConfigurationLogs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !GetAtt TtlFunctionLogGroup.Arn
 
   WaitlistFunction:
     Type: AWS::Serverless::Function
-    DependsOn: WaitlistFunctionLogGroup
+    DependsOn: [WaitlistFunctionLogGroup, WaitlistEmailIdentity]
     Properties:
       FunctionName: JobSeekerCopilotWaitlist
-      Description: Validates and conditionally persists landing-page waitlist registrations.
+      Description: Creates PENDING waitlist records and sends double-opt-in confirmation email.
       CodeUri: function/
       Handler: app.handler
       Role: !GetAtt WaitlistExecutionRole.Arn
+      Environment:
+        Variables: &EmailEnvironment
+          SES_REGION: !Ref AWS::Region
+          WAITLIST_SENDER_EMAIL: !Ref WaitlistSenderEmail
+          PUBLIC_SUPPORT_EMAIL: !Ref PublicSupportEmail
+          PUBLIC_SITE_URL: !Ref PublicSiteUrl
+          SES_CONFIGURATION_SET: !Ref WaitlistEmailConfigurationSet
+          CONFIRMATION_TOKEN_TTL_SECONDS: !Ref ConfirmationTokenTtlSeconds
+          CONFIRMATION_RESEND_COOLDOWN_SECONDS: !Ref ConfirmationResendCooldownSeconds
+          MAX_CONFIRMATION_SENDS: !Ref MaxConfirmationSends
+          CONFIRMATION_SEND_WINDOW_SECONDS: !Ref ConfirmationSendWindowSeconds
+          PENDING_RETENTION_SECONDS: !Ref PendingRetentionSeconds
+          USED_TOKEN_RETENTION_SECONDS: !Ref UsedTokenRetentionSeconds
+          CONSENT_VERSION: !Ref ConsentVersion
       Events:
         PostWaitlist:
+          Type: HttpApi
+          Properties: {ApiId: !Ref WaitlistApi, Method: POST, Path: /waitlist, PayloadFormatVersion: '2.0'}
+        OptionsWaitlist:
+          Type: HttpApi
+          Properties: {ApiId: !Ref WaitlistApi, Method: OPTIONS, Path: /waitlist, PayloadFormatVersion: '2.0'}
+
+  ConfirmationFunction:
+    Type: AWS::Serverless::Function
+    DependsOn: ConfirmationFunctionLogGroup
+    Properties:
+      FunctionName: JobSeekerCopilotWaitlistConfirm
+      Description: Atomically consumes a token and confirms one pending subscriber.
+      CodeUri: function/
+      Handler: confirm.handler
+      Role: !GetAtt ConfirmationExecutionRole.Arn
+      Environment:
+        Variables:
+          USED_TOKEN_RETENTION_SECONDS: !Ref UsedTokenRetentionSeconds
+      Events:
+        Confirm:
+          Type: HttpApi
+          Properties: {ApiId: !Ref WaitlistApi, Method: POST, Path: /waitlist/confirm, PayloadFormatVersion: '2.0'}
+        ConfirmOptions:
+          Type: HttpApi
+          Properties: {ApiId: !Ref WaitlistApi, Method: OPTIONS, Path: /waitlist/confirm, PayloadFormatVersion: '2.0'}
+
+  ResendFunction:
+    Type: AWS::Serverless::Function
+    DependsOn: [ResendFunctionLogGroup, WaitlistEmailIdentity]
+    Properties:
+      FunctionName: JobSeekerCopilotWaitlistResend
+      Description: Applies per-address cooldown and send limits before rotating confirmation tokens.
+      CodeUri: function/
+      Handler: resend.handler
+      Role: !GetAtt ResendExecutionRole.Arn
+      Environment:
+        Variables: *EmailEnvironment
+      Events:
+        Resend:
           Type: HttpApi
           Properties:
             ApiId: !Ref WaitlistApi
             Method: POST
-            Path: /waitlist
+            Path: /waitlist/resend
             PayloadFormatVersion: '2.0'
-        OptionsWaitlist:
+            RouteSettings: {ThrottlingBurstLimit: 3, ThrottlingRateLimit: 1}
+        ResendOptions:
           Type: HttpApi
+          Properties: {ApiId: !Ref WaitlistApi, Method: OPTIONS, Path: /waitlist/resend, PayloadFormatVersion: '2.0'}
+
+  SesEventsFunction:
+    Type: AWS::Serverless::Function
+    DependsOn: SesEventsFunctionLogGroup
+    Properties:
+      FunctionName: JobSeekerCopilotWaitlistSesEvents
+      Description: Records SES bounce, complaint, delivery, delay, reject, and rendering outcomes.
+      CodeUri: function/
+      Handler: ses_events.handler
+      Role: !GetAtt SesEventsExecutionRole.Arn
+      Events:
+        SesEvents:
+          Type: EventBridgeRule
           Properties:
-            ApiId: !Ref WaitlistApi
-            Method: OPTIONS
-            Path: /waitlist
-            PayloadFormatVersion: '2.0'
+            Pattern:
+              source: [aws.ses]
+              detail-type:
+                - Email Bounced
+                - Email Complaint Received
+                - Email Delivered
+                - Email Delivery Delayed
+                - Email Rejected
+                - Email Rendering Failed
+              detail:
+                mail:
+                  tags:
+                    'ses:configuration-set': [!Ref WaitlistEmailConfigurationSet]
+
+  TtlConfigurationFunction:
+    Type: AWS::Serverless::Function
+    DependsOn: TtlFunctionLogGroup
+    Properties:
+      FunctionName: JobSeekerCopilotWaitlistTtlConfiguration
+      Description: Safely enables pendingExpiresAt TTL on the existing waitlist table.
+      CodeUri: function/
+      Handler: ttl_configurator.handler
+      Role: !GetAtt TtlConfigurationExecutionRole.Arn
+      Timeout: 60
+
+  WaitlistPendingTtlConfiguration:
+    Type: Custom::WaitlistPendingTtl
+    Properties:
+      ServiceToken: !GetAtt TtlConfigurationFunction.Arn
+      TableName: !Ref WaitlistTableName
+      AttributeName: pendingExpiresAt
+
+  ConfirmationSendFailureAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties: &SingleCustomFailureAlarm
+      Namespace: JobSeekerCopilot/Waitlist
+      MetricName: ConfirmationSendFailures
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+  SesBounceAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      <<: *SingleCustomFailureAlarm
+      MetricName: SesBounces
+  SesComplaintAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      <<: *SingleCustomFailureAlarm
+      MetricName: SesComplaints
+  InvalidTokenVolumeAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      <<: *SingleCustomFailureAlarm
+      MetricName: InvalidConfirmationTokens
+      Threshold: 20
+  ResendVolumeAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      <<: *SingleCustomFailureAlarm
+      MetricName: ResendIssued
+      Threshold: 20
+  ApiServerErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      Namespace: AWS/ApiGateway
+      MetricName: 5xx
+      Dimensions:
+        - {Name: ApiId, Value: !Ref WaitlistApi}
+        - {Name: Stage, Value: '$default'}
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+  WaitlistDynamoThrottlingAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      Namespace: AWS/DynamoDB
+      MetricName: ThrottledRequests
+      Dimensions:
+        - {Name: TableName, Value: !Ref WaitlistTableName}
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+  WaitlistLambdaErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties: &LambdaErrorAlarm
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - {Name: FunctionName, Value: !Ref WaitlistFunction}
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+  ConfirmationLambdaErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      <<: *LambdaErrorAlarm
+      Dimensions:
+        - {Name: FunctionName, Value: !Ref ConfirmationFunction}
+  ResendLambdaErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      <<: *LambdaErrorAlarm
+      Dimensions:
+        - {Name: FunctionName, Value: !Ref ResendFunction}
+  SesEventsLambdaErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      <<: *LambdaErrorAlarm
+      Dimensions:
+        - {Name: FunctionName, Value: !Ref SesEventsFunction}
 
 Outputs:
-  ApiEndpoint:
-    Description: POST endpoint used by the Angular WAITLIST_API_URL runtime variable.
+  ApiBaseUrl:
+    Value: !Sub https://${WaitlistApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}
+  SubscribeEndpoint:
     Value: !Sub https://${WaitlistApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/waitlist
-  ApiId:
-    Value: !Ref WaitlistApi
-  LambdaName:
-    Value: !Ref WaitlistFunction
-  LambdaExecutionRoleName:
-    Value: !Ref WaitlistExecutionRole
-  DynamoDbPermission:
-    Value: !Sub dynamodb:PutItem on arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${WaitlistTableName}
+  ConfirmationEndpoint:
+    Value: !Sub https://${WaitlistApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/waitlist/confirm
+  ResendEndpoint:
+    Value: !Sub https://${WaitlistApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/waitlist/resend
+  SubscribeLambdaName: {Value: !Ref WaitlistFunction}
+  ConfirmationLambdaName: {Value: !Ref ConfirmationFunction}
+  ResendLambdaName: {Value: !Ref ResendFunction}
+  SesEventsLambdaName: {Value: !Ref SesEventsFunction}
+  TokenTableName: {Value: !Ref TokenTable}
+  WaitlistTableProtection:
+    Description: The existing table is an external parameter, not a stack resource, so this stack cannot replace or delete it.
+    Value: !Sub '${WaitlistTableName} is external; pendingExpiresAt TTL only'
+  SesIdentity: {Value: !Ref WaitlistEmailIdentity}
+  SesConfigurationSet: {Value: !Ref WaitlistEmailConfigurationSet}
+  DkimRecordName1: {Value: !GetAtt WaitlistEmailIdentity.DkimDNSTokenName1}
+  DkimRecordValue1: {Value: !GetAtt WaitlistEmailIdentity.DkimDNSTokenValue1}
+  DkimRecordName2: {Value: !GetAtt WaitlistEmailIdentity.DkimDNSTokenName2}
+  DkimRecordValue2: {Value: !GetAtt WaitlistEmailIdentity.DkimDNSTokenValue2}
+  DkimRecordName3: {Value: !GetAtt WaitlistEmailIdentity.DkimDNSTokenName3}
+  DkimRecordValue3: {Value: !GetAtt WaitlistEmailIdentity.DkimDNSTokenValue3}
