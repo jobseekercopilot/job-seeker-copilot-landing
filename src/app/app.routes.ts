@@ -7,6 +7,11 @@ export const routes: Routes = [
     title: 'Job Seeker Copilot | Organise your job search',
   },
   {
+    path: 'about',
+    loadComponent: () => import('./pages/about/about').then(module => module.AboutPage),
+    title: 'The Story Behind Job Seeker Copilot | The Journey So Far',
+  },
+  {
     path: 'privacy',
     loadComponent: () => import('./pages/legal/legal-page').then(module => module.LegalPage),
     data: { page: 'privacy' },
