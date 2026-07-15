@@ -7,6 +7,7 @@
         <span class="status-pill"><i aria-hidden="true"></i>Coming soon · Waitlist open</span>
         <h1 id="hero-heading">Your whole job search, <span>working together.</span></h1>
         <p class="hero-lead">Find roles across supported job sites, generate a tailored CV and cover letter together for each opportunity, keep the latest versions organised and track what happens next.</p>
+        <p class="contextual-faq-link">Have questions about how it works? <a routerLink="/faq">Read the FAQs.</a></p>
         <app-waitlist-offer context="hero" />
         <app-email-signup-form context="hero" />
         <div class="hero-reassurance" aria-label="Product highlights">
@@ -61,6 +62,8 @@
     </div>
   </section>
 
+  <app-competitor-comparison-section />
+
   <app-roadmap-section />
 
   <app-pricing-section />
@@ -76,6 +79,7 @@
         <h2 id="waitlist-heading">Ready for a more organised job search?</h2>
         <p>Register your interest now. Invitations and product account creation happen separately.</p>
         <app-waitlist-offer context="final" />
+        <p class="final-faq-link">Not ready to join yet? <a routerLink="/faq">Read the FAQs.</a></p>
       </div>
       <app-email-signup-form context="footer" />
     </div>

@@ -116,6 +116,15 @@
   font-size: 0.78rem;
 }
 
+.reporting-faq-link {
+  color: #1554ba;
+  display: inline-block;
+  font-size: .84rem;
+  font-weight: 800;
+  margin-top: 2px;
+  text-underline-offset: 4px;
+}
+
 @media (max-width: 1020px) {
   .statistics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

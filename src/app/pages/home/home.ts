@@ -1,5 +1,7 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { AccessibilitySectionComponent } from '../../components/accessibility-section/accessibility-section';
+import { CompetitorComparisonSectionComponent } from '../../components/competitor-comparison-section/competitor-comparison-section';
 import { EmailSignupFormComponent } from '../../components/email-signup-form/email-signup-form';
 import { FeatureSectionComponent, LandingFeature } from '../../components/feature-section/feature-section';
 import { FooterComponent } from '../../components/footer/footer';
@@ -24,7 +26,9 @@ import { WaitlistOfferComponent } from '../../components/waitlist-offer/waitlist
     RoadmapSectionComponent,
     LabourMarketSectionComponent,
     AccessibilitySectionComponent,
+    CompetitorComparisonSectionComponent,
     FooterComponent,
+    RouterLink,
   ],
   templateUrl: './home.html',
   styleUrl: './home.css',

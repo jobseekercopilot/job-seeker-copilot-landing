@@ -1,0 +1,64 @@
+<div class="comparison-legend" aria-label="Comparison status legend">
+  @for (status of legendStatuses; track status) {
+    <span>
+      <i [class]="'status-icon status-' + status" aria-hidden="true">{{ statusPresentation(status).icon }}</i>
+      {{ statusPresentation(status).label }}
+    </span>
+  }
+  @if (showPlanned()) {
+    <span>
+      <i class="status-icon status-planned" aria-hidden="true">{{ statusPresentation('planned').icon }}</i>
+      {{ statusPresentation('planned').label }}
+    </span>
+  }
+</div>
+
+<p class="scroll-hint">Scroll horizontally to compare every platform <span aria-hidden="true">→</span></p>
+
+<div class="comparison-scroll" tabindex="0" aria-label="Scrollable feature comparison">
+  <table>
+    <caption class="sr-only">Job-search platform feature comparison</caption>
+    <thead>
+      <tr>
+        <th class="feature-column" scope="col">Feature</th>
+        @for (platform of platforms(); track platform.id) {
+          <th [class.our-platform]="platform.isJobSeekerCopilot" scope="col">
+            <span class="platform-heading">
+              <span class="logo-container">
+                <img [src]="platform.logoPath" width="40" height="40" [alt]="platform.name + ' logo'">
+              </span>
+              <strong>{{ platform.name }}</strong>
+              @if (platform.isJobSeekerCopilot) {
+                <small>Our approach · In development</small>
+              }
+            </span>
+          </th>
+        }
+      </tr>
+    </thead>
+    <tbody>
+      @for (feature of features(); track feature.id; let index = $index) {
+        <tr [class.alternate-row]="index % 2 === 1">
+          <th class="feature-column" scope="row">
+            <span>{{ feature.label }}</span>
+            <span class="feature-help">
+              <button type="button" [attr.aria-describedby]="'feature-help-' + feature.id" [attr.aria-label]="'About ' + feature.label">i</button>
+              <span class="feature-tooltip" role="tooltip" [id]="'feature-help-' + feature.id">{{ feature.description }}</span>
+            </span>
+          </th>
+          @for (platform of platforms(); track platform.id) {
+            @let status = platform.features[feature.id];
+            <td [class.our-platform]="platform.isJobSeekerCopilot">
+              <span
+                [class]="'feature-status status-' + status"
+                [title]="statusPresentation(status).label">
+                <span aria-hidden="true">{{ statusPresentation(status).icon }}</span>
+                <span class="sr-only">{{ statusPresentation(status).label }}</span>
+              </span>
+            </td>
+          }
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>

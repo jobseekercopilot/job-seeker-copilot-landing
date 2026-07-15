@@ -7,7 +7,8 @@
           [routerLink]="article.path"
           [attr.aria-current]="article.path === currentPath() ? 'page' : null"
           [class.active]="article.path === currentPath()">
-          {{ article.title }}
+          <span>{{ article.title }}</span>
+          <time [attr.datetime]="article.dateTime">{{ article.publishedDate }}</time>
         </a>
       </li>
     }

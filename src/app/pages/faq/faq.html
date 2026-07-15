@@ -1,0 +1,84 @@
+<header class="faq-site-header">
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <div class="container faq-site-header-inner">
+    <a class="faq-brand" routerLink="/" aria-label="Job Seeker Copilot home">
+      <img src="/brand/jobseeker-copilot-logo.svg" width="38" height="38" alt="">
+      <span>Job Seeker Copilot</span>
+    </a>
+    <a class="back-link" routerLink="/">Back to the homepage</a>
+  </div>
+</header>
+
+<main id="main-content" class="faq-main" tabindex="-1">
+  <div class="faq-shell">
+    <header class="faq-heading">
+      <span class="status-badge"><i aria-hidden="true"></i>Pre-beta</span>
+      <h1>Frequently Asked Questions</h1>
+      <p class="faq-introduction">Find out what Job Seeker Copilot does, who it is being built for, how it searches for vacancies and how it aims to make the job-search process easier to organise.</p>
+      <p class="status-explanation">Job Seeker Copilot is currently in active development and is being prepared for private beta testing. Some features described as planned or in development may change before release.</p>
+    </header>
+
+    <div class="faq-layout">
+      <nav class="page-navigation" aria-labelledby="on-this-page-heading">
+        <h2 id="on-this-page-heading">On this page</h2>
+        <ol>
+          @for (item of items; track item.id) {
+            <li><a [routerLink]="[]" [fragment]="item.id">{{ item.question }}</a></li>
+          }
+        </ol>
+      </nav>
+
+      <section class="faq-list" aria-label="Frequently asked questions">
+        @for (item of items; track item.id; let index = $index) {
+          <article class="faq-item" [id]="item.id">
+            <h2>
+              <button
+                type="button"
+                [id]="'faq-button-' + item.id"
+                [attr.aria-expanded]="openItemId() === item.id"
+                [attr.aria-controls]="'faq-answer-' + item.id"
+                (click)="toggle(item)">
+                <span><small>{{ index + 1 < 10 ? '0' + (index + 1) : index + 1 }}</small>{{ item.question }}</span>
+                <i aria-hidden="true"></i>
+              </button>
+            </h2>
+            <div
+              class="faq-answer"
+              [id]="'faq-answer-' + item.id"
+              [attr.aria-labelledby]="'faq-button-' + item.id"
+              [hidden]="openItemId() !== item.id">
+              <div class="answer-inner">
+                @for (block of item.blocks; track $index) {
+                  @switch (block.type) {
+                    @case ('paragraph') { <p>{{ block.text }}</p> }
+                    @case ('emphasis') { <p class="answer-emphasis"><strong>{{ block.text }}</strong></p> }
+                    @case ('bullets') {
+                      <ul>@for (point of block.items; track point) { <li>{{ point }}</li> }</ul>
+                    }
+                  }
+                }
+                @if (item.callToAction; as action) {
+                  <a
+                    [class.button]="action.style === 'button'"
+                    [class.button-primary]="action.style === 'button'"
+                    [class.answer-link]="action.style === 'link'"
+                    [routerLink]="action.route"
+                    [fragment]="action.fragment ?? undefined">
+                    {{ action.label }} <span aria-hidden="true">→</span>
+                  </a>
+                }
+              </div>
+            </div>
+          </article>
+        }
+      </section>
+    </div>
+
+    <aside class="faq-closing" aria-label="Waiting list">
+      <div><strong>Interested in following the product?</strong><p>Join the waiting list for development updates and future private beta information.</p></div>
+      <a class="button button-primary" routerLink="/" fragment="waitlist">Join the waiting list</a>
+    </aside>
+  </div>
+</main>
+
+<app-footer />

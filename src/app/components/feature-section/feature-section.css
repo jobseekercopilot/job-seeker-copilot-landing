@@ -119,6 +119,15 @@ app-screenshot-frame {
   color: var(--colour-amber);
 }
 
+.feature-faq-link {
+  color: #1554ba;
+  display: inline-block;
+  font-size: 0.84rem;
+  font-weight: 800;
+  margin-top: 25px;
+  text-underline-offset: 4px;
+}
+
 @media (max-width: 900px) {
   .feature {
     gap: 44px;
