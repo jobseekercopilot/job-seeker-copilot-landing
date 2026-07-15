@@ -1,0 +1,88 @@
+.timeline {
+  background: #f4f6f8;
+  border: 1px solid #dfe4ea;
+  border-radius: 18px;
+  margin-block: clamp(48px, 8vw, 72px);
+  padding: clamp(26px, 5vw, 42px);
+}
+
+.timeline header {
+  border-bottom: 1px solid #d9dfe6;
+  margin-bottom: 28px;
+  padding-bottom: 24px;
+}
+
+.timeline .eyebrow {
+  color: #4b5563;
+  margin-bottom: 10px;
+}
+
+.timeline h2 {
+  font-size: clamp(1.35rem, 3vw, 1.75rem);
+  margin: 0;
+}
+
+.timeline ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.timeline li {
+  display: grid;
+  gap: 3px;
+  padding: 0 0 31px 32px;
+  position: relative;
+}
+
+.timeline li:not(:last-child)::before {
+  background: #c6cdd6;
+  content: '';
+  height: 100%;
+  left: 7px;
+  position: absolute;
+  top: 9px;
+  width: 1px;
+}
+
+.timeline li::after {
+  background: #ffffff;
+  border: 2px solid #566273;
+  border-radius: 50%;
+  content: '';
+  height: 11px;
+  left: 1px;
+  position: absolute;
+  top: 6px;
+  width: 11px;
+}
+
+.timeline li:last-child {
+  padding-bottom: 0;
+}
+
+.timeline time,
+.timeline small {
+  color: #5b6574;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.timeline strong,
+.timeline span {
+  color: #202938;
+  font-size: 0.94rem;
+}
+
+.timeline .current-step::after {
+  background: #202938;
+  box-shadow: 0 0 0 4px #dce1e7;
+}
+
+@media (max-width: 520px) {
+  .timeline li {
+    padding-left: 28px;
+  }
+}
