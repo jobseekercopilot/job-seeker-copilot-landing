@@ -16,5 +16,8 @@
         <li><span aria-hidden="true">✓</span>{{ point }}</li>
       }
     </ul>
+    @if (feature().id === 'multi-source-search') {
+      <a class="feature-faq-link" routerLink="/faq" fragment="job-sources">How many job sites does Job Seeker Copilot search?</a>
+    }
   </div>
 </article>

@@ -29,14 +29,17 @@ describe('AboutPage', () => {
     expect(text).toContain('AI is a tool, not the purpose');
   });
 
-  it('marks the only published journey article as current', () => {
+  it('lists published journey articles newest first and marks the story as current', () => {
     const fixture = TestBed.createComponent(AboutPage);
     fixture.detectChanges();
     const navigationLinks = fixture.nativeElement.querySelectorAll('.journey-navigation a') as NodeListOf<HTMLAnchorElement>;
 
-    expect(navigationLinks).toHaveLength(1);
-    expect(navigationLinks[0].textContent?.trim()).toBe('The Story Behind Job Seeker Copilot');
-    expect(navigationLinks[0].getAttribute('aria-current')).toBe('page');
+    expect(navigationLinks).toHaveLength(2);
+    expect(navigationLinks[0].textContent).toContain('How Job Seeker Copilot Compares');
+    expect(navigationLinks[0].textContent).toContain('16 July 2026');
+    expect(navigationLinks[1].textContent).toContain('The Story Behind Job Seeker Copilot');
+    expect(navigationLinks[1].textContent).toContain('14 July 2026');
+    expect(navigationLinks[1].getAttribute('aria-current')).toBe('page');
   });
 
   it('sets the requested search description', () => {

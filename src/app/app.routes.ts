@@ -12,6 +12,16 @@ export const routes: Routes = [
     title: 'The Story Behind Job Seeker Copilot | The Journey So Far',
   },
   {
+    path: 'faq',
+    loadComponent: () => import('./pages/faq/faq').then(module => module.FaqPage),
+    title: 'Frequently Asked Questions | Job Seeker Copilot',
+  },
+  {
+    path: 'the-journey-so-far/job-search-platform-comparison',
+    loadComponent: () => import('./pages/platform-comparison/platform-comparison').then(module => module.PlatformComparisonPage),
+    title: 'How Job Seeker Copilot Compares with Today’s Job Search Platforms | The Journey So Far',
+  },
+  {
     path: 'privacy',
     loadComponent: () => import('./pages/legal/legal-page').then(module => module.LegalPage),
     data: { page: 'privacy' },

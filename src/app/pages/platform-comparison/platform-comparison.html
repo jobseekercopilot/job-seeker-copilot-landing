@@ -1,0 +1,141 @@
+<header class="article-site-header">
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <div class="container article-site-header-inner">
+    <a class="article-brand" routerLink="/" aria-label="Job Seeker Copilot home">
+      <img src="/brand/jobseeker-copilot-logo.svg" width="38" height="38" alt="">
+      <span>Job Seeker Copilot</span>
+    </a>
+    <a class="back-link" routerLink="/">Back to the waiting list</a>
+  </div>
+</header>
+
+<main id="main-content" class="research-main" tabindex="-1">
+  <div class="journey-layout">
+    <aside class="journey-sidebar">
+      <app-journey-navigation [articles]="journeyArticles" [currentPath]="articlePath" />
+    </aside>
+
+    <article class="research-article">
+      <header class="article-header">
+        <span class="eyebrow">The Journey So Far</span>
+        <h1>How Job Seeker Copilot Compares with Today’s Job Search Platforms</h1>
+        <ul class="article-meta" aria-label="Article details">
+          <li><time datetime="2026-07-16">16 July 2026</time></li>
+          <li>Bernard McGeever</li>
+          <li>Approx. 14 min read</li>
+        </ul>
+      </header>
+
+      <p class="opening">Before deciding what Job Seeker Copilot should become, I wanted to understand what job boards and specialist job-search tools already do well—and where a more connected UK-focused workflow might still be useful.</p>
+
+      <section aria-labelledby="why-research">
+        <h2 id="why-research">Why I carried out this research</h2>
+        <p>Good product decisions begin with an honest view of the alternatives. Jobseekers already use capable products for finding vacancies, tracking applications, tailoring documents and completing forms. Treating all of those products as simple job boards would create the wrong starting point.</p>
+        <p>This comparison is therefore not a scorecard or a claim of superiority. It records the capabilities I could confirm, the limits described in public documentation and the product choices those findings suggest for Job Seeker Copilot.</p>
+      </section>
+
+      <section aria-labelledby="method">
+        <h2 id="method">Research method</h2>
+        <p>I reviewed official product pages and help-centre documentation on 15 July 2026. A feature is marked confirmed when the provider’s own documentation establishes it; limited when availability, scope or workflow is constrained; and not publicly confirmed when I could not establish it from those sources. Absence from public documentation is not proof that a capability does not exist.</p>
+        <aside class="disclaimer" aria-label="Comparison disclaimer">
+          <strong>Independent comparison.</strong> Job Seeker Copilot is not affiliated with, endorsed by or sponsored by any platform named in this article. Product features can change, and readers should check each provider’s current documentation before making a decision.
+        </aside>
+      </section>
+
+      <section aria-labelledby="main-conclusion">
+        <h2 id="main-conclusion">The main conclusion</h2>
+        <p>The market is not divided neatly between job boards that find vacancies and new tools that manage everything else. LinkedIn and Indeed provide tracking and application support; UK boards provide stored documents and application history; and products such as Teal, Huntr, Simplify, Jobscan, Careerflow and Kickresume connect several stages of the workflow.</p>
+        <p>The useful opportunity is narrower: build a calm, UK-focused workspace where discovery, match information, vacancy-specific documents, application progress and activity history remain connected, while the jobseeker decides what is submitted.</p>
+      </section>
+
+      <section aria-labelledby="traditional-platforms">
+        <h2 id="traditional-platforms">Job boards and UK-focused platforms</h2>
+        <p>These services are important discovery routes and several provide meaningful application-management capabilities of their own.</p>
+        @for (research of traditionalPlatforms; track research.platformId) {
+          @let platform = platformFor(research);
+          <section class="platform-review" [attr.aria-labelledby]="'platform-' + research.platformId">
+            <header>
+              <span class="platform-logo"><img [src]="platform.logoPath" width="48" height="48" [alt]="platform.name + ' logo'"></span>
+              <div><h3 [id]="'platform-' + research.platformId">{{ platform.name }}</h3><p>{{ research.description }}</p></div>
+            </header>
+            <div class="finding-grid">
+              <div><h4>Confirmed</h4><ul>@for (item of research.confirmed; track item) { <li>{{ item }}</li> }</ul></div>
+              <div><h4>Boundaries</h4><ul>@for (item of research.boundaries; track item) { <li>{{ item }}</li> }</ul></div>
+              <div><h4>Not publicly confirmed</h4><ul>@for (item of research.notConfirmed; track item) { <li>{{ item }}</li> }</ul></div>
+            </div>
+            <p class="significance"><strong>Why it matters:</strong> {{ research.significance }}</p>
+            <p class="sources"><strong>Official sources:</strong> @for (source of research.sources; track source.url; let last = $last) { <a [href]="source.url" target="_blank" rel="noopener noreferrer">{{ source.label }}</a>@if (!last) {<span>, </span>} }</p>
+          </section>
+        }
+      </section>
+
+      <section aria-labelledby="specialist-platforms">
+        <h2 id="specialist-platforms">Specialist job-search workspaces</h2>
+        <p>These products provide the clearest overlap with the proposed Job Seeker Copilot workflow, particularly around tracking, tailoring and browser-assisted applications.</p>
+        @for (research of specialistPlatforms; track research.platformId) {
+          @let platform = platformFor(research);
+          <section class="platform-review" [attr.aria-labelledby]="'platform-' + research.platformId">
+            <header>
+              <span class="platform-logo"><img [src]="platform.logoPath" width="48" height="48" [alt]="platform.name + ' logo'"></span>
+              <div><h3 [id]="'platform-' + research.platformId">{{ platform.name }}</h3><p>{{ research.description }}</p></div>
+            </header>
+            <div class="finding-grid">
+              <div><h4>Confirmed</h4><ul>@for (item of research.confirmed; track item) { <li>{{ item }}</li> }</ul></div>
+              <div><h4>Boundaries</h4><ul>@for (item of research.boundaries; track item) { <li>{{ item }}</li> }</ul></div>
+              <div><h4>Not publicly confirmed</h4><ul>@for (item of research.notConfirmed; track item) { <li>{{ item }}</li> }</ul></div>
+            </div>
+            <p class="significance"><strong>Why it matters:</strong> {{ research.significance }}</p>
+            <p class="sources"><strong>Official sources:</strong> @for (source of research.sources; track source.url; let last = $last) { <a [href]="source.url" target="_blank" rel="noopener noreferrer">{{ source.label }}</a>@if (!last) {<span>, </span>} }</p>
+          </section>
+        }
+      </section>
+
+      <section class="wide-section" aria-labelledby="full-comparison">
+        <h2 id="full-comparison">Full feature comparison</h2>
+        <p>The matrix separates assisted form filling from automatic submission and marks future Job Seeker Copilot ideas as planned rather than available.</p>
+        <app-comparison-matrix [platforms]="platforms" [features]="features" [showPlanned]="true" />
+      </section>
+
+      <section aria-labelledby="overlap">
+        <h2 id="overlap">Where the products overlap</h2>
+        <p>Application tracking, résumé tailoring, cover-letter help and browser-assisted form filling are established categories. Multi-source saving is also available from several specialist tools, while Adzuna documents both aggregated discovery and an automated application service. Job Seeker Copilot should earn trust through the quality and clarity of its connected workflow, not by presenting familiar capabilities as inventions.</p>
+      </section>
+
+      <section aria-labelledby="positioning">
+        <h2 id="positioning">How Job Seeker Copilot is positioned</h2>
+        <p>The current product direction is a UK-focused workspace rather than another vacancy marketplace. A vacancy becomes the centre of a record: matching context, tailored CV, tailored cover letter, notes, status and activity history can stay together. Submission remains a deliberate user decision.</p>
+        <p>That approach sits between established boards, which remain valuable discovery channels, and specialist workspaces, which demonstrate how much of the wider process can already be connected.</p>
+      </section>
+
+      <section aria-labelledby="future-gap">
+        <h2 id="future-gap">A possible future UK support gap</h2>
+        <p>People receiving employment support may need to discuss what they have done to look and prepare for work. A structured activity history could make that record easier to understand and share. This remains a product hypothesis for later validation—not a current Job Seeker Copilot feature.</p>
+        <ul class="planned-list">
+          <li><strong>Planned:</strong> clearer summaries of job-search and preparation activity.</li>
+          <li><strong>Planned:</strong> user-controlled export or sharing of selected evidence.</li>
+          <li><strong>Planned:</strong> language and guidance designed around UK employment-support contexts.</li>
+        </ul>
+        <p>There is no current integration with the Department for Work and Pensions, Universal Credit or an adviser service, and none is implied. The relevant public context is described in the <a href="https://www.gov.uk/government/publications/universal-credit-and-your-claimant-commitment-quick-guide/universal-credit-and-your-claimant-commitment" target="_blank" rel="noopener noreferrer">UK Government’s claimant commitment guide</a>.</p>
+      </section>
+
+      <section aria-labelledby="implications">
+        <h2 id="implications">What this means for the product</h2>
+        <ul>
+          <li>Integrate with the way people already discover vacancies instead of pretending those channels can be replaced.</li>
+          <li>Keep every claim precise and distinguish available, limited and planned capabilities.</li>
+          <li>Prioritise the continuity between a vacancy, its tailored documents and its application record.</li>
+          <li>Make consent and review visible whenever AI helps prepare application material.</li>
+          <li>Validate any employment-support workflow directly with jobseekers and relevant professionals before building it.</li>
+        </ul>
+      </section>
+
+      <section class="conclusion" aria-labelledby="conclusion">
+        <h2 id="conclusion">The journey from research to product</h2>
+        <p>This research changed the framing in a useful way. Job Seeker Copilot does not need a dramatic claim about everything other products lack. It needs a coherent reason to exist: helping UK jobseekers keep the important parts of their search connected, understandable and under their control.</p>
+        <p>That is the standard I will use as the product develops—and why this comparison belongs in The Journey So Far.</p>
+      </section>
+    </article>
+  </div>
+</main>
+
+<app-footer />

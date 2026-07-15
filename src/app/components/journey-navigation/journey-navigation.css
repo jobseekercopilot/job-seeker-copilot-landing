@@ -41,6 +41,15 @@
   font-weight: 700;
 }
 
+.journey-navigation time {
+  color: #596575;
+  display: block;
+  font-family: var(--font-sans);
+  font-size: 0.68rem;
+  font-weight: 600;
+  margin-top: 3px;
+}
+
 @media (max-width: 980px) {
   .journey-navigation {
     border-left: 0;
