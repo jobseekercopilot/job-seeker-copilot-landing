@@ -92,18 +92,12 @@
   padding-bottom: clamp(32px, 6vw, 52px);
 }
 
-.founder-mark {
-  align-items: center;
-  background: #e5e7eb;
+.founder-portrait {
   border: 1px solid #cbd0d7;
   border-radius: 50%;
-  color: #374151;
-  display: flex;
-  font-size: 1.2rem;
-  font-weight: 800;
   height: clamp(76px, 12vw, 106px);
-  justify-content: center;
-  letter-spacing: 0.05em;
+  object-fit: cover;
+  object-position: center;
   width: clamp(76px, 12vw, 106px);
 }
 
