@@ -1,0 +1,15 @@
+<nav class="journey-navigation" aria-labelledby="journey-navigation-heading">
+  <h2 id="journey-navigation-heading">The Journey So Far</h2>
+  <ul>
+    @for (article of articles(); track article.path) {
+      <li>
+        <a
+          [routerLink]="article.path"
+          [attr.aria-current]="article.path === currentPath() ? 'page' : null"
+          [class.active]="article.path === currentPath()">
+          {{ article.title }}
+        </a>
+      </li>
+    }
+  </ul>
+</nav>

@@ -9,7 +9,7 @@ export const routes: Routes = [
   {
     path: 'about',
     loadComponent: () => import('./pages/about/about').then(module => module.AboutPage),
-    title: 'About the Founder | Job Seeker Copilot',
+    title: 'The Story Behind Job Seeker Copilot | The Journey So Far',
   },
   {
     path: 'privacy',
