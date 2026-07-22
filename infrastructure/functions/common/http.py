@@ -4,6 +4,20 @@ from dataclasses import dataclass
 from typing import Any
 
 
+API_SECURITY_HEADERS = {
+    "Content-Security-Policy": "default-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+    "Permissions-Policy": (
+        "accelerometer=(), autoplay=(), camera=(), display-capture=(), geolocation=(), "
+        "microphone=(), payment=(), usb=()"
+    ),
+    "Referrer-Policy": "no-referrer",
+    "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "X-Permitted-Cross-Domain-Policies": "none",
+}
+
+
 @dataclass
 class ApiError(Exception):
     status: int
@@ -16,8 +30,8 @@ def response(event: dict, status: int, success: bool, code: str, message: str) -
     headers = {
         "Content-Type": "application/json; charset=utf-8",
         "Cache-Control": "no-store",
-        "X-Content-Type-Options": "nosniff",
         "Vary": "Origin",
+        **API_SECURITY_HEADERS,
     }
     origin = request_origin(event)
     if origin and origin in allowed_origins():
@@ -39,12 +53,18 @@ def options_response(event: dict) -> dict:
         return response(event, 403, False, "ORIGIN_NOT_ALLOWED", "This origin is not allowed.")
     result = response(event, 204, True, "PREFLIGHT_OK", "")
     result["headers"].update({
-        "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+        "Access-Control-Allow-Methods": "POST,OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type",
         "Access-Control-Max-Age": "600",
     })
     result["body"] = ""
     return result
+
+
+def enforce_origin(event: dict) -> None:
+    origin = request_origin(event)
+    if origin and origin not in allowed_origins():
+        raise ApiError(403, "ORIGIN_NOT_ALLOWED", "This origin is not allowed.", "origin")
 
 
 def parse_json(event: dict) -> dict[str, Any]:
@@ -64,17 +84,20 @@ def parse_json(event: dict) -> dict[str, Any]:
     return value
 
 
-def query_token(event: dict) -> str:
-    token = str((event.get("queryStringParameters") or {}).get("token", "")).strip()
+def body_token(event: dict) -> str:
+    payload = parse_json(event)
+    if set(payload) != {"token"}:
+        raise ApiError(400, "INVALID_TOKEN", "This link is invalid or incomplete.", "validation")
+    token = str(payload.get("token", "")).strip()
     if not token or len(token) > 256:
         raise ApiError(400, "INVALID_TOKEN", "This link is invalid or incomplete.", "validation")
     return token
 
 
 def allowed_origins() -> set[str]:
-    return {origin.strip().rstrip("/") for origin in os.getenv("ALLOWED_ORIGINS", "").split(",") if origin.strip()}
+    return {origin.strip() for origin in os.getenv("ALLOWED_ORIGINS", "").split(",") if origin.strip()}
 
 
 def request_origin(event: dict) -> str:
     headers = {str(k).lower(): str(v) for k, v in (event.get("headers") or {}).items()}
-    return headers.get("origin", "").rstrip("/")
+    return headers.get("origin", "").strip()

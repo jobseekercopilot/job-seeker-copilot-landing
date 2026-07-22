@@ -7,7 +7,7 @@ Accessibility is an ongoing development objective. This checklist supports revie
 Before a release:
 
 1. run Angular lint, unit tests and the production build;
-2. start the landing page and run `npm run test:a11y`; the checked-in Playwright/axe-core scan covers the home, Privacy, Terms, Accessibility, Contact, confirmation and unsubscribe routes against selected WCAG 2 A/AA rules;
+2. start the production build and run `npm run test:a11y`; the checked-in Playwright/axe-core scan covers the home, Privacy, Terms, Accessibility, Contact, confirmation and unsubscribe routes against selected WCAG 2 A/AA rules and fails on browser CSP violations;
 3. review every result manually—automated tools find only some accessibility barriers;
 4. record the tool/version, routes, date, findings, fixes and accepted follow-up work in the release record;
 5. re-run tests after material content or component changes.

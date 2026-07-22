@@ -266,7 +266,7 @@ Resources:
           Type: HttpApi
           Properties:
             ApiId: !Ref LandingApi
-            Method: GET
+            Method: POST
             Path: /waitlist/confirm
 
   WaitlistResendFunction:
@@ -327,7 +327,7 @@ Resources:
           Type: HttpApi
           Properties:
             ApiId: !Ref LandingApi
-            Method: GET
+            Method: POST
             Path: /waitlist/unsubscribe
 
   ContactSubmitFunction:

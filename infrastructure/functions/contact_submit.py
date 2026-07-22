@@ -6,7 +6,7 @@ from common.aws_clients import table
 from common.config import enabled, integer, required
 from common.email_provider import send_email
 from common.email_templates import contact_acknowledgement, contact_owner
-from common.http import ApiError, error_response, parse_json, response
+from common.http import ApiError, enforce_origin, error_response, parse_json, response
 from common.logging_utils import log_result, logger
 from common.validation import anti_automation, email, exact_fields, text
 
@@ -17,6 +17,7 @@ def handler(event, context):
     started = time.monotonic()
     submission_id = ""
     try:
+        enforce_origin(event)
         if not enabled("ENABLE_LIVE_SUBMISSIONS"):
             raise ApiError(503, "BACKEND_DISABLED", "Online contact is not currently available.", "configuration")
         data = parse_json(event)

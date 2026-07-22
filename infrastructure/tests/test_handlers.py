@@ -123,6 +123,17 @@ class HandlerTests(unittest.TestCase):
         self.assertNotIn("private database detail", result["body"])
 
     @patch.dict(os.environ, BASE_ENV, clear=True)
+    def test_actual_request_rejects_invalid_origin_before_data_access(self):
+        with patch.object(waitlist_submit, "table") as subscriber_table:
+            rejected = waitlist_submit.handler({
+                **post_event({"email": "person@example.com"}),
+                "headers": {"content-type": "application/json", "origin": "https://evil.example"},
+            }, Context())
+        self.assertEqual(rejected["statusCode"], 403)
+        self.assertNotIn("Access-Control-Allow-Origin", rejected["headers"])
+        subscriber_table.assert_not_called()
+
+    @patch.dict(os.environ, BASE_ENV, clear=True)
     def test_confirm_rejects_expired_single_use_token(self):
         raw_token = "valid-looking-token-that-is-long-enough"
         fake_table = Mock()
@@ -132,7 +143,7 @@ class HandlerTests(unittest.TestCase):
             "unsubscribeTokenHash": "hash", "unsubscribeTokenNonce": "nonce",
         }]}
         with patch.object(waitlist_confirm, "table", return_value=fake_table):
-            result = waitlist_confirm.handler({"headers": {}, "queryStringParameters": {"token": raw_token}}, Context())
+            result = waitlist_confirm.handler(post_event({"token": raw_token}), Context())
         self.assertEqual(result["statusCode"], 410)
         self.assertEqual(json.loads(result["body"])["code"], "TOKEN_EXPIRED")
         fake_table.update_item.assert_not_called()
@@ -148,7 +159,7 @@ class HandlerTests(unittest.TestCase):
         fake_table = Mock()
         fake_table.query.side_effect = lambda **_kwargs: {"Items": [item]}
         fake_table.update_item.side_effect = lambda **_kwargs: item.update({"status": "confirmed"})
-        event = {"headers": {}, "queryStringParameters": {"token": raw_token}}
+        event = post_event({"token": raw_token})
         with patch.object(waitlist_confirm, "table", return_value=fake_table), \
              patch.object(waitlist_confirm, "send_email") as send:
             first = waitlist_confirm.handler(event, Context())
@@ -169,7 +180,7 @@ class HandlerTests(unittest.TestCase):
         }]}
         with patch.object(waitlist_unsubscribe, "table", return_value=fake_table):
             result = waitlist_unsubscribe.handler(
-                {"headers": {}, "queryStringParameters": {"token": raw_token}}, Context()
+                post_event({"token": raw_token}), Context()
             )
         self.assertEqual(json.loads(result["body"])["code"], "WAITLIST_UNSUBSCRIBED")
         fake_table.update_item.assert_called_once()

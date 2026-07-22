@@ -14,6 +14,7 @@ describe('EmailSubscriptionService', () => {
         enableLiveSubmissions: true,
         waitlistConfirmationApiUrl: '/api/waitlist/confirm',
         waitlistResendApiUrl: '/api/waitlist/resend',
+        waitlistUnsubscribeApiUrl: '/api/waitlist/unsubscribe',
       } },
     ],
   }));
@@ -26,6 +27,18 @@ describe('EmailSubscriptionService', () => {
     expect(request.request.body).toEqual({ token: 'secure-token' });
     request.flush({ success: true, code: 'WAITLIST_CONFIRMED', message: 'Confirmed.' });
     expect(status).toBe('confirmed');
+  });
+
+  it('posts unsubscribe tokens in the body rather than a URL', () => {
+    let status = '';
+    TestBed.inject(EmailSubscriptionService).unsubscribe('secure-unsubscribe-token')
+      .subscribe(result => status = result.status);
+    const request = TestBed.inject(HttpTestingController).expectOne('/api/waitlist/unsubscribe');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.params.keys()).toEqual([]);
+    expect(request.request.body).toEqual({ token: 'secure-unsubscribe-token' });
+    request.flush({ success: true, code: 'WAITLIST_UNSUBSCRIBED', message: 'Unsubscribed.' });
+    expect(status).toBe('unsubscribed');
   });
 
   it('maps already-confirmed, invalid, and expired responses', () => {

@@ -11,7 +11,7 @@ sys.path.insert(0, str(FUNCTIONS))
 
 from common.email_templates import contact_owner, waitlist_confirmation  # noqa: E402
 from common.email_provider import send_email  # noqa: E402
-from common.http import ApiError, options_response, parse_json  # noqa: E402
+from common.http import API_SECURITY_HEADERS, ApiError, options_response, parse_json  # noqa: E402
 from common.tokens import subscriber_id, token_hash, unsubscribe_token  # noqa: E402
 from common.validation import anti_automation, email, text  # noqa: E402
 
@@ -86,10 +86,15 @@ class CommonTests(unittest.TestCase):
     def test_cors_reflects_only_an_exact_allowed_origin(self):
         allowed = options_response({"headers": {"origin": "https://one.example"}})
         denied = options_response({"headers": {"origin": "https://evil.example"}})
+        trailing_slash = options_response({"headers": {"origin": "https://one.example/"}})
         self.assertEqual(allowed["statusCode"], 204)
         self.assertEqual(allowed["headers"]["Access-Control-Allow-Origin"], "https://one.example")
         self.assertEqual(denied["statusCode"], 403)
         self.assertNotIn("Access-Control-Allow-Origin", denied["headers"])
+        self.assertEqual(trailing_slash["statusCode"], 403)
+        self.assertNotIn("Access-Control-Allow-Credentials", allowed["headers"])
+        for header, value in API_SECURITY_HEADERS.items():
+            self.assertEqual(allowed["headers"][header], value)
 
 
 if __name__ == "__main__":

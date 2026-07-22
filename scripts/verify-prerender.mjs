@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
@@ -9,6 +10,7 @@ const article = await readFile(
 );
 const faq = await readFile(join(output, 'faq', 'index.html'), 'utf8');
 const contact = await readFile(join(output, 'contact', 'index.html'), 'utf8');
+const confirmation = await readFile(join(output, 'waitlist', 'confirm', 'index.html'), 'utf8');
 const runtimeConfig = JSON.parse(await readFile(join(output, 'config', 'app-config.json'), 'utf8'));
 
 const requirements = [
@@ -30,6 +32,22 @@ const requirements = [
 
 for (const [html, expected, label] of requirements) {
   if (!html.includes(expected)) throw new Error(`Prerendered HTML is missing ${label}.`);
+}
+
+for (const html of [home, article, faq, contact, confirmation]) {
+  const inlineScripts = [...html.matchAll(/<script\b(?![^>]*\bsrc\s*=)[^>]*>([\s\S]*?)<\/script>/gi)];
+  if (!html.includes('http-equiv="Content-Security-Policy"') ||
+      !html.includes("script-src 'self'") ||
+      !html.includes("object-src 'none'") ||
+      (inlineScripts.length && !html.includes("'sha256-")) ||
+      html.includes("'unsafe-inline'") ||
+      html.includes("'unsafe-eval'")) {
+    throw new Error('Every prerendered route must contain a hash-based CSP without unsafe script directives.');
+  }
+  for (const script of inlineScripts) {
+    const expected = `'sha256-${createHash('sha256').update(script[1], 'utf8').digest('base64')}'`;
+    if (!html.includes(expected)) throw new Error('Prerendered CSP does not match an inline script hash.');
+  }
 }
 
 if (contact.includes('@gmail.com')) {
