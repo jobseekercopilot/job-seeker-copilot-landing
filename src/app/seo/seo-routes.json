@@ -1,0 +1,89 @@
+{
+  "home": {
+    "path": "/",
+    "title": "Job Seeker Copilot | Organise your job search",
+    "description": "Find roles across supported job sources, prepare job-specific documents and track applications in one calm Job Seeker Copilot workspace.",
+    "indexable": true,
+    "socialType": "website",
+    "schema": "home"
+  },
+  "about": {
+    "path": "/about",
+    "title": "The Story Behind Job Seeker Copilot | The Journey So Far",
+    "description": "Read why Bernard McGeever began building Job Seeker Copilot and the milestones that shaped the project’s journey so far.",
+    "indexable": true,
+    "socialType": "article"
+  },
+  "faq": {
+    "path": "/faq",
+    "title": "Frequently Asked Questions | Job Seeker Copilot",
+    "description": "Answers about Job Seeker Copilot, supported job sources, tailored application documents, private beta access and planned work-search reporting.",
+    "indexable": true,
+    "socialType": "website",
+    "schema": "faq"
+  },
+  "comparison": {
+    "path": "/the-journey-so-far/job-search-platform-comparison",
+    "title": "Job Seeker Copilot vs Job Search Platforms | The Journey So Far",
+    "description": "An official-source comparison of Job Seeker Copilot with UK job boards and specialist job-search platforms across discovery, documents and tracking.",
+    "indexable": true,
+    "socialType": "article",
+    "schema": "comparison"
+  },
+  "privacy": {
+    "path": "/privacy",
+    "title": "Privacy Notice | Job Seeker Copilot",
+    "description": "Read how Job Seeker Copilot handles landing-site, waiting-list and contact information, including retention, security and your privacy rights.",
+    "indexable": true,
+    "socialType": "website"
+  },
+  "terms": {
+    "path": "/terms",
+    "title": "Terms | Job Seeker Copilot",
+    "description": "Read the terms for using the Job Seeker Copilot landing site, joining early access and understanding the current pre-beta service boundaries.",
+    "indexable": true,
+    "socialType": "website"
+  },
+  "contact": {
+    "path": "/contact",
+    "title": "Contact | Job Seeker Copilot",
+    "description": "Contact Job Seeker Copilot through the company enquiry channel for product, accessibility, privacy or early-access questions.",
+    "indexable": true,
+    "socialType": "website"
+  },
+  "accessibility": {
+    "path": "/accessibility",
+    "title": "Accessibility Statement | Job Seeker Copilot",
+    "description": "Read the Job Seeker Copilot accessibility statement, current conformance approach, known limitations and contact route for support.",
+    "indexable": true,
+    "socialType": "website"
+  },
+  "confirm": {
+    "path": "/waitlist/confirm",
+    "title": "Confirm Your Email | Job Seeker Copilot",
+    "description": "Confirm a Job Seeker Copilot early-access email using the private link sent to you.",
+    "indexable": false,
+    "socialType": "website"
+  },
+  "resend": {
+    "path": "/waitlist/resend",
+    "title": "Request a Confirmation Email | Job Seeker Copilot",
+    "description": "Request a replacement Job Seeker Copilot early-access confirmation email.",
+    "indexable": false,
+    "socialType": "website"
+  },
+  "unsubscribe": {
+    "path": "/waitlist/unsubscribe",
+    "title": "Unsubscribe | Job Seeker Copilot",
+    "description": "Use your private Job Seeker Copilot link to leave early-access email updates.",
+    "indexable": false,
+    "socialType": "website"
+  },
+  "notFound": {
+    "path": "/404",
+    "title": "Page Not Found | Job Seeker Copilot",
+    "description": "The requested Job Seeker Copilot page could not be found.",
+    "indexable": false,
+    "socialType": "website"
+  }
+}

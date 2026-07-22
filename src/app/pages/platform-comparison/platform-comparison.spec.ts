@@ -41,17 +41,4 @@ describe('PlatformComparisonPage', () => {
     expect(sources.every(link => link.href.startsWith('https://'))).toBe(true);
     expect(sources.every(link => link.rel === 'noopener noreferrer')).toBe(true);
   });
-
-  it('adds canonical, social and BlogPosting metadata', () => {
-    const fixture = TestBed.createComponent(PlatformComparisonPage);
-    fixture.detectChanges();
-    const document = fixture.nativeElement.ownerDocument as Document;
-    const canonical = document.querySelector<HTMLLinkElement>('#platform-comparison-canonical');
-    const schema = document.querySelector<HTMLScriptElement>('#platform-comparison-structured-data');
-
-    expect(canonical?.href).toBe('https://jobseekercopilot.com/the-journey-so-far/job-search-platform-comparison');
-    expect(JSON.parse(schema?.textContent ?? '{}')['@type']).toBe('BlogPosting');
-    expect(JSON.parse(schema?.textContent ?? '{}').datePublished).toBe('2026-07-16');
-    fixture.destroy();
-  });
 });

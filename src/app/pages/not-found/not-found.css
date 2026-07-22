@@ -1,0 +1,30 @@
+.not-found-page {
+  min-height: 62vh;
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: 1rem;
+  width: min(100% - 2rem, 62rem);
+  margin-inline: auto;
+  padding-block: 4rem;
+}
+
+.eyebrow {
+  color: #155eef;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  margin: 0;
+}
+
+h1,
+p {
+  margin: 0;
+}
+
+.home-link {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  color: #155eef;
+  font-weight: 700;
+}

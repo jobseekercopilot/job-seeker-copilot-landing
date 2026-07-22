@@ -12,7 +12,10 @@ const buildOptions = workspace.projects['job-seeker-copilot-landing'].architect.
 describe('browser security policy', () => {
   it('injects a route-specific hash CSP after prerender without unsafe eval', () => {
     assert.equal(buildOptions.security?.autoCsp, undefined);
-    assert.match(packageJson.scripts.build, /ng build && node scripts\/inject-csp\.mjs/);
+    assert.match(
+      packageJson.scripts.build,
+      /ng build && node scripts\/prepare-static-not-found\.mjs && node scripts\/inject-csp\.mjs/,
+    );
     assert.match(injector, /createHash\('sha256'\)/);
     assert.match(injector, /script-src 'self'/);
     assert.doesNotMatch(injector, /unsafe-inline|unsafe-eval/);

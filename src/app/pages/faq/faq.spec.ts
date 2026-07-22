@@ -63,18 +63,12 @@ describe('FaqPage', () => {
     expect(root.querySelector('#faq-answer-job-sources')?.hasAttribute('hidden')).toBe(false);
   });
 
-  it('links the competitor answer and exposes matching FAQ structured data', () => {
+  it('links the competitor answer from the visible FAQ content', () => {
     const fixture = TestBed.createComponent(FaqPage);
     fixture.detectChanges();
     const root = fixture.nativeElement as HTMLElement;
     const comparison = root.querySelector<HTMLAnchorElement>('#linkedin-and-indeed .answer-link');
-    const schema = document.querySelector<HTMLScriptElement>('#faq-structured-data');
-    const data = JSON.parse(schema?.textContent ?? '{}');
 
     expect(comparison?.getAttribute('href')).toBe('/the-journey-so-far/job-search-platform-comparison');
-    expect(data['@type']).toBe('FAQPage');
-    expect(data.mainEntity).toHaveLength(9);
-    expect(document.querySelector<HTMLLinkElement>('#faq-canonical')?.href).toBe('https://www.jobseekercopilot.com/faq');
-    fixture.destroy();
   });
 });

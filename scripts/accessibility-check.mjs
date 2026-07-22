@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { chromium } from 'playwright';
 
 const baseUrl = (process.env.BASE_URL || 'http://127.0.0.1:4201').replace(/\/$/, '');
-const routes = ['/', '/about', '/faq', '/the-journey-so-far/job-search-platform-comparison', '/privacy', '/terms', '/accessibility', '/contact', '/waitlist/confirm', '/waitlist/resend', '/waitlist/unsubscribe'];
+const routes = ['/', '/about', '/faq', '/the-journey-so-far/job-search-platform-comparison', '/privacy', '/terms', '/accessibility', '/contact', '/waitlist/confirm', '/waitlist/resend', '/waitlist/unsubscribe', '/404'];
 const viewports = [
   { name: 'desktop', width: 1280, height: 900 },
   { name: 'mobile', width: 390, height: 844 },

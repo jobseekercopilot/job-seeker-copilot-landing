@@ -30,7 +30,7 @@ export const PLATFORM_RESEARCH: readonly PlatformResearch[] = [
     boundaries: [
       'The documented tracker concerns jobs listed on LinkedIn, including LinkedIn listings that redirect elsewhere.',
       'AI résumé and application assistance can depend on Premium access, language, device, job eligibility or rollout.',
-      'LinkedIn states that its Premium Apply Assistant prepares drafts for review and does not submit without approval.',
+      'LinkedIn documents its AI résumé and cover-letter tools as producing material the applicant can review and edit before using it in an application.',
     ],
     notConfirmed: [
       'A general facility for importing an arbitrary vacancy found only on an unrelated job board.',
@@ -40,7 +40,7 @@ export const PLATFORM_RESEARCH: readonly PlatformResearch[] = [
     sources: [
       { label: 'LinkedIn Help: Track and organise job opportunities', url: 'https://www.linkedin.com/help/linkedin/answer/a8684146' },
       { label: 'LinkedIn Help: AI-powered résumé tips', url: 'https://www.linkedin.com/help/linkedin/answer/a6865810' },
-      { label: 'LinkedIn Help: Premium Apply Assistant', url: 'https://www.linkedin.com/help/linkedin/answer/a13960046' },
+      { label: 'LinkedIn Help: AI-powered cover letter drafting', url: 'https://www.linkedin.com/help/linkedin/answer/a7127697' },
     ],
   },
   {
