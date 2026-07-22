@@ -77,7 +77,7 @@ Before promoting the existing Amplify app to a verified production release:
 
 The production waitlist stack in `infrastructure/waitlist-backend/` uses AWS SAM and references the existing `JobSeekerCopilotWaitlist` table without creating or deleting it. It defines the HTTP API, double-opt-in Lambdas, a retained token table, SES domain identity/DKIM, EventBridge delivery-event handling, explicit least-privilege roles, TTL cleanup, alarms and retained data safeguards. The broader undeployed design in `infrastructure/template.yaml` remains separate for future contact work.
 
-Production waitlist deployment is documented in [infrastructure/waitlist-backend/README.md](./infrastructure/waitlist-backend/README.md). Broader email-domain work, contact APIs, costs and data operations remain documented in [infrastructure/README.md](./infrastructure/README.md) and [infrastructure/docs/data-operations.md](./infrastructure/docs/data-operations.md).
+Production waitlist deployment is documented in [infrastructure/waitlist-backend/README.md](./infrastructure/waitlist-backend/README.md). The [22 July 2026 SES production verification](./docs/launch/ses-production-verification-2026-07-22.md) records the verified identity, DKIM, quota, event and IAM baseline. Broader email-domain work, contact APIs, costs and data operations remain documented in [infrastructure/README.md](./infrastructure/README.md) and [infrastructure/docs/data-operations.md](./infrastructure/docs/data-operations.md).
 
 ## Public content and screenshots
 

@@ -14,6 +14,13 @@ This directory contains an undeployed AWS SAM template and Python 3.12 Lambda co
 
 The stack never creates an SES identity or public domain. It grants send permission only for deployment-supplied verified sender identities.
 
+Every send must use the deployment-supplied SES configuration set and one
+internally controlled `message-purpose` tag. Supported purposes are
+`waitlist-confirmation`, `waitlist-confirmed`, `contact-enquiry` and
+`contact-acknowledgement`. Browser input cannot select a purpose, sender,
+recipient, configuration set or template. This lets the SES event pipeline
+separate the two public journeys without recording message content.
+
 ## API routes
 
 | Method | Route | Purpose |
@@ -78,7 +85,10 @@ sam deploy --guided
 
 The guided prompts must provide environment/stack/region and every parameter without a default. Start with `EnableLiveSubmissions=false`, verify resources and SES, then update deliberately. Capture the `ApiBaseUrl` output and form route URLs as Amplify public runtime variables. Keep test and production stacks, tables, peppers and sender identities separate.
 
-Required owner-supplied parameters include exact HTTPS origins, public site URL, hash pepper, verified sender addresses, private recipient, reply-to and public support address. The template contains no account IDs, regions, domains, emails or secrets.
+Required owner-supplied parameters include exact HTTPS origins, public site URL,
+hash pepper, verified sender addresses, private recipient, reply-to, public
+support address and the existing SES configuration-set name. The template
+contains no account IDs, regions, domains, emails or secrets.
 
 The production mailbox mapping is:
 
