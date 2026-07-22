@@ -125,7 +125,7 @@ Parameters:
     Type: String
     Default: ''
     NoEcho: true
-    AllowedPattern: '^$|^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$'
+    AllowedPattern: '^$|^[^@\s]+@[^@\s]+\.[^@\s]+$'
     Description: Approved operator mailbox for SNS alarm state changes. Never expose it in outputs or logs.
 
 Conditions:

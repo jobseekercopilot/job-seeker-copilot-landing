@@ -626,6 +626,11 @@ class EventAndSecurityTests(unittest.TestCase):
             "\nConditions:", 1
         )[0]
         self.assertIn("NoEcho: true", notification_parameter)
+        self.assertIn(
+            r"AllowedPattern: '^$|^[^@\s]+@[^@\s]+\.[^@\s]+$'",
+            notification_parameter,
+        )
+        self.assertNotIn("[:space:]", notification_parameter)
         self.assertIn("HasAlarmNotificationEmail:", template)
         self.assertIn("  AlarmNotificationTopic:\n", template)
         self.assertIn("  AlarmNotificationTopicPolicy:\n", template)
