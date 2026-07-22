@@ -439,13 +439,45 @@ class EventAndSecurityTests(unittest.TestCase):
         table = Mock()
         with patch.object(ses_events, "subscriber_table", return_value=table):
             ses_events.handler({
-                "detail-type": "Email Bounced", "detail": {"mail": {"destination": ["person@example.com"]}},
+                "detail-type": "Email Bounced", "detail": {"mail": {
+                    "destination": ["person@example.com"],
+                    "tags": {"message-purpose": ["waitlist-confirmation"]},
+                }},
             }, Context())
             ses_events.handler({
-                "detail-type": "Email Complaint Received", "detail": {"mail": {"destination": ["person@example.com"]}},
+                "detail-type": "Email Complaint Received", "detail": {"mail": {
+                    "destination": ["person@example.com"],
+                    "tags": {"message-purpose": ["waitlist-confirmation"]},
+                }},
             }, Context())
         statuses = [call.kwargs["ExpressionAttributeValues"][":status"] for call in table.update_item.call_args_list]
         self.assertEqual(statuses, ["BOUNCED", "COMPLAINED"])
+
+    def test_contact_and_missing_purpose_events_never_touch_subscriber_data(self):
+        table = Mock()
+        contact_event = {
+            "detail-type": "Email Delivered",
+            "detail": {"mail": {
+                "destination": ["private-company-inbox@example.com"],
+                "tags": {"message-purpose": ["contact-enquiry"]},
+            }},
+        }
+        missing_tag_event = {
+            "detail-type": "Email Bounced",
+            "detail": {"mail": {"destination": ["person@example.com"]}},
+        }
+        with patch.object(ses_events, "subscriber_table", return_value=table) as subscriber, \
+             self.assertLogs(level="INFO") as captured:
+            contact_result = ses_events.handler(contact_event, Context())
+            missing_result = ses_events.handler(missing_tag_event, Context())
+        self.assertEqual(contact_result, {"processed": 0})
+        self.assertEqual(missing_result, {"processed": 0})
+        subscriber.assert_not_called()
+        table.update_item.assert_not_called()
+        logs = " ".join(captured.output)
+        self.assertIn("ignored-non-waitlist-purpose", logs)
+        self.assertNotIn("private-company-inbox@example.com", logs)
+        self.assertNotIn("person@example.com", logs)
 
     def test_logs_do_not_contain_complete_email_or_token(self):
         table = Mock()

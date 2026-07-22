@@ -118,7 +118,7 @@ Confirm your Job Seeker Copilot waitlist email
 
 The message identifies Job Seeker Copilot, explains why it was sent, includes the prominent link and fallback URL, states the configured expiry, links to Privacy and Contact, says no action is required for an unsolicited request, and describes the early-access offer as eligibility after confirmation rather than an awarded credit.
 
-The stack creates the `jobseekercopilot.com` SES domain identity and three Easy DKIM CNAME records in the existing Route 53 hosted zone. It creates an EventBridge configuration-set destination for sends, rejects, hard bounces, complaints, deliveries, rendering failures and delivery delays. A Lambda records `BOUNCED` or `COMPLAINED`, or safe delivery metadata, without logging recipient addresses.
+The stack creates the `jobseekercopilot.com` SES domain identity and three Easy DKIM CNAME records in the existing Route 53 hosted zone. It creates an EventBridge configuration-set destination for sends, rejects, hard bounces, complaints, deliveries, rendering failures and delivery delays. A Lambda records `BOUNCED` or `COMPLAINED`, or safe delivery metadata, only when the internally controlled message-purpose tag is `waitlist-confirmation`. Contact and unknown-purpose events are ignored before any subscriber-table access, and recipient addresses are never logged.
 
 The sending roles grant `ses:SendEmail` only against the configured domain identity and the exact waitlist configuration set, constrained to the configured sender address. The contact role additionally constrains `ses:Recipients` to the private company recipient. The visitor address can appear only as Reply-To.
 

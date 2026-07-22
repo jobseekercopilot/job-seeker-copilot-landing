@@ -101,6 +101,10 @@ requires one of these closed, code-owned values:
 
 Browser input cannot select the purpose, sender, recipient, configuration set,
 header set or template. Unknown purpose values fail before an SES request.
+The deployed SES event handler independently requires the exact
+`waitlist-confirmation` purpose before any subscriber-table access. Contact and
+missing/unknown-purpose delivery events are ignored with a redacted result, so
+the contact inbox can never be interpreted as a subscriber.
 
 ## IAM verification
 
@@ -142,7 +146,7 @@ Remaining gates:
    contract.
 2. CONTACT-04 verifies controlled company-inbox receipt and reply behavior.
 3. SES-02 uses only SES mailbox-simulator addresses for success, hard bounce and
-   complaint evidence and proves purpose-aware handling.
+   complaint evidence and extends the deployed purpose-aware handling.
 4. LANDING-SEC-01/02 resolve domain-mail policy, secrets and dependency gates.
 5. RELEASE-02 confirms the final production configuration and events before any
    live announcement.
