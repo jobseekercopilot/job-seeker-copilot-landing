@@ -303,12 +303,17 @@ def log_result(context: Any, operation: str, status: int, outcome: str) -> None:
     }, separators=(",", ":")))
 
 
-def metric(name: str, value: int = 1) -> None:
+def metric(
+    name: str,
+    value: int = 1,
+    *,
+    namespace: str = "JobSeekerCopilot/Waitlist",
+) -> None:
     LOGGER.info(json.dumps({
         "_aws": {
             "Timestamp": int(time.time() * 1000),
             "CloudWatchMetrics": [{
-                "Namespace": "JobSeekerCopilot/Waitlist",
+                "Namespace": namespace,
                 "Dimensions": [[]],
                 "Metrics": [{"Name": name, "Unit": "Count"}],
             }],

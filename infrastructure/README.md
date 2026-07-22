@@ -1,9 +1,11 @@
 # Landing-page AWS infrastructure
 
 This directory contains two SAM designs. `waitlist-backend/` is the deployed
-landing stack and now owns the production-shaped double-opt-in and storage-free
-contact endpoints. The top-level `template.yaml` and `functions/` are the
-broader, still-undeployed HMAC/unsubscribe/optional-contact-storage design.
+landing stack and now owns the production-shaped double-opt-in and content-free
+contact endpoints. Its contact deduplication store contains only short-lived
+HMAC fingerprints, not enquiries. The top-level `template.yaml` and
+`functions/` are the broader, still-undeployed
+HMAC/unsubscribe/optional-contact-storage design.
 Normal frontend development and unit tests need no AWS credentials, SAM CLI or
 Docker.
 

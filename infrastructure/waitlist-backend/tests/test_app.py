@@ -46,6 +46,10 @@ BASE_ENV = {
     "CONTACT_SENDER_EMAIL": "hello@jobseekercopilot.com",
     "CONTACT_RECIPIENT_EMAIL": "hello@jobseekercopilot.com",
     "CONTACT_MESSAGE_MAX_LENGTH": "3000",
+    "CONTACT_DEDUPE_TABLE_NAME": "contact-dedupe",
+    "CONTACT_DEDUPE_PEPPER": "test-only-contact-dedupe-pepper-value-1234567890",
+    "CONTACT_DEDUPE_TTL_SECONDS": "900",
+    "CONTACT_MINIMUM_FORM_COMPLETION_MS": "1200",
 }
 
 
@@ -586,6 +590,12 @@ class TableSafeguardTests(unittest.TestCase):
 
 @patch.dict(os.environ, BASE_ENV, clear=True)
 class ContactTests(unittest.TestCase):
+    def setUp(self):
+        self.dedupe = Mock()
+        self.dedupe_patcher = patch.object(contact, "dedupe_table", return_value=self.dedupe)
+        self.dedupe_patcher.start()
+        self.addCleanup(self.dedupe_patcher.stop)
+
     def valid_payload(self):
         return {
             "name": "  Zoë   <Admin>  ",
@@ -626,6 +636,18 @@ class ContactTests(unittest.TestCase):
         logs = " ".join(captured.output)
         self.assertNotIn("person@example.com", logs)
         self.assertNotIn("Merci", logs)
+        reservation = self.dedupe.put_item.call_args.kwargs
+        self.assertEqual(set(reservation["Item"]), {"fingerprint", "expiresAt", "owner"})
+        self.assertEqual(len(reservation["Item"]["fingerprint"]), 64)
+        self.assertEqual(reservation["Item"]["owner"], "test-request")
+        self.assertEqual(
+            reservation["ConditionExpression"],
+            "attribute_not_exists(fingerprint) OR expiresAt < :now",
+        )
+        stored = json.dumps(reservation)
+        self.assertNotIn("person@example.com", stored)
+        self.assertNotIn("Product partnership", stored)
+        self.assertNotIn("Merci", stored)
 
     def test_options_uses_exact_origin_cors_without_sending(self):
         ses = Mock()
@@ -689,6 +711,58 @@ class ContactTests(unittest.TestCase):
         self.assertTrue(all(result["statusCode"] == 400 for result in results))
         self.assertTrue(all(body(result)["success"] is False for result in results))
         ses.send_email.assert_not_called()
+        self.dedupe.put_item.assert_not_called()
+
+    def test_honeypot_and_too_fast_submission_emit_only_redacted_metrics(self):
+        valid = self.valid_payload()
+        with patch.object(contact.time, "time", return_value=1_780_000_000.5), \
+             patch.object(contact, "ses_client") as ses, \
+             self.assertLogs(level="INFO") as captured:
+            honeypot = contact.handler(event({**valid, "website": "bot@example.com"}), Context())
+            too_fast = contact.handler(event({**valid, "formStartedAt": 1_780_000_000_000}), Context())
+        self.assertEqual([honeypot["statusCode"], too_fast["statusCode"]], [400, 400])
+        logs = " ".join(captured.output)
+        self.assertIn("ContactHoneypotRejections", logs)
+        self.assertIn("ContactTooFastRejections", logs)
+        self.assertIn("ContactValidationRejections", logs)
+        self.assertNotIn("bot@example.com", logs)
+        self.assertNotIn("Merci", logs)
+        ses.return_value.send_email.assert_not_called()
+        self.dedupe.put_item.assert_not_called()
+
+    def test_duplicate_returns_same_success_without_a_second_email(self):
+        duplicate = Exception("private duplicate detail")
+        duplicate.response = {"Error": {"Code": "ConditionalCheckFailedException"}}
+        self.dedupe.put_item.side_effect = duplicate
+        ses = Mock()
+        with patch.object(contact, "ses_client", return_value=ses), \
+             self.assertLogs(level="INFO") as captured:
+            result = contact.handler(event(self.valid_payload()), Context())
+        self.assertEqual(result["statusCode"], 202)
+        self.assertEqual(body(result), {
+            "success": True, "code": "CONTACT_ACCEPTED", "message": "Your message has been sent.",
+        })
+        ses.send_email.assert_not_called()
+        logs = " ".join(captured.output)
+        self.assertIn("ContactDuplicateSuppressions", logs)
+        self.assertNotIn("private duplicate detail", logs)
+        self.assertNotIn("person@example.com", logs)
+
+    def test_dedupe_dependency_failure_fails_before_ses_with_redacted_monitoring(self):
+        failure = Exception("private table detail person@example.com")
+        failure.response = {"Error": {"Code": "InternalServerError", "Message": str(failure)}}
+        self.dedupe.put_item.side_effect = failure
+        ses = Mock()
+        with patch.object(contact, "ses_client", return_value=ses), \
+             self.assertLogs(level="INFO") as captured:
+            result = contact.handler(event(self.valid_payload()), Context())
+        self.assertEqual(result["statusCode"], 503)
+        self.assertEqual(body(result)["code"], "CONTACT_TEMPORARILY_UNAVAILABLE")
+        ses.send_email.assert_not_called()
+        evidence = result["body"] + " ".join(captured.output)
+        self.assertIn("ContactDedupeFailures", evidence)
+        self.assertNotIn("private table detail", evidence)
+        self.assertNotIn("person@example.com", evidence)
 
     def test_crlf_header_injection_and_message_control_characters_are_rejected(self):
         valid = self.valid_payload()
@@ -718,29 +792,70 @@ class ContactTests(unittest.TestCase):
         self.assertNotIn("private provider detail", evidence)
         self.assertNotIn("person@example.com", evidence)
         self.assertNotIn("<script>", evidence)
+        self.dedupe.delete_item.assert_called_once()
+        release = self.dedupe.delete_item.call_args.kwargs
+        self.assertEqual(release["Key"], {
+            "fingerprint": self.dedupe.put_item.call_args.kwargs["Item"]["fingerprint"],
+        })
+        self.assertEqual(release["ExpressionAttributeValues"], {":owner": "test-request"})
 
-    def test_template_has_one_fail_closed_contact_route_and_no_data_permissions(self):
+    def test_retry_after_ses_failure_can_reserve_and_send_again(self):
+        ses = Mock()
+        ses.send_email.side_effect = [RuntimeError("temporary"), None]
+        with patch.object(contact, "ses_client", return_value=ses):
+            first = contact.handler(event(self.valid_payload()), Context())
+            second = contact.handler(event(self.valid_payload()), Context())
+        self.assertEqual(first["statusCode"], 503)
+        self.assertEqual(second["statusCode"], 202)
+        self.assertEqual(self.dedupe.put_item.call_count, 2)
+        self.dedupe.delete_item.assert_called_once()
+        self.assertEqual(ses.send_email.call_count, 2)
+
+    def test_template_has_one_fail_closed_contact_route_and_exact_dedupe_permissions(self):
         template = TEMPLATE.read_text(encoding="utf-8")
         self.assertIn("EnableContactSubmissions:", template)
         self.assertIn("Default: 'false'", template)
         recipient_parameter = template.split("  ContactRecipientEmail:", 1)[1].split(
-            "  ContactMessageMaxLength:", 1
+            "  ContactDedupeTableName:", 1
         )[0]
         self.assertIn("NoEcho: true", recipient_parameter)
+        pepper_parameter = template.split("  ContactDedupePepper:", 1)[1].split(
+            "  ContactDedupeTtlSeconds:", 1
+        )[0]
+        self.assertIn("NoEcho: true", pepper_parameter)
         self.assertEqual(template.count("Path: /contact"), 2)
         role = template.split("  ContactExecutionRole:", 1)[1].split("  WaitlistFunction:", 1)[0]
         self.assertIn("Action: ses:SendEmail", role)
         self.assertIn("ses:FromAddress: !Ref ContactSenderEmail", role)
         self.assertIn("ses:Recipients: !Ref ContactRecipientEmail", role)
-        self.assertNotIn("dynamodb:", role)
+        self.assertIn("Action: [dynamodb:PutItem, dynamodb:DeleteItem]", role)
+        self.assertIn("Resource: !GetAtt ContactDedupeTable.Arn", role)
+        self.assertNotIn("dynamodb:GetItem", role)
+        self.assertNotIn("dynamodb:Scan", role)
         self.assertNotIn("Resource: '*'", role)
+        table = template.split("  ContactDedupeTable:", 1)[1].split(
+            "  WaitlistEmailConfigurationSet:", 1
+        )[0]
+        self.assertIn("AttributeName: fingerprint", table)
+        self.assertIn("AttributeName: expiresAt", table)
+        self.assertIn("BillingMode: PAY_PER_REQUEST", table)
+        self.assertIn("SSEEnabled: true", table)
         function = template.split("  ContactFunction:", 1)[1].split(
             "  WaitlistPendingTtlConfiguration:", 1
         )[0]
         self.assertIn("Handler: contact.handler", function)
         self.assertIn("CONTACT_RECIPIENT_EMAIL: !Ref ContactRecipientEmail", function)
+        self.assertIn("CONTACT_DEDUPE_PEPPER: !Ref ContactDedupePepper", function)
+        self.assertIn("RouteSettings: {ThrottlingBurstLimit: 3, ThrottlingRateLimit: 1}", function)
+        self.assertIn("ContactApiThrottleMetricFilter:", template)
+        for alarm in (
+            "ContactValidationVolumeAlarm", "ContactThrottleVolumeAlarm",
+            "ContactDuplicateVolumeAlarm", "ContactSesFailureAlarm",
+        ):
+            self.assertIn(f"  {alarm}:\n", template)
         outputs = template.split("Outputs:", 1)[1]
         self.assertNotIn("ContactRecipientEmail", outputs)
+        self.assertNotIn("ContactDedupePepper", outputs)
 
 
 if __name__ == "__main__":

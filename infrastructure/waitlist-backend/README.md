@@ -1,6 +1,6 @@
 # Waitlist and contact backend
 
-This isolated AWS SAM stack updates the existing `job-seeker-copilot-waitlist` stack in `eu-west-2`. It uses API Gateway HTTP API, Python Lambda, Amazon SES v2, EventBridge and DynamoDB for double opt-in, plus a storage-free contact delivery Lambda.
+This isolated AWS SAM stack updates the existing `job-seeker-copilot-waitlist` stack in `eu-west-2`. It uses API Gateway HTTP API, Python Lambda, Amazon SES v2, EventBridge and DynamoDB for double opt in, plus contact delivery with content-free duplicate protection.
 
 ## Safety boundary
 
@@ -15,10 +15,13 @@ The new `JobSeekerCopilotWaitlistTokens` table is managed by this stack with:
 
 No handler calls `Scan`. Confirmation performs a consistent `GetItem` using the SHA-256 token hash, then atomically updates the subscriber and token through `TransactWriteItems`.
 
-The contact Lambda has no DynamoDB permission and does not store enquiries. Its
-IAM policy can send only from the configured contact sender, only to the single
-configured company recipient, and only through the existing SES configuration
-set. Contact submission is independently disabled by default.
+The contact Lambda does not store enquiries. It may only conditionally put and
+delete an opaque HMAC fingerprint in the dedicated TTL deduplication table; it
+cannot read or scan that table. The record contains only the fingerprint,
+expiry and Lambda request owner—never the address, name, subject, message or IP.
+Its IAM policy can send only from the configured contact sender, only to the
+single configured company recipient, and only through the existing SES
+configuration set. Contact submission is independently disabled by default.
 
 ## Data and lifecycle
 
@@ -126,6 +129,14 @@ configuration set and template are never browser-controlled. See
 `../../docs/launch/contact-api-contract.md` for the exact request, response,
 failure and deployment contract.
 
+The contact route also applies a conservative route override, checks the hidden
+honeypot and browser start time on the server, and conditionally reserves the
+HMAC fingerprint before SES. A concurrent repeat gets the same public accepted
+response without another email. A deduplication dependency failure stops before
+SES; an SES failure conditionally releases that request's reservation so a safe
+retry can proceed. See `../../docs/launch/contact-abuse-protection.md` for the
+abuse model, privacy boundary, metrics, tuning and future challenge options.
+
 ## SES deployment modes
 
 ### Local/test
@@ -170,10 +181,16 @@ Lambda environment variables are generated from SAM parameters; no endpoint or A
 - `CONTACT_SENDER_EMAIL`
 - `CONTACT_RECIPIENT_EMAIL`
 - `CONTACT_MESSAGE_MAX_LENGTH`
+- `CONTACT_DEDUPE_TABLE_NAME`
+- `CONTACT_DEDUPE_PEPPER`
+- `CONTACT_DEDUPE_TTL_SECONDS`
+- `CONTACT_MINIMUM_FORM_COMPLETION_MS`
 
 Defaults are visible in `template.yaml` and can be changed through
-`--parameter-overrides`. `ContactRecipientEmail` is a required NoEcho
-CloudFormation parameter and is never an output or browser value.
+`--parameter-overrides`. `ContactRecipientEmail` and `ContactDedupePepper` are
+required NoEcho CloudFormation parameters and are never outputs or browser
+values. Generate the pepper in an approved deployment workflow; never commit,
+print or reuse it across environments.
 
 ## Validate and create a reviewable change set
 
@@ -198,10 +215,14 @@ sam deploy \
     EnableContactSubmissions=false \
     ContactSenderEmail=hello@jobseekercopilot.com \
     ContactRecipientEmail=<approved-private-company-inbox> \
+    ContactDedupePepper=<strong-random-secret> \
   --no-execute-changeset
 ```
 
-Inspect the change set before execution. Stop if it proposes replacement/deletion of either DynamoDB table, disables a safeguard, adds wildcard IAM/CORS, exposes a token, or adds a subscriber-list route.
+Inspect the change set before execution. Stop if it proposes replacement or
+deletion of the subscriber, token or contact-deduplication table; disables a
+safeguard; adds wildcard IAM/CORS; exposes a secret/token; stores enquiry
+content; or adds a subscriber-list route.
 
 After a safe deployment, use stack outputs for the Angular hosted runtime configuration:
 
@@ -214,13 +235,17 @@ CONTACT_API_URL=<ContactEndpoint>
 ```
 
 Keep both Angular live submissions and `EnableContactSubmissions` disabled until
-the contact abuse controls, permitted-recipient delivery, Reply-To, CORS and
-monitoring tests are complete. Publishing the contact URL while both switches
-remain false is safe: POST returns the controlled unavailable response and
-sends no email.
+permitted-recipient delivery, Reply-To, CORS and monitoring tests are complete.
+Publishing the contact URL while both switches remain false is safe: POST
+returns the controlled unavailable response and sends no email.
 
 ## Monitoring and later communications
 
-The stack creates alarms for API 5xx, Lambda errors, DynamoDB throttling, confirmation-send failures, bounces, complaints, unusual resend volume and elevated invalid-token volume. Alarm actions are intentionally unset until the owner chooses an operational notification destination.
+The stack creates alarms for API 5xx, Lambda errors, DynamoDB throttling,
+confirmation-send failures, bounces, complaints, unusual resend/invalid-token
+volume, and contact validation, throttle, duplicate, deduplication-dependency
+and SES failures. Contact metrics contain counts only. API access logs omit
+bodies and IPs. Alarm actions are intentionally unset until the owner chooses
+an operational notification destination.
 
 No promotional or launch email exists in this stack. Any future campaign implementation must select only records whose current status is exactly `CONFIRMED`; it must exclude `PENDING`, `UNSUBSCRIBED`, `BOUNCED` and `COMPLAINED` records.
