@@ -122,6 +122,11 @@ The stack creates the `jobseekercopilot.com` SES domain identity and three Easy 
 
 The waitlist sending roles grant `ses:SendEmail` only against the configured domain identity and the exact waitlist configuration set, constrained to the configured sender address. The contact role names both that domain identity and the separately verified exact company sender identity because SES may authorize the more-specific identity; it still constrains From, the configuration set and the single private company recipient exactly. The visitor address can appear only as Reply-To.
 
+The submit, confirmation and resend roles grant `TransactWriteItems` plus only
+the underlying per-table `PutItem`, `UpdateItem` and `DeleteItem` actions used by
+their transaction members. DynamoDB evaluates those underlying actions during a
+transaction; no role receives table wildcard, scan or query permission.
+
 Contact email uses an internally prefixed subject, separate UTF-8 text/HTML
 bodies, and `message-purpose=contact-enquiry`. Name, subject and message values
 are bounded; header controls are rejected; HTML is escaped; sender, recipient,
