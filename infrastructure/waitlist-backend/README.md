@@ -137,6 +137,14 @@ SES; an SES failure conditionally releases that request's reservation so a safe
 retry can proceed. See `../../docs/launch/contact-abuse-protection.md` for the
 abuse model, privacy boundary, metrics, tuning and future challenge options.
 
+All deployed API responses include fixed transport, framing, MIME, referrer,
+permissions and resource-policy headers as well as `no-store`. Development CORS
+reflects only the exact develop and canonical origins; production reflects only
+canonical `www`. Preflight allows `POST,OPTIONS` and `Content-Type` without
+credentials or wildcards. See the
+[browser and API security policy](../../docs/launch/browser-api-security-policy.md)
+for hosting CSP, token-history removal, request limits and deployment checks.
+
 ## SES deployment modes
 
 ### Local/test

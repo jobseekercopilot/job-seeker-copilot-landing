@@ -608,18 +608,32 @@ class EventAndSecurityTests(unittest.TestCase):
         self.assertNotIn("person@example.com", output)
         self.assertNotIn(raw, output)
 
+    def test_deployed_handlers_do_not_emit_exception_tracebacks(self):
+        for source in FUNCTION.glob("*.py"):
+            text = source.read_text(encoding="utf-8")
+            self.assertNotIn("LOGGER.exception(", text, source.name)
+            self.assertNotIn("logger.exception(", text, source.name)
+            self.assertNotIn("exc_info=True", text, source.name)
+
     def test_cors_allows_only_exact_development_canonical_and_production_origins(self):
         allowed = app.handler(event({}, method="OPTIONS"), Context())
         canonical = app.handler(
             event({}, origin=BASE_ENV["ADDITIONAL_DEVELOPMENT_ORIGIN"], method="OPTIONS"), Context()
         )
         denied = app.handler(event({}, origin="https://develop.attacker.amplifyapp.com", method="OPTIONS"), Context())
+        trailing_slash = app.handler(
+            event({}, origin=f"{BASE_ENV['DEVELOPMENT_ORIGIN']}/", method="OPTIONS"), Context()
+        )
         self.assertEqual(allowed["headers"]["Access-Control-Allow-Origin"], BASE_ENV["DEVELOPMENT_ORIGIN"])
         self.assertEqual(
             canonical["headers"]["Access-Control-Allow-Origin"], BASE_ENV["ADDITIONAL_DEVELOPMENT_ORIGIN"]
         )
         self.assertEqual(denied["statusCode"], 403)
         self.assertNotIn("Access-Control-Allow-Origin", denied["headers"])
+        self.assertEqual(trailing_slash["statusCode"], 403)
+        self.assertNotIn("Access-Control-Allow-Credentials", allowed["headers"])
+        for header, value in common.API_SECURITY_HEADERS.items():
+            self.assertEqual(allowed["headers"][header], value)
         with patch.dict(os.environ, {**BASE_ENV, "ENVIRONMENT_NAME": "production"}, clear=True):
             production = app.handler(event({}, origin=BASE_ENV["PRODUCTION_ORIGIN"], method="OPTIONS"), Context())
             apex = app.handler(event({}, origin="https://jobseekercopilot.com", method="OPTIONS"), Context())

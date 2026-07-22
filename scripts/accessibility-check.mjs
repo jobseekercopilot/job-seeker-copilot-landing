@@ -17,6 +17,12 @@ try {
         viewport: { width: viewport.width, height: viewport.height },
       });
       const page = await context.newPage();
+      const cspViolations = [];
+      page.on('console', message => {
+        if (message.text().toLowerCase().includes('content security policy')) {
+          cspViolations.push(message.text());
+        }
+      });
       await page.goto(`${baseUrl}${route}`, { waitUntil: 'networkidle' });
       const results = await new AxeBuilder({ page })
         .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
@@ -29,6 +35,14 @@ try {
           id: 'horizontal-overflow',
           impact: 'serious',
           help: 'The page must fit the viewport without horizontal scrolling.',
+          nodes: [{ target: ['html'] }],
+        });
+      }
+      if (cspViolations.length) {
+        results.violations.push({
+          id: 'content-security-policy',
+          impact: 'serious',
+          help: 'The production CSP must allow required application behavior without browser violations.',
           nodes: [{ target: ['html'] }],
         });
       }
@@ -61,6 +75,20 @@ try {
             impact: 'serious',
             help: 'FAQ questions must toggle from the keyboard and anchored questions must open.',
             nodes: [{ target: ['#faq-button-what-is-job-seeker-copilot', '#faq-button-job-sources'] }],
+          });
+        }
+      }
+      if (route === '/waitlist/confirm') {
+        const rawToken = 'browser-history-test-token-value';
+        await page.goto(`${baseUrl}${route}?token=${rawToken}`, { waitUntil: 'networkidle' });
+        const visibleUrl = page.url();
+        const renderedText = await page.locator('body').innerText();
+        if (visibleUrl.includes(rawToken) || renderedText.includes(rawToken)) {
+          results.violations.push({
+            id: 'confirmation-token-history',
+            impact: 'critical',
+            help: 'The confirmation token must be removed from the visible URL and never rendered.',
+            nodes: [{ target: ['html'] }],
           });
         }
       }

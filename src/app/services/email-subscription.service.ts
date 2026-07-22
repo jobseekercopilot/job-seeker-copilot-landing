@@ -1,4 +1,4 @@
-import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, map, of, throwError } from 'rxjs';
 import { PUBLIC_APP_CONFIG } from '../config/public-app-config';
@@ -62,8 +62,7 @@ export class EmailSubscriptionService {
 
   unsubscribe(token: string): Observable<WaitlistActionResult> {
     if (!this.isEnabled(this.config.waitlistUnsubscribeApiUrl)) return of({ status: 'backend-disabled' });
-    const params = new HttpParams().set('token', token);
-    return this.http.get<ApiResponse>(this.config.waitlistUnsubscribeApiUrl, { params }).pipe(
+    return this.http.post<ApiResponse>(this.config.waitlistUnsubscribeApiUrl, { token }).pipe(
       map(response => ({ status: response.code === 'ALREADY_UNSUBSCRIBED'
         ? 'already-unsubscribed' as const
         : 'unsubscribed' as const })),

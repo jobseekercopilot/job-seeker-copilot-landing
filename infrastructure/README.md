@@ -33,9 +33,9 @@ separate the two public journeys without recording message content.
 | Method | Route | Purpose |
 | --- | --- | --- |
 | `POST` | `/v1/waitlist` | Validate a new request and send a confirmation email. |
-| `GET` | `/v1/waitlist/confirm?token=…` | Consume a single confirmation token. |
+| `POST` | `/v1/waitlist/confirm` | Consume a single confirmation token from a bounded JSON body. |
 | `POST` | `/v1/waitlist/resend` | Replace a confirmation token, limited to once per minute per record. |
-| `GET` | `/v1/waitlist/unsubscribe?token=…` | Unsubscribe without putting an email in the URL. |
+| `POST` | `/v1/waitlist/unsubscribe` | Consume an unsubscribe token from a bounded JSON body. |
 | `POST` | `/v1/contact` | Send a contact message through SES. |
 | `OPTIONS` | `/v1/{proxy+}` | Permit only exact configured origins. |
 

@@ -25,6 +25,19 @@ _DDB_CLIENT = None
 _DDB_RESOURCE = None
 _SES_CLIENT = None
 
+API_SECURITY_HEADERS = {
+    "Content-Security-Policy": "default-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+    "Permissions-Policy": (
+        "accelerometer=(), autoplay=(), camera=(), display-capture=(), geolocation=(), "
+        "microphone=(), payment=(), usb=()"
+    ),
+    "Referrer-Policy": "no-referrer",
+    "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "X-Permitted-Cross-Domain-Policies": "none",
+}
+
 
 class RequestError(Exception):
     def __init__(self, status_code: int, code: str, message: str):
@@ -117,7 +130,7 @@ def response(event: dict[str, Any], status: int, code: str, message: str, *, suc
         "Content-Type": "application/json; charset=utf-8",
         "Cache-Control": "no-store",
         "Vary": "Origin",
-        "X-Content-Type-Options": "nosniff",
+        **API_SECURITY_HEADERS,
     }
     if origin and origin_allowed(origin):
         result_headers["Access-Control-Allow-Origin"] = origin
@@ -157,7 +170,7 @@ def request_method(event: dict[str, Any]) -> str:
 
 
 def request_origin(event: dict[str, Any]) -> str:
-    return headers(event).get("origin", "").strip().rstrip("/")
+    return headers(event).get("origin", "").strip()
 
 
 def headers(event: dict[str, Any]) -> dict[str, str]:
@@ -172,7 +185,7 @@ def origin_allowed(origin: str) -> bool:
         "DEVELOPMENT_ORIGIN", "ADDITIONAL_DEVELOPMENT_ORIGIN",
     )
     allowed_origins = {
-        os.getenv(setting, "").strip().rstrip("/")
+        os.getenv(setting, "").strip()
         for setting in settings
         if os.getenv(setting, "").strip()
     }
