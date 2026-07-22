@@ -195,10 +195,12 @@ Lambda environment variables are generated from SAM parameters; no endpoint or A
 - `CONTACT_MINIMUM_FORM_COMPLETION_MS`
 
 Defaults are visible in `template.yaml` and can be changed through
-`--parameter-overrides`. `ContactRecipientEmail` and `ContactDedupePepper` are
-required NoEcho CloudFormation parameters and are never outputs or browser
-values. Generate the pepper in an approved deployment workflow; never commit,
-print or reuse it across environments.
+`--parameter-overrides`. `ContactRecipientEmail`, `ContactDedupePepper` and
+`AlarmNotificationEmail` are NoEcho CloudFormation parameters and are never
+outputs or browser values. The recipient and pepper are required; the alarm
+endpoint is optional only until an approved notification path is configured.
+Generate the pepper in an approved deployment workflow; never commit, print or
+reuse it across environments.
 
 ## Validate and create a reviewable change set
 
@@ -224,6 +226,7 @@ sam deploy \
     ContactSenderEmail=hello@jobseekercopilot.com \
     ContactRecipientEmail=<approved-private-company-inbox> \
     ContactDedupePepper=<strong-random-secret> \
+    AlarmNotificationEmail=<approved-operator-mailbox> \
   --no-execute-changeset
 ```
 
@@ -249,11 +252,15 @@ returns the controlled unavailable response and sends no email.
 
 ## Monitoring and later communications
 
-The stack creates alarms for API 5xx, Lambda errors, DynamoDB throttling,
-confirmation-send failures, bounces, complaints, unusual resend/invalid-token
-volume, and contact validation, throttle, duplicate, deduplication-dependency
-and SES failures. Contact metrics contain counts only. API access logs omit
-bodies and IPs. Alarm actions are intentionally unset until the owner chooses
-an operational notification destination.
+The stack creates an operational dashboard and actionable alarms for API 5xx
+and per-journey throttles, every Lambda, valid DynamoDB throttle/system-error
+dimensions, confirmation-send and purpose-separated SES delivery outcomes,
+unusual resend/invalid-token volume, and contact validation, duplicate,
+deduplication and delivery failures. Contact metrics contain counts only. API
+access logs omit bodies and IPs. Alarm and recovery actions publish to a scoped
+SNS topic; the conditional email endpoint is supplied through the NoEcho
+`AlarmNotificationEmail` parameter and must confirm the subscription. Deployment,
+threshold, response, canary, redaction and cost guidance is in
+[the launch monitoring guide](../../docs/launch/launch-monitoring-and-alarms.md).
 
 No promotional or launch email exists in this stack. Any future campaign implementation must select only records whose current status is exactly `CONFIRMED`; it must exclude `PENDING`, `UNSUBSCRIBED`, `BOUNCED` and `COMPLAINED` records.

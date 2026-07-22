@@ -45,7 +45,9 @@ Count-only embedded metrics record validation rejection, honeypot/timing
 signals, duplicate suppression, duplicate-store failures and SES failures. A
 CloudWatch Logs metric filter counts contact-route 429 responses rejected by
 API Gateway before Lambda. The stack creates alarms for the actionable contact
-categories; notification delivery is completed by OPS-01.
+categories and publishes ALARM/OK changes through the scoped, confirmed OPS-01
+notification path. The dashboard, thresholds and safe response process are in
+[the launch monitoring guide](./launch-monitoring-and-alarms.md).
 
 Neither Lambda nor API Gateway access logs contain form bodies or source IPs.
 When an alarm fires:
@@ -56,8 +58,8 @@ When an alarm fires:
    uncertain;
 4. tune route and server controls through a reviewed SAM change set, then rerun
    duplicate, retry, CORS and redaction tests;
-5. document the reason and review date without publishing the effective
-   thresholds.
+5. document the reason, aggregate evidence and review date; threshold changes
+   require a reviewed SAM change set.
 
 ## Future WAF or challenge decision
 
@@ -72,10 +74,10 @@ control.
 ## Residual risk
 
 Distributed bots can stay below aggregate limits, honeypots can be avoided and
-browser timing can be forged. DynamoDB TTL deletion is not immediate. Alarm
-actions are not yet connected. These are accepted launch-stage residual risks
-only while traffic is low, both forms remain disabled, and CONTACT-04 plus the
-operations issues are still gating release.
+browser timing can be forged. DynamoDB TTL deletion is not immediate. Email
+notification is not a staffed 24/7 on-call rota. These are accepted
+launch-stage residual risks only while both forms remain disabled and the
+remaining operations, E2E and release issues still gate public launch.
 
 ## Verification
 

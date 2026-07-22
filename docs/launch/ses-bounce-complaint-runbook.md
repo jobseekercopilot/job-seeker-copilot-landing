@@ -51,11 +51,18 @@ The handler emits count-only embedded metrics:
 - `SesBounces` for validated permanent-bounce events;
 - `SesComplaints` for validated complaint events;
 - `SesTransientBounces` for transient or undetermined bounces;
+- `SesDeliveries` and `SesDeliveryFailures` for trusted waitlist-purpose
+  delivery versus delay/reject/rendering/non-permanent-bounce outcomes;
+- purpose-separated `ContactSesDeliveries`, `ContactSesDeliveryFailures`,
+  `ContactSesBounces` and `ContactSesComplaints` for contact-enquiry events;
 - `SesMalformedEvents` for rejected schemas; and
 - `SesEventUpdateFailures` when DynamoDB fails for a reason other than its
   expected conditional no-op.
 
-The existing bounce and complaint alarms use the first two metrics. Logs contain
+Waitlist and contact alarm groups use the purpose-specific metrics and publish
+state changes through the OPS-01 notification path; see
+[the launch monitoring guide](./launch-monitoring-and-alarms.md). Contact events
+emit counts without accessing subscriber data. Logs contain
 only the Lambda request ID, operation, status, fixed outcome, and a fixed AWS
 error code when an update must be retried. They never include the SES message
 ID, destination, event payload, headers, email content, table name or exception

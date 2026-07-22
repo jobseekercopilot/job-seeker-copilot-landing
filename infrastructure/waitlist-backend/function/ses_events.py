@@ -6,6 +6,8 @@ from common import aws_error_code, log_result, metric, normalise_email, subscrib
 
 LOGGER = logging.getLogger()
 WAITLIST_MESSAGE_PURPOSE = "waitlist-confirmation"
+CONTACT_MESSAGE_PURPOSE = "contact-enquiry"
+CONTACT_METRIC_NAMESPACE = "JobSeekerCopilot/Contact"
 
 EVENT_SCHEMAS = {
     "Email Bounced": ("Bounce", "bounce"),
@@ -27,9 +29,11 @@ def handler(event, context):
         log_result(context, "ses-event", 200, outcome)
         return {"processed": 0}
 
-    detail_type, detail, email = routed
+    detail_type, detail, message_purpose, email = routed
     try:
-        changed, event_outcome = _process_event(detail_type, detail, email)
+        changed, event_outcome = _process_event(
+            detail_type, detail, message_purpose, email
+        )
     except Exception as exc:
         metric("SesEventUpdateFailures")
         LOGGER.error(json.dumps({
@@ -68,31 +72,42 @@ def _route_event(event):
     if not expected_configuration_set or _single_tag(mail, "ses:configuration-set") != expected_configuration_set:
         return None, "ignored-untrusted-configuration-set"
 
-    if _message_purpose(mail) != WAITLIST_MESSAGE_PURPOSE:
-        return None, "ignored-non-waitlist-purpose"
+    message_purpose = _message_purpose(mail)
+    if message_purpose not in {WAITLIST_MESSAGE_PURPOSE, CONTACT_MESSAGE_PURPOSE}:
+        return None, "ignored-non-approved-purpose"
 
     recipients = mail.get("destination")
-    if not isinstance(recipients, list) or len(recipients) != 1:
+    if (
+        not isinstance(recipients, list)
+        or len(recipients) != 1
+        or not isinstance(recipients[0], str)
+    ):
         return None, "ignored-malformed"
-    email = normalise_email(recipients[0])
-    if not email:
-        return None, "ignored-malformed"
+    email = ""
+    if message_purpose == WAITLIST_MESSAGE_PURPOSE:
+        email = normalise_email(recipients[0])
+        if not email:
+            return None, "ignored-malformed"
 
     if detail_type == "Email Bounced":
         bounce_type = payload.get("bounceType")
         if bounce_type not in {"Permanent", *NON_PERMANENT_BOUNCES}:
             return None, "ignored-malformed"
 
-    return (detail_type, detail, email), ""
+    return (detail_type, detail, message_purpose, email), ""
 
 
-def _process_event(detail_type, detail, email):
+def _process_event(detail_type, detail, message_purpose, email):
+    if message_purpose == CONTACT_MESSAGE_PURPOSE:
+        return True, _process_contact_event(detail_type, detail)
+
     if detail_type == "Email Bounced":
         bounce_type = detail["bounce"]["bounceType"]
         if bounce_type == "Permanent":
             metric("SesBounces")
             return _suppress(email, "BOUNCED"), "permanent-bounce-suppressed"
         metric("SesTransientBounces")
+        metric("SesDeliveryFailures")
         return _record(email, "lastEmailDeliveryIssueAt"), "non-permanent-bounce-recorded"
 
     if detail_type == "Email Complaint Received":
@@ -100,12 +115,33 @@ def _process_event(detail_type, detail, email):
         return _suppress(email, "COMPLAINED"), "complaint-suppressed"
 
     if detail_type == "Email Delivered":
+        metric("SesDeliveries")
         return _record(email, "lastEmailDeliveredAt"), "delivery-recorded"
 
     if detail_type in ISSUE_EVENTS:
+        metric("SesDeliveryFailures")
         return _record(email, "lastEmailDeliveryIssueAt"), "delivery-issue-recorded"
 
     raise RuntimeError("Unreachable SES event route")
+
+
+def _process_contact_event(detail_type, detail):
+    if detail_type == "Email Bounced":
+        if detail["bounce"]["bounceType"] == "Permanent":
+            metric("ContactSesBounces", namespace=CONTACT_METRIC_NAMESPACE)
+            return "contact-permanent-bounce-recorded"
+        metric("ContactSesDeliveryFailures", namespace=CONTACT_METRIC_NAMESPACE)
+        return "contact-non-permanent-bounce-recorded"
+    if detail_type == "Email Complaint Received":
+        metric("ContactSesComplaints", namespace=CONTACT_METRIC_NAMESPACE)
+        return "contact-complaint-recorded"
+    if detail_type == "Email Delivered":
+        metric("ContactSesDeliveries", namespace=CONTACT_METRIC_NAMESPACE)
+        return "contact-delivery-recorded"
+    if detail_type in ISSUE_EVENTS:
+        metric("ContactSesDeliveryFailures", namespace=CONTACT_METRIC_NAMESPACE)
+        return "contact-delivery-issue-recorded"
+    raise RuntimeError("Unreachable contact SES event route")
 
 
 def _message_purpose(mail):
