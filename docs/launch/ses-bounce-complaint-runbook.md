@@ -116,13 +116,15 @@ with `aws sesv2 send-email`. The controlled request must set the fixed sender,
 one simulator `ToAddresses` value, `ConfigurationSetName`, and this tag:
 
 ```text
-Key=message-purpose,Value=waitlist-confirmation
+Name=message-purpose,Value=waitlist-confirmation
 ```
 
 Do not save or publish the returned SES message IDs. Confirm within the bounded
 window:
 
-- one delivery event produced `delivery-recorded-no-op`;
+- the success case produced `delivery-recorded-no-op`; record the exact delivery
+  count because the complaint simulator may also publish a normal delivery
+  before its complaint event;
 - one permanent bounce produced `permanent-bounce-suppressed-no-op` and one
   `SesBounces` count;
 - one complaint produced `complaint-suppressed-no-op` and one `SesComplaints`
