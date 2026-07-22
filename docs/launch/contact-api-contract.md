@@ -43,9 +43,12 @@ deployment configuration. It creates an internal subject prefix and separate
 UTF-8 plain-text/HTML bodies. Every interpolated HTML value is escaped. The
 validated visitor email is used only in `ReplyToAddresses`.
 
-The role permits `ses:SendEmail` only for the verified domain identity and
-configuration set. Conditions enforce the exact configured From address and
-single `ses:Recipients` company inbox. It has scoped log writes, exact
+The role permits `ses:SendEmail` only for the verified domain identity, the
+separately verified exact company sender identity and the configuration set.
+SES can authorize the more-specific email identity when both an address and
+its domain are verified, so both trusted identity ARNs are named explicitly.
+Conditions still enforce the exact configured From address and single
+`ses:Recipients` company inbox. It has scoped log writes, exact
 deduplication-table Put/Delete access and no read, scan, S3, Secrets Manager,
 list, attachment or wildcard data permission. Every message has
 `message-purpose=contact-enquiry`, selected internally.

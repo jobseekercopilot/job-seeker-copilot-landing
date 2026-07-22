@@ -79,12 +79,20 @@ class TokenTests(unittest.TestCase):
         self.assertEqual(common.validate_token("a" * 129), "")
         self.assertEqual(common.validate_token("contains.email@example.com"), "")
 
+    @patch.dict(os.environ, BASE_ENV, clear=True)
     def test_aws_error_scope_classifies_without_exposing_resource_values(self):
         error = Exception()
         error.response = {"Error": {"Message": (
             "not authorized on resource arn:aws:ses:eu-west-2:123:identity/private@example.com"
         )}}
         self.assertEqual(common.aws_error_scope(error), "other-email-identity")
+        error.response = {"Error": {"Message": (
+            "not authorized on resource "
+            "arn:aws:ses:eu-west-2:123:identity/hello@jobseekercopilot.com"
+        )}}
+        self.assertEqual(
+            common.aws_error_scope(error), "contact-sender-email-identity"
+        )
 
     @patch.dict(os.environ, BASE_ENV, clear=True)
     def test_confirmation_email_has_html_text_expiry_and_privacy_without_email_in_url(self):
@@ -812,7 +820,14 @@ class ContactTests(unittest.TestCase):
 
     def test_ses_failure_returns_and_logs_only_stable_redacted_details(self):
         failure = Exception("private provider detail person@example.com")
-        failure.response = {"Error": {"Code": "ServiceUnavailable", "Message": str(failure)}}
+        failure.response = {"Error": {
+            "Code": "AccessDeniedException",
+            "Message": (
+                "not authorized on resource "
+                "arn:aws:ses:eu-west-2:123:identity/hello@jobseekercopilot.com "
+                "because private provider detail person@example.com"
+            ),
+        }}
         ses = Mock()
         ses.send_email.side_effect = failure
         with patch.object(contact, "ses_client", return_value=ses), \
@@ -824,6 +839,10 @@ class ContactTests(unittest.TestCase):
         self.assertNotIn("private provider detail", evidence)
         self.assertNotIn("person@example.com", evidence)
         self.assertNotIn("<script>", evidence)
+        self.assertNotIn("hello@jobseekercopilot.com", evidence)
+        self.assertIn(
+            "AccessDeniedException (contact-sender-email-identity)", evidence
+        )
         self.dedupe.delete_item.assert_called_once()
         release = self.dedupe.delete_item.call_args.kwargs
         self.assertEqual(release["Key"], {
@@ -858,6 +877,8 @@ class ContactTests(unittest.TestCase):
         self.assertEqual(template.count("Path: /contact"), 2)
         role = template.split("  ContactExecutionRole:", 1)[1].split("  WaitlistFunction:", 1)[0]
         self.assertIn("Action: ses:SendEmail", role)
+        self.assertIn("identity/${SesDomainIdentity}", role)
+        self.assertIn("identity/${ContactSenderEmail}", role)
         self.assertIn("ses:FromAddress: !Ref ContactSenderEmail", role)
         self.assertIn("ses:Recipients: !Ref ContactRecipientEmail", role)
         self.assertIn("Action: [dynamodb:PutItem, dynamodb:DeleteItem]", role)
