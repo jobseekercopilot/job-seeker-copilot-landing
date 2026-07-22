@@ -1,6 +1,11 @@
 # Landing-page AWS infrastructure
 
-This directory contains an undeployed AWS SAM template and Python 3.12 Lambda code for the landing-page waiting list and contact form. AWS SAM was chosen because the repository had no infrastructure standard and the required backend is a compact serverless stack. Normal frontend development and unit tests need no AWS credentials, SAM CLI or Docker.
+This directory contains two SAM designs. `waitlist-backend/` is the deployed
+landing stack and now owns the production-shaped double-opt-in and storage-free
+contact endpoints. The top-level `template.yaml` and `functions/` are the
+broader, still-undeployed HMAC/unsubscribe/optional-contact-storage design.
+Normal frontend development and unit tests need no AWS credentials, SAM CLI or
+Docker.
 
 ## Resources defined
 

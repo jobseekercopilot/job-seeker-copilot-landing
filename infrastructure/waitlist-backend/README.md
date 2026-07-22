@@ -1,6 +1,6 @@
-# Waitlist double opt-in backend
+# Waitlist and contact backend
 
-This isolated AWS SAM stack updates the existing `job-seeker-copilot-waitlist` stack in `eu-west-2`. It uses API Gateway HTTP API, Python Lambda, Amazon SES v2, EventBridge and DynamoDB.
+This isolated AWS SAM stack updates the existing `job-seeker-copilot-waitlist` stack in `eu-west-2`. It uses API Gateway HTTP API, Python Lambda, Amazon SES v2, EventBridge and DynamoDB for double opt-in, plus a storage-free contact delivery Lambda.
 
 ## Safety boundary
 
@@ -14,6 +14,11 @@ The new `JobSeekerCopilotWaitlistTokens` table is managed by this stack with:
 - DynamoDB TTL on `deleteAfter`.
 
 No handler calls `Scan`. Confirmation performs a consistent `GetItem` using the SHA-256 token hash, then atomically updates the subscriber and token through `TransactWriteItems`.
+
+The contact Lambda has no DynamoDB permission and does not store enquiries. Its
+IAM policy can send only from the configured contact sender, only to the single
+configured company recipient, and only through the existing SES configuration
+set. Contact submission is independently disabled by default.
 
 ## Data and lifecycle
 
@@ -81,6 +86,7 @@ All JSON API calls use exact-origin CORS and return typed, public-safe responses
 | `POST` | `/waitlist` | Create PENDING record and send confirmation |
 | `POST` | `/waitlist/confirm` | Consume `{ "token": "..." }` once |
 | `POST` | `/waitlist/resend` | Accept `{ "email": "..." }` with neutral response |
+| `POST` | `/contact` | Validate and deliver one company enquiry when independently enabled |
 | `OPTIONS` | each route | Exact-origin preflight |
 
 Development allows only `https://develop.d3gd9ezfa3aujn.amplifyapp.com` and
@@ -111,7 +117,14 @@ The message identifies Job Seeker Copilot, explains why it was sent, includes th
 
 The stack creates the `jobseekercopilot.com` SES domain identity and three Easy DKIM CNAME records in the existing Route 53 hosted zone. It creates an EventBridge configuration-set destination for sends, rejects, hard bounces, complaints, deliveries, rendering failures and delivery delays. A Lambda records `BOUNCED` or `COMPLAINED`, or safe delivery metadata, without logging recipient addresses.
 
-The sending roles grant `ses:SendEmail` only against the configured domain identity and the exact waitlist configuration set, constrained to the configured sender address.
+The sending roles grant `ses:SendEmail` only against the configured domain identity and the exact waitlist configuration set, constrained to the configured sender address. The contact role additionally constrains `ses:Recipients` to the private company recipient. The visitor address can appear only as Reply-To.
+
+Contact email uses an internally prefixed subject, separate UTF-8 text/HTML
+bodies, and `message-purpose=contact-enquiry`. Name, subject and message values
+are bounded; header controls are rejected; HTML is escaped; sender, recipient,
+configuration set and template are never browser-controlled. See
+`../../docs/launch/contact-api-contract.md` for the exact request, response,
+failure and deployment contract.
 
 ## SES deployment modes
 
@@ -153,8 +166,14 @@ Lambda environment variables are generated from SAM parameters; no endpoint or A
 - `PENDING_RETENTION_SECONDS`
 - `USED_TOKEN_RETENTION_SECONDS`
 - `CONSENT_VERSION`
+- `ENABLE_CONTACT_SUBMISSIONS`
+- `CONTACT_SENDER_EMAIL`
+- `CONTACT_RECIPIENT_EMAIL`
+- `CONTACT_MESSAGE_MAX_LENGTH`
 
-Defaults are visible in `template.yaml` and can be changed through `--parameter-overrides`.
+Defaults are visible in `template.yaml` and can be changed through
+`--parameter-overrides`. `ContactRecipientEmail` is a required NoEcho
+CloudFormation parameter and is never an output or browser value.
 
 ## Validate and create a reviewable change set
 
@@ -176,6 +195,9 @@ sam deploy \
     AdditionalDevelopmentOrigin=https://www.jobseekercopilot.com \
     ProductionOrigin=https://www.jobseekercopilot.com \
     PublicSiteUrl=https://www.jobseekercopilot.com \
+    EnableContactSubmissions=false \
+    ContactSenderEmail=hello@jobseekercopilot.com \
+    ContactRecipientEmail=<approved-private-company-inbox> \
   --no-execute-changeset
 ```
 
@@ -188,9 +210,14 @@ ENABLE_LIVE_SUBMISSIONS=true
 WAITLIST_API_URL=<SubscribeEndpoint>
 WAITLIST_CONFIRMATION_API_URL=<ConfirmationEndpoint>
 WAITLIST_RESEND_API_URL=<ResendEndpoint>
+CONTACT_API_URL=<ContactEndpoint>
 ```
 
-Keep live submissions disabled until identity verification and permitted-recipient end-to-end testing are complete.
+Keep both Angular live submissions and `EnableContactSubmissions` disabled until
+the contact abuse controls, permitted-recipient delivery, Reply-To, CORS and
+monitoring tests are complete. Publishing the contact URL while both switches
+remain false is safe: POST returns the controlled unavailable response and
+sends no email.
 
 ## Monitoring and later communications
 
