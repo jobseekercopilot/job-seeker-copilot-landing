@@ -18,7 +18,7 @@ const requirements = [
   [home, 'How Job Seeker Copilot Fits In', 'homepage comparison heading'],
   [article, 'How Job Seeker Copilot Compares with Today’s Job Search Platforms', 'article title'],
   [article, 'datePublished":"2026-07-16', 'structured publication date'],
-  [article, 'rel="canonical" href="https://www.jobseekercopilot.com/the-journey-so-far/job-search-platform-comparison"', 'canonical URL'],
+  [article, 'rel="canonical" href="https://www.jobseekercopilot.com/the-journey-so-far/job-search-platform-comparison/"', 'canonical URL'],
   [article, '"@type":"BlogPosting"', 'BlogPosting structured data'],
   [article, 'Independent comparison.', 'comparison disclaimer'],
   [faq, 'Frequently Asked Questions', 'FAQ title'],
@@ -27,7 +27,7 @@ const requirements = [
   [faq, 'Adzuna', 'Adzuna integration'],
   [faq, 'JSearch', 'JSearch integration'],
   [faq, '"@type":"FAQPage"', 'FAQPage structured data'],
-  [faq, 'rel="canonical" href="https://www.jobseekercopilot.com/faq"', 'FAQ canonical URL'],
+  [faq, 'rel="canonical" href="https://www.jobseekercopilot.com/faq/"', 'FAQ canonical URL'],
 ];
 
 for (const [html, expected, label] of requirements) {

@@ -47,6 +47,7 @@ test('SEO files are deterministic, canonical and gated for disabled and approved
     assert.equal(urls.length, 8);
     assert.equal(new Set(urls).size, urls.length);
     assert.ok(urls.every(url => url.startsWith(`${CANONICAL_PUBLIC_ORIGIN}/`)));
+    assert.ok(urls.every(url => new URL(url).pathname === '/' || new URL(url).pathname.endsWith('/')));
     assert.ok(urls.every(url => !/[?#]|\/waitlist\/|\/404(?:\/|$)/.test(url)));
   } finally {
     await Promise.all([rm(disabled, { recursive: true, force: true }), rm(enabled, { recursive: true, force: true })]);
