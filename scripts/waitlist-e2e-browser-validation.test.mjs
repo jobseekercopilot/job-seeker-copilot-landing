@@ -14,6 +14,8 @@ for (const required of [
   "url.pathname === '/waitlist/confirm'",
   'tokenRemovedFromUrl',
   'tokenNotRendered',
+  'announcementRoleCorrect',
+  "expectedHeading === 'This link is no longer active.' ? 'alert' : 'status'",
   'noCspViolations',
   'fitsViewport',
 ]) {
