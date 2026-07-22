@@ -46,6 +46,22 @@ Parameters:
   PublicSupportEmail:
     Type: String
     Default: support@jobseekercopilot.com
+  EnableContactSubmissions:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+  ContactSenderEmail:
+    Type: String
+    Default: hello@jobseekercopilot.com
+  ContactRecipientEmail:
+    Type: String
+    NoEcho: true
+    Description: Approved private company inbox. Never expose this parameter in browser configuration or stack outputs.
+  ContactMessageMaxLength:
+    Type: Number
+    Default: 3000
+    MinValue: 10
+    MaxValue: 3000
   SesConfigurationSetName:
     Type: String
     Default: JobSeekerCopilotWaitlistEmails
@@ -235,6 +251,13 @@ Resources:
     Properties:
       LogGroupName: /aws/lambda/JobSeekerCopilotWaitlistTtlConfiguration
       RetentionInDays: 30
+  ContactFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: /aws/lambda/JobSeekerCopilotContact
+      RetentionInDays: 30
 
   WaitlistExecutionRole:
     Type: AWS::IAM::Role
@@ -382,6 +405,35 @@ Resources:
                 Action: [logs:CreateLogStream, logs:PutLogEvents]
                 Resource: !GetAtt TtlFunctionLogGroup.Arn
 
+  ContactExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: Sends validated contact enquiries only to the configured company inbox.
+      AssumeRolePolicyDocument: *LambdaTrust
+      Policies:
+        - PolicyName: SendContactEnquiryOnly
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: ses:SendEmail
+                Resource: !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesDomainIdentity}
+                Condition:
+                  StringEquals:
+                    ses:FromAddress: !Ref ContactSenderEmail
+                  ForAllValues:StringEquals:
+                    ses:Recipients: !Ref ContactRecipientEmail
+              - Effect: Allow
+                Action: ses:SendEmail
+                Resource: !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:configuration-set/${SesConfigurationSetName}
+        - PolicyName: WriteContactLogs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !GetAtt ContactFunctionLogGroup.Arn
+
   WaitlistFunction:
     Type: AWS::Serverless::Function
     DependsOn: [WaitlistFunctionLogGroup, WaitlistEmailIdentity]
@@ -495,6 +547,36 @@ Resources:
       Role: !GetAtt TtlConfigurationExecutionRole.Arn
       Timeout: 60
 
+  ContactFunction:
+    Type: AWS::Serverless::Function
+    DependsOn: [ContactFunctionLogGroup, WaitlistEmailIdentity]
+    Properties:
+      FunctionName: JobSeekerCopilotContact
+      Description: Validates and sends one contact enquiry to the configured company inbox.
+      CodeUri: function/
+      Handler: contact.handler
+      Role: !GetAtt ContactExecutionRole.Arn
+      Environment:
+        Variables:
+          SES_REGION: !Ref AWS::Region
+          SES_CONFIGURATION_SET: !Ref WaitlistEmailConfigurationSet
+          ENABLE_CONTACT_SUBMISSIONS: !Ref EnableContactSubmissions
+          CONTACT_SENDER_EMAIL: !Ref ContactSenderEmail
+          CONTACT_RECIPIENT_EMAIL: !Ref ContactRecipientEmail
+          CONTACT_MESSAGE_MAX_LENGTH: !Ref ContactMessageMaxLength
+      Events:
+        Contact:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref WaitlistApi
+            Method: POST
+            Path: /contact
+            PayloadFormatVersion: '2.0'
+            RouteSettings: {ThrottlingBurstLimit: 3, ThrottlingRateLimit: 1}
+        ContactOptions:
+          Type: HttpApi
+          Properties: {ApiId: !Ref WaitlistApi, Method: OPTIONS, Path: /contact, PayloadFormatVersion: '2.0'}
+
   WaitlistPendingTtlConfiguration:
     Type: Custom::WaitlistPendingTtl
     Properties:
@@ -605,9 +687,12 @@ Outputs:
     Value: !Sub https://${WaitlistApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/waitlist/confirm
   ResendEndpoint:
     Value: !Sub https://${WaitlistApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/waitlist/resend
+  ContactEndpoint:
+    Value: !Sub https://${WaitlistApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/contact
   SubscribeLambdaName: {Value: !Ref WaitlistFunction}
   ConfirmationLambdaName: {Value: !Ref ConfirmationFunction}
   ResendLambdaName: {Value: !Ref ResendFunction}
+  ContactLambdaName: {Value: !Ref ContactFunction}
   SesEventsLambdaName: {Value: !Ref SesEventsFunction}
   TokenTableName: {Value: !Ref TokenTable}
   WaitlistTableProtection:

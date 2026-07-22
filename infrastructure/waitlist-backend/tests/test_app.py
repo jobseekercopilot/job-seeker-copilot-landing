@@ -12,6 +12,7 @@ sys.path.insert(0, str(FUNCTION))
 import app  # noqa: E402
 import common  # noqa: E402
 import confirm  # noqa: E402
+import contact  # noqa: E402
 import resend  # noqa: E402
 import ses_events  # noqa: E402
 import ttl_configurator  # noqa: E402
@@ -41,6 +42,10 @@ BASE_ENV = {
     "PENDING_RETENTION_SECONDS": "2592000",
     "USED_TOKEN_RETENTION_SECONDS": "604800",
     "CONSENT_VERSION": "1.0",
+    "ENABLE_CONTACT_SUBMISSIONS": "true",
+    "CONTACT_SENDER_EMAIL": "hello@jobseekercopilot.com",
+    "CONTACT_RECIPIENT_EMAIL": "hello@jobseekercopilot.com",
+    "CONTACT_MESSAGE_MAX_LENGTH": "3000",
 }
 
 
@@ -577,6 +582,165 @@ class TableSafeguardTests(unittest.TestCase):
             self.assertIn(f"dynamodb:{action}", role_section)
         self.assertNotIn("dynamodb:*", role_section)
         self.assertNotIn("Resource: '*'", role_section)
+
+
+@patch.dict(os.environ, BASE_ENV, clear=True)
+class ContactTests(unittest.TestCase):
+    def valid_payload(self):
+        return {
+            "name": "  Zoë   <Admin>  ",
+            "email": " Person@Example.COM ",
+            "subject": "  Product   partnership  ",
+            "message": "  Could you review <script>alert('x')</script>?\nMerci — café.  ",
+            "source": "landing-page",
+            "website": "",
+            "formStartedAt": 1_780_000_000_000,
+        }
+
+    def test_valid_contact_uses_trusted_envelope_reply_to_and_escaped_utf8_bodies(self):
+        ses = Mock()
+        with patch.object(contact, "ses_client", return_value=ses), \
+             patch.object(contact, "utc_iso", return_value="2026-07-22T13:00:00Z"), \
+             self.assertLogs(level="INFO") as captured:
+            result = contact.handler(event(self.valid_payload()), Context())
+        self.assertEqual(result["statusCode"], 202)
+        self.assertEqual(body(result), {
+            "success": True, "code": "CONTACT_ACCEPTED", "message": "Your message has been sent.",
+        })
+        request = ses.send_email.call_args.kwargs
+        self.assertEqual(request["FromEmailAddress"], "hello@jobseekercopilot.com")
+        self.assertEqual(request["Destination"], {"ToAddresses": ["hello@jobseekercopilot.com"]})
+        self.assertEqual(request["ReplyToAddresses"], ["person@example.com"])
+        self.assertEqual(request["ConfigurationSetName"], "WaitlistEmails")
+        self.assertEqual(request["EmailTags"], [{"Name": "message-purpose", "Value": "contact-enquiry"}])
+        simple = request["Content"]["Simple"]
+        self.assertEqual(simple["Subject"]["Data"], "Job Seeker Copilot enquiry: Product partnership")
+        self.assertEqual(simple["Subject"]["Charset"], "UTF-8")
+        text_content = simple["Body"]["Text"]["Data"]
+        html_content = simple["Body"]["Html"]["Data"]
+        self.assertIn("Zoë <Admin>", text_content)
+        self.assertIn("Merci — café.", text_content)
+        self.assertIn("Zoë &lt;Admin&gt;", html_content)
+        self.assertIn("&lt;script&gt;alert(&#x27;x&#x27;)&lt;/script&gt;", html_content)
+        self.assertNotIn("<script>", html_content)
+        logs = " ".join(captured.output)
+        self.assertNotIn("person@example.com", logs)
+        self.assertNotIn("Merci", logs)
+
+    def test_options_uses_exact_origin_cors_without_sending(self):
+        ses = Mock()
+        with patch.object(contact, "ses_client", return_value=ses):
+            allowed = contact.handler(event({}, method="OPTIONS"), Context())
+            denied = contact.handler(
+                event({}, origin="https://obsolete.example.test", method="OPTIONS"), Context()
+            )
+        self.assertEqual(allowed["statusCode"], 204)
+        self.assertEqual(
+            allowed["headers"]["Access-Control-Allow-Origin"], BASE_ENV["DEVELOPMENT_ORIGIN"]
+        )
+        self.assertEqual(allowed["headers"]["Access-Control-Allow-Methods"], "POST,OPTIONS")
+        self.assertEqual(denied["statusCode"], 403)
+        ses.send_email.assert_not_called()
+
+    def test_disabled_contact_fails_closed_before_parsing_or_sending(self):
+        ses = Mock()
+        with patch.dict(os.environ, {**BASE_ENV, "ENABLE_CONTACT_SUBMISSIONS": "false"}, clear=True), \
+             patch.object(contact, "ses_client", return_value=ses):
+            result = contact.handler(event(self.valid_payload()), Context())
+        self.assertEqual(result["statusCode"], 503)
+        self.assertEqual(body(result)["code"], "CONTACT_UNAVAILABLE")
+        ses.send_email.assert_not_called()
+
+    def test_content_type_malformed_json_and_body_size_are_bounded(self):
+        valid = event(self.valid_payload())
+        cases = [
+            {**valid, "headers": {**valid["headers"], "content-type": "text/plain"}},
+            {**valid, "body": "{"},
+            {**valid, "body": "x" * 4097},
+        ]
+        with patch.object(contact, "ses_client") as ses:
+            results = [contact.handler(case, Context()) for case in cases]
+        self.assertEqual([result["statusCode"] for result in results], [415, 400, 400])
+        self.assertEqual([body(result)["code"] for result in results], [
+            "UNSUPPORTED_MEDIA_TYPE", "INVALID_JSON", "INVALID_REQUEST",
+        ])
+        ses.return_value.send_email.assert_not_called()
+
+    def test_missing_extra_empty_oversized_and_automation_fields_are_rejected(self):
+        valid = self.valid_payload()
+        missing = {key: value for key, value in valid.items() if key != "name"}
+        cases = [
+            missing,
+            {**valid, "recipient": "attacker@example.com"},
+            {**valid, "name": "   "},
+            {**valid, "email": "not-an-email"},
+            {**valid, "subject": "x" * 161},
+            {**valid, "message": "   "},
+            {**valid, "message": "x" * 3001},
+            {**valid, "source": "attacker-controlled"},
+            {**valid, "website": "bot-value"},
+            {**valid, "formStartedAt": "now"},
+            {**valid, "formStartedAt": True},
+            {**valid, "formStartedAt": -1},
+        ]
+        ses = Mock()
+        with patch.object(contact, "ses_client", return_value=ses):
+            results = [contact.handler(event(payload), Context()) for payload in cases]
+        self.assertTrue(all(result["statusCode"] == 400 for result in results))
+        self.assertTrue(all(body(result)["success"] is False for result in results))
+        ses.send_email.assert_not_called()
+
+    def test_crlf_header_injection_and_message_control_characters_are_rejected(self):
+        valid = self.valid_payload()
+        cases = [
+            {**valid, "name": "Alex\r\nBcc: attacker@example.com"},
+            {**valid, "email": "person@example.com\r\nBcc:attacker@example.com"},
+            {**valid, "subject": "Question\r\nBcc: attacker@example.com"},
+            {**valid, "message": "Valid message text\x00hidden"},
+        ]
+        ses = Mock()
+        with patch.object(contact, "ses_client", return_value=ses):
+            results = [contact.handler(event(payload), Context()) for payload in cases]
+        self.assertTrue(all(result["statusCode"] == 400 for result in results))
+        ses.send_email.assert_not_called()
+
+    def test_ses_failure_returns_and_logs_only_stable_redacted_details(self):
+        failure = Exception("private provider detail person@example.com")
+        failure.response = {"Error": {"Code": "ServiceUnavailable", "Message": str(failure)}}
+        ses = Mock()
+        ses.send_email.side_effect = failure
+        with patch.object(contact, "ses_client", return_value=ses), \
+             self.assertLogs(level="ERROR") as captured:
+            result = contact.handler(event(self.valid_payload()), Context())
+        self.assertEqual(result["statusCode"], 503)
+        self.assertEqual(body(result)["code"], "CONTACT_TEMPORARILY_UNAVAILABLE")
+        evidence = result["body"] + " ".join(captured.output)
+        self.assertNotIn("private provider detail", evidence)
+        self.assertNotIn("person@example.com", evidence)
+        self.assertNotIn("<script>", evidence)
+
+    def test_template_has_one_fail_closed_contact_route_and_no_data_permissions(self):
+        template = TEMPLATE.read_text(encoding="utf-8")
+        self.assertIn("EnableContactSubmissions:", template)
+        self.assertIn("Default: 'false'", template)
+        recipient_parameter = template.split("  ContactRecipientEmail:", 1)[1].split(
+            "  ContactMessageMaxLength:", 1
+        )[0]
+        self.assertIn("NoEcho: true", recipient_parameter)
+        self.assertEqual(template.count("Path: /contact"), 2)
+        role = template.split("  ContactExecutionRole:", 1)[1].split("  WaitlistFunction:", 1)[0]
+        self.assertIn("Action: ses:SendEmail", role)
+        self.assertIn("ses:FromAddress: !Ref ContactSenderEmail", role)
+        self.assertIn("ses:Recipients: !Ref ContactRecipientEmail", role)
+        self.assertNotIn("dynamodb:", role)
+        self.assertNotIn("Resource: '*'", role)
+        function = template.split("  ContactFunction:", 1)[1].split(
+            "  WaitlistPendingTtlConfiguration:", 1
+        )[0]
+        self.assertIn("Handler: contact.handler", function)
+        self.assertIn("CONTACT_RECIPIENT_EMAIL: !Ref ContactRecipientEmail", function)
+        outputs = template.split("Outputs:", 1)[1]
+        self.assertNotIn("ContactRecipientEmail", outputs)
 
 
 if __name__ == "__main__":
