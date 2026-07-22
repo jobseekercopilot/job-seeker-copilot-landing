@@ -65,6 +65,40 @@ def body(result):
     return json.loads(result["body"])
 
 
+SES_EVENT_SCHEMA = {
+    "Email Bounced": ("Bounce", "bounce", {"bounceType": "Permanent"}),
+    "Email Complaint Received": ("Complaint", "complaint", {}),
+    "Email Delivered": ("Delivery", "delivery", {}),
+    "Email Delivery Delayed": ("DeliveryDelay", "deliveryDelay", {}),
+    "Email Rejected": ("Reject", "reject", {}),
+    "Email Rendering Failed": ("Rendering Failure", "failure", {}),
+}
+
+
+def ses_event(
+    detail_type,
+    *,
+    destination="person@example.com",
+    purpose="waitlist-confirmation",
+    configuration_set="WaitlistEmails",
+    payload=None,
+):
+    event_type, payload_name, default_payload = SES_EVENT_SCHEMA[detail_type]
+    tags = {
+        "message-purpose": [purpose],
+        "ses:configuration-set": [configuration_set],
+    }
+    return {
+        "source": "aws.ses",
+        "detail-type": detail_type,
+        "detail": {
+            "eventType": event_type,
+            "mail": {"destination": [destination], "tags": tags},
+            payload_name: default_payload if payload is None else payload,
+        },
+    }
+
+
 class TokenTests(unittest.TestCase):
     def test_tokens_use_url_safe_256_bit_random_values_and_sha256_hashes(self):
         first = common.new_token()
@@ -446,34 +480,71 @@ class EventAndSecurityTests(unittest.TestCase):
     def test_bounce_and_complaint_mark_suppression_states(self):
         table = Mock()
         with patch.object(ses_events, "subscriber_table", return_value=table):
-            ses_events.handler({
-                "detail-type": "Email Bounced", "detail": {"mail": {
-                    "destination": ["person@example.com"],
-                    "tags": {"message-purpose": ["waitlist-confirmation"]},
-                }},
-            }, Context())
-            ses_events.handler({
-                "detail-type": "Email Complaint Received", "detail": {"mail": {
-                    "destination": ["person@example.com"],
-                    "tags": {"message-purpose": ["waitlist-confirmation"]},
-                }},
-            }, Context())
+            bounced = ses_events.handler(ses_event("Email Bounced"), Context())
+            complained = ses_events.handler(ses_event("Email Complaint Received"), Context())
         statuses = [call.kwargs["ExpressionAttributeValues"][":status"] for call in table.update_item.call_args_list]
         self.assertEqual(statuses, ["BOUNCED", "COMPLAINED"])
+        self.assertEqual(bounced, {"processed": 1})
+        self.assertEqual(complained, {"processed": 1})
+        bounce_condition = table.update_item.call_args_list[0].kwargs["ConditionExpression"]
+        complaint_condition = table.update_item.call_args_list[1].kwargs["ConditionExpression"]
+        self.assertIn(":excluded2", bounce_condition)
+        self.assertNotIn(":excluded2", complaint_condition)
+
+    def test_non_permanent_bounce_records_issue_without_suppressing(self):
+        table = Mock()
+        with patch.object(ses_events, "subscriber_table", return_value=table), \
+             patch.object(ses_events, "metric") as emit_metric:
+            result = ses_events.handler(
+                ses_event("Email Bounced", payload={"bounceType": "Transient"}), Context()
+            )
+        request = table.update_item.call_args.kwargs
+        self.assertEqual(result, {"processed": 1})
+        self.assertIn("lastEmailDeliveryIssueAt", request["UpdateExpression"])
+        self.assertNotIn(":status", request["ExpressionAttributeValues"])
+        emit_metric.assert_called_once_with("SesTransientBounces")
+
+    def test_delivery_and_delivery_issue_events_update_only_existing_non_suppressed_records(self):
+        table = Mock()
+        detail_types = [
+            "Email Delivered",
+            "Email Delivery Delayed",
+            "Email Rejected",
+            "Email Rendering Failed",
+        ]
+        with patch.object(ses_events, "subscriber_table", return_value=table):
+            results = [ses_events.handler(ses_event(value), Context()) for value in detail_types]
+        self.assertEqual(results, [{"processed": 1}] * len(detail_types))
+        updates = [call.kwargs for call in table.update_item.call_args_list]
+        self.assertIn("lastEmailDeliveredAt", updates[0]["UpdateExpression"])
+        self.assertTrue(all("#status<>:complained" in value["ConditionExpression"] for value in updates))
+        self.assertTrue(
+            all("lastEmailDeliveryIssueAt" in value["UpdateExpression"] for value in updates[1:])
+        )
+
+    def test_duplicate_or_out_of_order_suppression_is_an_idempotent_no_op(self):
+        table = Mock()
+        conflict = Exception("conditional details must remain private")
+        conflict.response = {"Error": {"Code": "ConditionalCheckFailedException"}}
+        table.update_item.side_effect = conflict
+        with patch.object(ses_events, "subscriber_table", return_value=table), \
+             self.assertLogs(level="INFO") as captured:
+            result = ses_events.handler(ses_event("Email Bounced"), Context())
+        self.assertEqual(result, {"processed": 0})
+        output = " ".join(captured.output)
+        self.assertIn("permanent-bounce-suppressed-no-op", output)
+        self.assertNotIn("person@example.com", output)
+        self.assertNotIn("conditional details", output)
 
     def test_contact_and_missing_purpose_events_never_touch_subscriber_data(self):
         table = Mock()
-        contact_event = {
-            "detail-type": "Email Delivered",
-            "detail": {"mail": {
-                "destination": ["private-company-inbox@example.com"],
-                "tags": {"message-purpose": ["contact-enquiry"]},
-            }},
-        }
-        missing_tag_event = {
-            "detail-type": "Email Bounced",
-            "detail": {"mail": {"destination": ["person@example.com"]}},
-        }
+        contact_event = ses_event(
+            "Email Delivered",
+            destination="private-company-inbox@example.com",
+            purpose="contact-enquiry",
+        )
+        missing_tag_event = ses_event("Email Bounced")
+        del missing_tag_event["detail"]["mail"]["tags"]["message-purpose"]
         with patch.object(ses_events, "subscriber_table", return_value=table) as subscriber, \
              self.assertLogs(level="INFO") as captured:
             contact_result = ses_events.handler(contact_event, Context())
@@ -486,6 +557,42 @@ class EventAndSecurityTests(unittest.TestCase):
         self.assertIn("ignored-non-waitlist-purpose", logs)
         self.assertNotIn("private-company-inbox@example.com", logs)
         self.assertNotIn("person@example.com", logs)
+
+    def test_wrong_configuration_set_unknown_event_and_malformed_schema_never_access_data(self):
+        table = Mock()
+        wrong_configuration = ses_event("Email Complaint Received", configuration_set="OtherSet")
+        wrong_event_type = ses_event("Email Complaint Received")
+        wrong_event_type["detail"]["eventType"] = "Bounce"
+        multiple_recipients = ses_event("Email Bounced")
+        multiple_recipients["detail"]["mail"]["destination"].append("other@example.com")
+        events = [wrong_configuration, wrong_event_type, multiple_recipients, {"source": "unknown"}]
+        with patch.object(ses_events, "subscriber_table", return_value=table) as subscriber:
+            results = [ses_events.handler(value, Context()) for value in events]
+        self.assertEqual(results, [{"processed": 0}] * len(events))
+        subscriber.assert_not_called()
+        table.update_item.assert_not_called()
+
+    def test_dynamodb_failure_is_retried_with_only_redacted_error_scope(self):
+        table = Mock()
+        failure = Exception("table and person@example.com must not be logged")
+        failure.response = {"Error": {"Code": "ProvisionedThroughputExceededException"}}
+        table.update_item.side_effect = failure
+        with patch.object(ses_events, "subscriber_table", return_value=table), \
+             patch.object(ses_events, "metric") as emit_metric, \
+             self.assertLogs(level="ERROR") as captured, \
+             self.assertRaises(Exception):
+            ses_events.handler(ses_event("Email Complaint Received"), Context())
+        emit_metric.assert_any_call("SesComplaints")
+        emit_metric.assert_any_call("SesEventUpdateFailures")
+        output = " ".join(captured.output)
+        self.assertIn("ProvisionedThroughputExceededException", output)
+        self.assertNotIn("person@example.com", output)
+        self.assertNotIn("table and", output)
+
+    def test_ses_event_function_receives_the_exact_configuration_set(self):
+        template = TEMPLATE.read_text(encoding="utf-8")
+        function = template.split("  SesEventsFunction:", 1)[1].split("  TtlConfigurationFunction:", 1)[0]
+        self.assertIn("SES_CONFIGURATION_SET: !Ref WaitlistEmailConfigurationSet", function)
 
     def test_logs_do_not_contain_complete_email_or_token(self):
         table = Mock()

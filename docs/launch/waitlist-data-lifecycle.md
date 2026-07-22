@@ -11,13 +11,21 @@ export, mutate, or delete subscriber items and did not send email.
 | `PENDING` | A single transaction conditionally creates a new subscriber and active hashed-token record only when neither key exists. Confirmation may change it to `CONFIRMED`; SES bounce/complaint processing may suppress it. | Has `pendingExpiresAt` (30 days by default). Resend is rate-limited and can rotate only the current token. |
 | `CONFIRMED` | A transaction requires current `PENDING` state, matching token hash, unexpired subscriber/token records, and an `ACTIVE` token. | Confirmation removes `pendingExpiresAt`, token/expiry fields, and send controls, preserving the subscriber until unsubscribe, approved erasure, or end of purpose. Submit/resend cannot reactivate or disclose it. |
 | `UNSUBSCRIBED` | Reserved for an approved unsubscribe process. The current public stack has no unsubscribe route; no operator should improvise this transition. | Never receives confirmation or future marketing. Retain only the minimum suppression record for the approved period; re-subscription requires fresh explicit consent and confirmation. |
-| `BOUNCED` | SES hard-bounce events conditionally update an existing, non-unsubscribed subscriber and remove its active subscriber token/expiry and pending TTL. | Suppressed from resend and future delivery. Retain only as long as operationally and legally necessary. |
-| `COMPLAINED` | SES complaint events use the same conditional suppression update as bounce handling. | Suppressed from resend and future delivery. Never override `UNSUBSCRIBED`; retain only as long as necessary. |
+| `BOUNCED` | A validated SES permanent-bounce event conditionally updates an existing subscriber only when it is not already unsubscribed, complained, or bounced, then removes active subscriber token/expiry and pending TTL fields. Transient and undetermined bounces do not enter this state. | Suppressed from resend and future delivery. A later complaint may strengthen this state. Retain only as long as operationally and legally necessary. |
+| `COMPLAINED` | A validated SES complaint conditionally updates an existing subscriber only when it is not already unsubscribed or complained, then removes active subscriber token/expiry and pending TTL fields. | Suppressed from resend and future delivery. A later bounce cannot downgrade this state, and no SES event overrides `UNSUBSCRIBED`. Retain only as long as necessary. |
 
 Delivery metadata updates require `attribute_exists(email)`, so an SES event
 cannot create a subscriber. Submission returns the same neutral `202` contract
 for existing states and resend returns the same neutral result for unknown,
 confirmed, unsubscribed, bounced, and complained records.
+
+The event handler also requires the direct SES source, matching EventBridge and
+SES event types, the configured configuration-set tag, the exact
+`waitlist-confirmation` purpose and one valid destination. Contact and malformed
+events stop before subscriber-table access. Conditional terminal transitions
+make duplicates and out-of-order events safe no-ops. See the
+[SES bounce and complaint runbook](./ses-bounce-complaint-runbook.md) for the
+monitoring, investigation, simulator and recovery procedures.
 
 ## Race and token invariants
 
