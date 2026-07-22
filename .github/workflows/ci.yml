@@ -1,0 +1,137 @@
+name: Security and build gates
+
+on:
+  pull_request:
+  push:
+    branches: [develop, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GITLEAKS_VERSION: 8.30.1
+  GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+
+jobs:
+  verify:
+    name: Full release gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out complete history
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+
+      - name: Set up AWS SAM CLI
+        uses: aws-actions/setup-sam@89ddb14d60e682855e3fea4be85b3c56485de310 # v3
+        with:
+          version: 1.163.0
+
+      - name: Install locked application and pinned security tools
+        run: |
+          npm ci
+          python -m pip install --disable-pip-version-check bandit==1.9.4 pip-audit==2.10.1
+
+      - name: Install checksum-verified Gitleaks
+        shell: bash
+        run: |
+          set -euo pipefail
+          security_archive="${RUNNER_TEMP}/gitleaks.tar.gz"
+          security_directory="${RUNNER_TEMP}/gitleaks"
+          mkdir -p "${security_directory}"
+          curl --fail --location --silent --show-error \
+            --output "${security_archive}" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  ${security_archive}" | sha256sum --check --strict
+          tar -xzf "${security_archive}" -C "${security_directory}" gitleaks
+
+      - name: Prove scanner rejects a controlled secret
+        env:
+          GITLEAKS_BIN: ${{ runner.temp }}/gitleaks/gitleaks
+        run: npm run security:secret-scan:test
+
+      - name: Scan complete Git history without printing values
+        env:
+          GITLEAKS_BIN: ${{ runner.temp }}/gitleaks/gitleaks
+          GITLEAKS_REPORT_PATH: ${{ runner.temp }}/gitleaks-history.json
+        run: npm run security:secret-scan
+
+      - name: Audit npm and Python runtime dependencies
+        run: |
+          npm audit --audit-level=high
+          pip-audit --requirement security/runtime-requirements.txt
+          npm run security:python-dependencies
+
+      - name: Run lint and Python static analysis
+        run: |
+          npm run lint
+          bandit -q -r infrastructure/functions infrastructure/waitlist-backend/function
+          python -m compileall -q infrastructure/functions infrastructure/tests infrastructure/waitlist-backend/function infrastructure/waitlist-backend/tests
+
+      - name: Run frontend and both backend test suites
+        run: npm test
+
+      - name: Build and inspect production artifacts
+        env:
+          GITLEAKS_BIN: ${{ runner.temp }}/gitleaks/gitleaks
+        run: |
+          npm run build
+          npm run security:artifacts
+          npm run security:artifact-secret-scan
+
+      - name: Validate and build both SAM designs
+        run: |
+          sam validate --lint --template-file infrastructure/template.yaml
+          sam build --template-file infrastructure/template.yaml --build-dir "${RUNNER_TEMP}/sam-reference"
+          sam validate --lint --template-file infrastructure/waitlist-backend/template.yaml
+          sam build --template-file infrastructure/waitlist-backend/template.yaml --build-dir "${RUNNER_TEMP}/sam-deployed"
+
+      - name: Run browser CSP, token-history and accessibility checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx playwright install --with-deps chromium
+          python -m http.server 4201 --directory dist/job-seeker-copilot-landing/browser >/dev/null 2>&1 &
+          security_server_pid=$!
+          trap 'kill "${security_server_pid}"' EXIT
+          BASE_URL=http://127.0.0.1:4201 npm run test:a11y
+
+      - name: Create redacted evidence summary
+        shell: bash
+        run: |
+          printf '%s\n' \
+            "commit=${GITHUB_SHA}" \
+            "full_history_secret_findings=0" \
+            "synthetic_secret_rejection=passed" \
+            "npm_critical_or_high=0" \
+            "packaged_python_dependencies=0" \
+            "python_static_analysis=passed" \
+            "production_artifact_policy=passed" \
+            "frontend_backend_sam_browser_gates=passed" \
+            > "${RUNNER_TEMP}/security-evidence.txt"
+
+      - name: Retain redacted evidence only
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: redacted-security-evidence-${{ github.run_id }}
+          path: ${{ runner.temp }}/security-evidence.txt
+          if-no-files-found: error
+          retention-days: 30

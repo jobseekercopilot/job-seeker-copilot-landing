@@ -2,7 +2,7 @@
 /dist
 /.angular
 /coverage
-/.aws-sam
+.aws-sam/
 
 # Python Lambda test/build caches
 __pycache__/
