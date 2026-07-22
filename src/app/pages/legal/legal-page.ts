@@ -19,5 +19,5 @@ export class LegalPage {
   protected readonly offer = inject(EARLY_ACCESS_OFFER_CONFIG);
   protected readonly formattedBonusTokens = formatOfferTokenAmount(this.offer.bonusTokens);
   protected readonly page = this.route.snapshot.data['page'] as 'privacy' | 'terms' | 'accessibility' | 'contact';
-  protected readonly effectiveDate = '13 July 2026';
+  protected readonly effectiveDate = '22 July 2026';
 }

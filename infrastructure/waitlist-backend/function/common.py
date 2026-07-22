@@ -323,15 +323,25 @@ def metric(
     value: int = 1,
     *,
     namespace: str = "JobSeekerCopilot/Waitlist",
+    dimensions: dict[str, str] | None = None,
 ) -> None:
-    LOGGER.info(json.dumps({
+    safe_dimensions = dimensions or {}
+    payload = {
         "_aws": {
             "Timestamp": int(time.time() * 1000),
             "CloudWatchMetrics": [{
                 "Namespace": namespace,
-                "Dimensions": [[]],
+                "Dimensions": [sorted(safe_dimensions)],
                 "Metrics": [{"Name": name, "Unit": "Count"}],
             }],
         },
         name: value,
-    }, separators=(",", ":")))
+        **safe_dimensions,
+    }
+    LOGGER.info(json.dumps(payload, separators=(",", ":")))
+
+
+def environment_dimensions() -> dict[str, str]:
+    value = os.getenv("ENVIRONMENT_NAME", "production").strip().lower()
+    environment = value if value in {"development", "test", "production"} else "production"
+    return {"Environment": environment}

@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { validateLiveSubmissionConfig, validateSearchIndexingConfig } from './runtime-config-validation.mjs';
+import {
+  validateAnalyticsConfig,
+  validateLiveSubmissionConfig,
+  validateSearchIndexingConfig,
+} from './runtime-config-validation.mjs';
 
 const valid = {
   environmentName: 'production',
@@ -84,5 +88,38 @@ describe('search indexing runtime configuration', () => {
       environmentName: 'production',
       publicWebsiteUrl: 'https://jobseekercopilot.com',
     }), /exact canonical public website URL/);
+  });
+});
+
+describe('analytics runtime configuration', () => {
+  it('allows analytics to remain disabled in every environment', () => {
+    assert.doesNotThrow(() => validateAnalyticsConfig({ analyticsEnabled: false }));
+  });
+
+  it('accepts only canonical production with a query-free HTTPS analytics route', () => {
+    const analytics = {
+      analyticsEnabled: true,
+      environmentName: 'production',
+      publicWebsiteUrl: 'https://www.jobseekercopilot.com',
+      analyticsEndpointUrl: 'https://api.example.test/analytics',
+      waitlistApiUrl: 'https://api.example.test/waitlist',
+    };
+    assert.doesNotThrow(() => validateAnalyticsConfig(analytics));
+    assert.throws(
+      () => validateAnalyticsConfig({ ...analytics, environmentName: 'development' }),
+      /exact canonical public website URL/,
+    );
+    assert.throws(
+      () => validateAnalyticsConfig({ ...analytics, analyticsEndpointUrl: 'https://api.example.test/analytics?visitor=value' }),
+      /query-free HTTPS analytics endpoint/,
+    );
+    assert.throws(
+      () => validateAnalyticsConfig({ ...analytics, analyticsEndpointUrl: 'https://api.example.test/events' }),
+      /query-free HTTPS analytics endpoint/,
+    );
+    assert.throws(
+      () => validateAnalyticsConfig({ ...analytics, analyticsEndpointUrl: 'https://other.example.test/analytics' }),
+      /approved first-party waitlist API origin/,
+    );
   });
 });

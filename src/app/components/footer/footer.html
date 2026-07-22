@@ -23,6 +23,9 @@
         <a routerLink="/terms">Terms</a>
         <a routerLink="/accessibility">Accessibility Statement</a>
         <a routerLink="/contact">Contact</a>
+        @if (config.analyticsEnabled) {
+          <button type="button" class="analytics-choice" (click)="analyticsConsent.openPreferences()">Analytics choices</button>
+        }
       </div>
     </nav>
   </div>

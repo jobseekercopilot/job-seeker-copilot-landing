@@ -1,7 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { Observable, of, Subject, throwError } from 'rxjs';
+import { AnalyticsService } from '../../analytics/analytics.service';
 import { DEFAULT_EARLY_ACCESS_OFFER_CONFIG, EARLY_ACCESS_OFFER_CONFIG } from '../../config/early-access-offer';
 import { DEFAULT_PUBLIC_APP_CONFIG, PUBLIC_APP_CONFIG } from '../../config/public-app-config';
 import { WaitlistResult, WaitlistService } from '../../services/waitlist.service';
@@ -19,9 +21,15 @@ class WaitlistServiceStub {
   }
 }
 
+class AnalyticsServiceStub {
+  readonly consent = { canCollect: signal(false) };
+  readonly track = vi.fn(() => true);
+}
+
 describe('EmailSignupFormComponent', () => {
   let fixture: ComponentFixture<EmailSignupFormComponent>;
   let service: WaitlistServiceStub;
+  let analytics: AnalyticsServiceStub;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -31,11 +39,13 @@ describe('EmailSignupFormComponent', () => {
         { provide: EARLY_ACCESS_OFFER_CONFIG, useValue: DEFAULT_EARLY_ACCESS_OFFER_CONFIG },
         { provide: PUBLIC_APP_CONFIG, useValue: DEFAULT_PUBLIC_APP_CONFIG },
         { provide: WaitlistService, useClass: WaitlistServiceStub },
+        { provide: AnalyticsService, useClass: AnalyticsServiceStub },
       ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(EmailSignupFormComponent);
     service = TestBed.inject(WaitlistService) as unknown as WaitlistServiceStub;
+    analytics = TestBed.inject(AnalyticsService) as unknown as AnalyticsServiceStub;
     fixture.detectChanges();
   });
 
@@ -43,6 +53,7 @@ describe('EmailSignupFormComponent', () => {
     submitForm();
 
     expect(service.calls).toBe(0);
+    expect(analytics.track).not.toHaveBeenCalled();
     expect(fixture.nativeElement.textContent).toContain('Enter your email address to join the list.');
     expect(emailInput().getAttribute('aria-invalid')).toBe('true');
   });
@@ -52,6 +63,8 @@ describe('EmailSignupFormComponent', () => {
     submitForm();
 
     expect(service.calls).toBe(1);
+    expect(analytics.track).toHaveBeenCalledOnce();
+    expect(analytics.track).toHaveBeenCalledWith('waitlist_attempt', 'hero');
     expect(fixture.nativeElement.textContent).toContain('If this address needs confirmation');
     expect(fixture.nativeElement.textContent).toContain('If it is already confirmed, no further action is needed');
     expect(fixture.nativeElement.textContent).not.toContain('You are now subscribed');
@@ -114,6 +127,7 @@ describe('EmailSignupFormComponent', () => {
     submitForm();
 
     expect(service.calls).toBe(1);
+    expect(analytics.track).toHaveBeenCalledOnce();
     expect((fixture.nativeElement.querySelector('button[type="submit"]') as HTMLButtonElement).disabled).toBe(true);
     expect(emailInput().disabled).toBe(true);
     expect(fixture.nativeElement.textContent).toContain('Submitting your request securely');

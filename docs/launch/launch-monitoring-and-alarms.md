@@ -1,6 +1,6 @@
 # Launch monitoring and alarms
 
-Tracking: [launch epic #8](https://github.com/jobseekercopilot/job-seeker-copilot-landing/issues/8) and [OPS-01 #22](https://github.com/jobseekercopilot/job-seeker-copilot-landing/issues/22)
+Tracking: [launch epic #8](https://github.com/jobseekercopilot/job-seeker-copilot-landing/issues/8), [OPS-01 #22](https://github.com/jobseekercopilot/job-seeker-copilot-landing/issues/22) and [MONITORING-01 #50](https://github.com/jobseekercopilot/job-seeker-copilot-landing/issues/50)
 
 ## Operator boundary
 
@@ -36,6 +36,7 @@ logging request content.
 | HTTP API | Waitlist route `429` count | 5 in 5 minutes | Check aggregate route volume and account/stage limits; do not raise limits until abuse is excluded. |
 | HTTP API | Contact route `429` count | 5 in 5 minutes | Check aggregate contact validation/duplicate signals; do not inspect message bodies. |
 | Lambda | Errors for submit, confirm, resend, SES-event, TTL and contact functions | 1 in 5 minutes per function | Use the function name, UTC window and request ID to inspect sanitized logs. |
+| Analytics Lambda | Collector error | 1 in 5 minutes | Disable frontend analytics, verify the false-by-default backend parameter, exact origin and bounded schema; neither public form depends on this collector. |
 | DynamoDB | Read/write throttle events for subscriber, token and content-free contact-deduplication tables | 1 in 5 minutes per table | Check operation-level aggregate metrics and capacity/account limits; never scan a table. |
 | DynamoDB | `SystemErrors` with both required `TableName` and `Operation` dimensions | 1 in 5 minutes per table | Check the affected operation and Lambda error category; retry safely or escalate to AWS for persistent service errors. |
 | Waitlist delivery | Confirmation send failure | 1 in 5 minutes | Check SES sending/configuration-set health and keep the pending record recoverable. |
@@ -61,8 +62,17 @@ The `JobSeekerCopilotLanding-<environment>` dashboard contains:
 - current alarm state;
 - HTTP API request, 4xx and 5xx counts;
 - per-function Lambda error counts;
-- separate waitlist/SES and contact count-only signals; and
+- separate waitlist/SES and contact count-only signals;
+- opted-in production visits, page/form views and submit attempts, with true
+  backend waiting-list/contact outcomes alongside them; and
 - read/write DynamoDB throttle counts for all three tables.
+
+The reviewed template contains 31 actionable alarms after MONITORING-01 adds
+the analytics Lambda error alarm. Its analytics Lambda has no DynamoDB or SES
+permission, and its log group retains 30 days. The dashboard's `Visits` value
+is a consenting browser-tab session proxy, not a unique-person count. Top page,
+acquisition, controlled campaign, funnel and Search Console reporting is in the
+[privacy-focused analytics guide](./privacy-focused-analytics-and-reporting.md).
 
 Evidence should contain only the UTC window, stack/commit, logical alarm or
 metric name, state/count, action/subscription status, dashboard name and a
@@ -111,6 +121,8 @@ use `set-alarm-state` on a real alarm or enable either public submission switch.
 For application metrics, use unit tests with synthetic events and mocks. Do not
 generate real complaints, bounces, DynamoDB errors or customer-facing outages.
 The SES mailbox simulator procedure remains limited to its dedicated runbook.
+MONITORING-01 does not deploy or enable the analytics collector. RELEASE-02 owns
+the bounded refusal/acceptance and `TrafficClass=smoke` live verification.
 
 ## Response and escalation
 

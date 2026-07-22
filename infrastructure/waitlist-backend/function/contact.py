@@ -15,6 +15,7 @@ from common import (
     aws_error_scope,
     dynamodb_resource,
     enforce_origin,
+    environment_dimensions,
     env_int,
     is_options,
     log_result,
@@ -71,6 +72,7 @@ def handler(event, context):
             _contact_metric("ContactSesFailures")
             _release_fingerprint(fingerprint, request_id)
             raise
+        metric("ContactAcceptedRequests", namespace=METRIC_NAMESPACE, dimensions=environment_dimensions())
         log_result(context, OPERATION, 202, "accepted")
         return response(
             event, 202, "CONTACT_ACCEPTED", "Your message has been sent.", success=True

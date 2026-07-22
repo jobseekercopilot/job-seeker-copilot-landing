@@ -24,9 +24,10 @@ operator sequence that joins them together.
 
 The following rules apply to every procedure:
 
-1. Keep the Amplify `ENABLE_LIVE_SUBMISSIONS` value and CloudFormation
-   `EnableContactSubmissions` parameter `false` except during an approved,
-   staffed, controlled test window.
+1. Keep the Amplify `ENABLE_LIVE_SUBMISSIONS` and `ENABLE_ANALYTICS` values and
+   CloudFormation `EnableContactSubmissions` and `EnableAnalyticsCollection`
+   parameters `false` except during their separately approved, staffed,
+   controlled test windows.
 2. Never delete, replace, empty, scan or broadly export a table. Never use a
    stack deletion as data cleanup or rollback.
 3. Never paste an address, confirmation token, contact message, provider
@@ -80,13 +81,13 @@ aws cloudformation describe-stacks \
   --stack-name job-seeker-copilot-waitlist \
   --profile jobseekercopilot-deploy \
   --region eu-west-2 \
-  --query 'Stacks[0].{Status:StackStatus,ContactEnabled:Parameters[?ParameterKey==`EnableContactSubmissions`]|[0].ParameterValue}'
+  --query 'Stacks[0].{Status:StackStatus,ContactEnabled:Parameters[?ParameterKey==`EnableContactSubmissions`]|[0].ParameterValue,AnalyticsEnabled:Parameters[?ParameterKey==`EnableAnalyticsCollection`]|[0].ParameterValue}'
 
 aws amplify get-app \
   --app-id d3gd9ezfa3aujn \
   --profile jobseekercopilot-deploy \
   --region eu-west-2 \
-  --query 'app.{Platform:platform,ProductionBranch:productionBranch.branchName,LiveSubmissions:environmentVariables.ENABLE_LIVE_SUBMISSIONS}'
+  --query 'app.{Platform:platform,ProductionBranch:productionBranch.branchName,LiveSubmissions:environmentVariables.ENABLE_LIVE_SUBMISSIONS,Analytics:environmentVariables.ENABLE_ANALYTICS}'
 
 aws amplify list-jobs \
   --app-id d3gd9ezfa3aujn \
@@ -98,7 +99,7 @@ aws amplify list-jobs \
 ```
 
 Expected before a release: the account is the approved company account, the
-stack is stable, both switches are false, the checked-out commit is reviewed,
+stack is stable, all four submission/analytics switches are false, the checked-out commit is reviewed,
 and the latest Amplify job for that commit succeeded. A stale audit document is
 not evidence; use live control-plane values.
 
@@ -183,8 +184,9 @@ aws cloudformation wait stack-update-complete \
   --region eu-west-2
 ```
 
-Verify stack status, Lambda update status, alarms, log retention and both safe
-switches. Do not enable a journey merely because deployment succeeded.
+Verify stack status, Lambda update status, all 31 alarms, log retention and all
+safe switches. Do not enable a journey or analytics merely because deployment
+succeeded.
 
 ## Frontend deployment and Amplify verification
 
@@ -226,8 +228,9 @@ curl --fail --silent --show-error --head \
 
 The configuration is public but must contain no private recipient, pepper,
 credential or placeholder host. Confirm the expected commit, CSP/security
-headers, SPA routes and `enableLiveSubmissions=false` until the controlled smoke
-window is approved. Use `main` instead of `develop` only after RELEASE-01 has
+headers, SPA routes, `enableLiveSubmissions=false` and
+`analyticsEnabled=false` until the respective controlled smoke window is
+approved. Use `main` instead of `develop` only after RELEASE-01 has
 created and verified that branch; replace `VERIFIED_JOB_ID` with the numeric ID
 from the preceding list.
 
@@ -415,7 +418,7 @@ RELEASE-02 owns the production smoke. This runbook defines their safety rules.
 ### Baseline, always first
 
 1. Verify exact deployed commit, stack status, SES health and all alarms OK.
-2. Verify both submission switches false.
+2. Verify both submission switches and both analytics switches false.
 3. Verify exact CORS origins and the public runtime config.
 4. Record a UTC start and baseline aggregate counts.
 5. Use only a company-controlled test identity and non-sensitive contact text.
@@ -442,6 +445,19 @@ Do not reuse development evidence. Repeat the minimum smoke through the exact
 `main` commit and canonical domain after domain mapping and backend parameters
 are production-correct. If any criterion fails, turn both switches off, roll
 back the affected layer, create a focused issue and keep the epic open.
+
+### Optional analytics controlled window
+
+Only RELEASE-02 may run this after privacy approval and the canonical release
+commit are verified. Deploy the collector with its backend switch false, then
+enable it through a reviewed parameter-only change set. Keep frontend analytics
+false and prove no request arrives. Enable frontend analytics on `main`, use
+only `analytics_test=smoke`, prove refusal sends nothing, accept once and run
+one bounded page/form smoke. Verify only aggregate smoke events and true backend
+outcomes. Do not read raw logs, mailbox content or subscriber data. The owner
+records the intentional final analytics state; disable frontend then backend if
+the check fails. Follow the
+[privacy-focused analytics guide](./privacy-focused-analytics-and-reporting.md).
 
 ## Monitoring, logs and cost
 
@@ -472,6 +488,8 @@ stored bytes, SNS delivery and the monthly budget before release and weekly
 during launch. Do not add high-cardinality dimensions or retain logs longer
 without cost/privacy review. Replace `APPROVED_ACCOUNT_ID` privately with the
 verified `get-caller-identity` result; an unchanged placeholder fails safely.
+Use the analytics guide for bounded founder reports and funnel interpretation;
+never label tab-session `Visits` as unique people or publish raw event rows.
 
 ## Evidence preservation and close-out
 
@@ -482,7 +500,8 @@ Preserve only:
 - stack/change-set and Amplify job identifiers;
 - alarm/metric name, state and aggregate count;
 - pass/fail, response category and one redacted request-ID prefix; and
-- confirmation that switches returned to false.
+- confirmation that submission and analytics switches returned to their
+  approved states.
 
 Do not preserve mailbox content, complete addresses, contact text, tokens,
 headers, SES message IDs, raw events, exception text, table keys/items or secret

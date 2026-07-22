@@ -1,6 +1,11 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
-import { validateLiveSubmissionConfig, validateSearchIndexingConfig } from './runtime-config-validation.mjs';
+import { resolveAnalyticsEnabled } from './analytics-policy.mjs';
+import {
+  validateAnalyticsConfig,
+  validateLiveSubmissionConfig,
+  validateSearchIndexingConfig,
+} from './runtime-config-validation.mjs';
 import { resolveSearchIndexingEnabled } from './search-indexing-policy.mjs';
 
 const outputPath = resolve(process.env.RUNTIME_CONFIG_OUTPUT_PATH || 'public/config/app-config.json');
@@ -9,6 +14,8 @@ const config = {
   environmentName: oneOf(process.env.PUBLIC_ENVIRONMENT_NAME, ['development', 'test', 'production'], 'production'),
   enableLiveSubmissions: process.env.ENABLE_LIVE_SUBMISSIONS === 'true',
   searchIndexingEnabled: resolveSearchIndexingEnabled(),
+  analyticsEnabled: resolveAnalyticsEnabled(),
+  analyticsEndpointUrl: text('ANALYTICS_ENDPOINT_URL'),
   waitlistApiUrl: text('WAITLIST_API_URL'),
   waitlistConfirmationApiUrl: text('WAITLIST_CONFIRMATION_API_URL'),
   waitlistResendApiUrl: text('WAITLIST_RESEND_API_URL'),
@@ -22,7 +29,6 @@ const config = {
   privacyPolicyUrl: text('PRIVACY_POLICY_URL', '/privacy'),
   termsUrl: text('TERMS_URL', '/terms'),
   supportUrl: text('SUPPORT_URL', '/contact'),
-  analyticsId: text('ANALYTICS_ID'),
   antiBotProvider: text('ANTI_BOT_PROVIDER', 'none'),
   antiBotSiteKey: text('ANTI_BOT_SITE_KEY'),
   consentVersion: text('CONSENT_VERSION', new Date().toISOString().slice(0, 10)),
@@ -33,6 +39,7 @@ const config = {
 
 validateLiveSubmissionConfig(config);
 validateSearchIndexingConfig(config);
+validateAnalyticsConfig(config);
 
 await mkdir(dirname(outputPath), { recursive: true });
 await writeFile(outputPath, `${JSON.stringify(config, null, 2)}\n`, 'utf8');

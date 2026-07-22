@@ -1,7 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { Observable, of, Subject, throwError } from 'rxjs';
+import { AnalyticsService } from '../../analytics/analytics.service';
 import { DEFAULT_PUBLIC_APP_CONFIG, PUBLIC_APP_CONFIG } from '../../config/public-app-config';
 import { ContactRequest, ContactResult, ContactService } from '../../services/contact.service';
 import { ContactFormComponent } from './contact-form';
@@ -18,9 +20,15 @@ class ContactServiceStub {
   }
 }
 
+class AnalyticsServiceStub {
+  readonly consent = { canCollect: signal(false) };
+  readonly track = vi.fn(() => true);
+}
+
 describe('ContactFormComponent', () => {
   let fixture: ComponentFixture<ContactFormComponent>;
   let service: ContactServiceStub;
+  let analytics: AnalyticsServiceStub;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -29,10 +37,12 @@ describe('ContactFormComponent', () => {
         provideRouter([]),
         { provide: PUBLIC_APP_CONFIG, useValue: DEFAULT_PUBLIC_APP_CONFIG },
         { provide: ContactService, useClass: ContactServiceStub },
+        { provide: AnalyticsService, useClass: AnalyticsServiceStub },
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(ContactFormComponent);
     service = TestBed.inject(ContactService) as unknown as ContactServiceStub;
+    analytics = TestBed.inject(AnalyticsService) as unknown as AnalyticsServiceStub;
     fixture.detectChanges();
   });
 
@@ -40,6 +50,7 @@ describe('ContactFormComponent', () => {
     setField('#contact-name', '   ');
     submit();
     expect(service.calls).toBe(0);
+    expect(analytics.track).not.toHaveBeenCalled();
     expect(fixture.nativeElement.textContent).toContain('Enter your name using no more than 120 characters.');
     expect(document.activeElement).toBe(fixture.nativeElement.querySelector('#contact-name'));
   });
@@ -70,6 +81,8 @@ describe('ContactFormComponent', () => {
     setField('#contact-message', '  I would like to learn more.  ');
     submit();
     expect(service.calls).toBe(1);
+    expect(analytics.track).toHaveBeenCalledOnce();
+    expect(analytics.track).toHaveBeenCalledWith('contact_attempt', 'contact');
     expect(service.lastRequest).toMatchObject({
       name: 'Alex Smith', email: 'alex@example.com', subject: 'Early access',
       message: 'I would like to learn more.', website: '',
@@ -101,6 +114,7 @@ describe('ContactFormComponent', () => {
     submit();
     submit();
     expect(service.calls).toBe(1);
+    expect(analytics.track).toHaveBeenCalledOnce();
     expect((fixture.nativeElement.querySelector('button[type="submit"]') as HTMLButtonElement).disabled).toBe(true);
     expect((fixture.nativeElement.querySelector('#contact-name') as HTMLInputElement).disabled).toBe(true);
     expect((fixture.nativeElement.querySelector('form') as HTMLFormElement).getAttribute('aria-busy')).toBe('true');
@@ -160,6 +174,7 @@ describe('ContactFormComponent production fallback', () => {
           useValue: { ...DEFAULT_PUBLIC_APP_CONFIG, environmentName: 'production' },
         },
         { provide: ContactService, useClass: ContactServiceStub },
+        { provide: AnalyticsService, useClass: AnalyticsServiceStub },
       ],
     }).compileComponents();
     const productionFixture = TestBed.createComponent(ContactFormComponent);

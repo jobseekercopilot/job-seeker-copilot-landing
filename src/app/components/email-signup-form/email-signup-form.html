@@ -1,4 +1,4 @@
-<form class="signup-form" [class.signup-form-footer]="context() === 'footer'" (submit)="submit($event)" [attr.aria-busy]="submitting()" novalidate>
+<form class="signup-form" [class.signup-form-footer]="context() === 'footer'" (submit)="submit($event)" [attr.aria-busy]="submitting()" [appAnalyticsView]="'waitlist_form_view'" [analyticsContext]="context()" novalidate>
   <div class="honeypot" aria-hidden="true">
     <label [for]="'waitlist-website-' + context()">Leave this field empty</label>
     <input [id]="'waitlist-website-' + context()" type="text" tabindex="-1" autocomplete="off" [formControl]="website">

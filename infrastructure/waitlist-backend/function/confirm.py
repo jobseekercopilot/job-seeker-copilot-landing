@@ -8,6 +8,7 @@ from common import (
     aws_error_code,
     dynamodb_client,
     enforce_origin,
+    environment_dimensions,
     env_int,
     is_options,
     log_result,
@@ -84,6 +85,7 @@ def handler(event, context):
                 },
             }},
         ])
+        metric("WaitlistConfirmed", dimensions=environment_dimensions())
         log_result(context, OPERATION, 200, "confirmed")
         return response(event, 200, "WAITLIST_CONFIRMED", "Your email address has been confirmed.", success=True)
     except RequestError as exc:

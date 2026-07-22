@@ -10,6 +10,7 @@ TEMPLATE = Path(__file__).resolve().parents[1] / "template.yaml"
 sys.path.insert(0, str(FUNCTION))
 
 import app  # noqa: E402
+import analytics  # noqa: E402
 import common  # noqa: E402
 import confirm  # noqa: E402
 import contact  # noqa: E402
@@ -43,6 +44,7 @@ BASE_ENV = {
     "USED_TOKEN_RETENTION_SECONDS": "604800",
     "CONSENT_VERSION": "1.0",
     "ENABLE_CONTACT_SUBMISSIONS": "true",
+    "ENABLE_ANALYTICS_COLLECTION": "true",
     "CONTACT_SENDER_EMAIL": "hello@jobseekercopilot.com",
     "CONTACT_RECIPIENT_EMAIL": "hello@jobseekercopilot.com",
     "CONTACT_MESSAGE_MAX_LENGTH": "3000",
@@ -200,13 +202,16 @@ class SubscribeTests(unittest.TestCase):
         with patch.object(app, "subscriber_table", return_value=table), \
              patch.object(app, "create_pending", return_value=("raw-token", "hash")), \
              patch.object(app, "send_confirmation_email") as send, \
-             patch.object(app, "mark_confirmation_sent") as mark:
+             patch.object(app, "mark_confirmation_sent") as mark, \
+             patch.object(app, "metric") as emitted:
             result = app.handler(event({"email": " Person@Example.com "}), Context())
         self.assertEqual(result["statusCode"], 202)
         self.assertEqual(body(result)["code"], "WAITLIST_REQUEST_ACCEPTED")
         self.assertIn("If this address needs confirmation", body(result)["message"])
         send.assert_called_once_with("person@example.com", "raw-token")
         mark.assert_called_once_with("person@example.com", "hash")
+        emitted.assert_any_call("WaitlistAcceptedRequests", dimensions={"Environment": "development"})
+        emitted.assert_any_call("WaitlistConfirmationSent", dimensions={"Environment": "development"})
 
     def test_existing_states_return_one_neutral_contract_without_sending(self):
         results = []
@@ -221,13 +226,15 @@ class SubscribeTests(unittest.TestCase):
         table = Mock()
         table.get_item.side_effect = [{"Item": record} for record in records]
         with patch.object(app, "subscriber_table", return_value=table), \
-             patch.object(app, "send_confirmation_email") as send:
+             patch.object(app, "send_confirmation_email") as send, \
+             patch.object(app, "metric") as emitted:
             for _ in records:
                 results.append(app.handler(event({"email": "person@example.com"}), Context()))
         public_results = [(result["statusCode"], body(result)["code"], body(result)["message"]) for result in results]
         self.assertTrue(all(result == public_results[0] for result in public_results))
         self.assertEqual(public_results[0][0:2], (202, "WAITLIST_REQUEST_ACCEPTED"))
         send.assert_not_called()
+        emitted.assert_not_called()
 
     def test_concurrent_create_loser_resolves_to_the_neutral_existing_contract(self):
         conflict = Exception("private transaction detail")
@@ -395,7 +402,8 @@ class ConfirmationTests(unittest.TestCase):
         ddb = Mock()
         with patch.object(confirm, "token_table", return_value=tokens), \
              patch.object(confirm, "dynamodb_client", return_value=ddb), \
-             patch.object(confirm, "now_epoch", return_value=2_000):
+             patch.object(confirm, "now_epoch", return_value=2_000), \
+             patch.object(confirm, "metric") as emitted:
             result = confirm.handler(event({"token": self.RAW}), Context())
         self.assertEqual(body(result)["code"], "WAITLIST_CONFIRMED")
         actions = ddb.transact_write_items.call_args.kwargs["TransactItems"]
@@ -412,6 +420,7 @@ class ConfirmationTests(unittest.TestCase):
             self.assertIn(field, subscriber_update["UpdateExpression"])
         self.assertIn("REMOVE email", actions[1]["Update"]["UpdateExpression"])
         self.assertFalse(hasattr(tokens, "scan") and tokens.scan.called)
+        emitted.assert_called_once_with("WaitlistConfirmed", dimensions={"Environment": "development"})
 
     def test_malformed_and_unknown_tokens_are_rejected_before_any_update(self):
         tokens = Mock()
@@ -894,6 +903,113 @@ class TableSafeguardTests(unittest.TestCase):
 
 
 @patch.dict(os.environ, BASE_ENV, clear=True)
+class AnalyticsTests(unittest.TestCase):
+    def valid_payload(self):
+        return {
+            "eventName": "page_view",
+            "path": "/about",
+            "viewport": "mobile",
+            "trafficClass": "production",
+            "acquisition": "social",
+            "campaign": {
+                "source": "linkedin",
+                "medium": "social",
+                "campaign": "beta_launch",
+                "content": "founder_post",
+            },
+        }
+
+    def test_valid_event_emits_only_bounded_aggregate_log_and_metric(self):
+        with patch.object(analytics, "metric") as emitted, self.assertLogs(level="INFO") as captured:
+            result = analytics.handler(event(self.valid_payload()), Context())
+        self.assertEqual(result["statusCode"], 202)
+        self.assertEqual(body(result)["code"], "ANALYTICS_ACCEPTED")
+        emitted.assert_called_once_with(
+            "PageViews",
+            namespace="JobSeekerCopilot/Analytics",
+            dimensions={"Environment": "development", "TrafficClass": "production"},
+        )
+        logs = " ".join(captured.output)
+        for expected in ("page_view", "/about", "mobile", "linkedin", "beta_launch"):
+            self.assertIn(expected, logs)
+        for prohibited in ("email", "token", "userAgent", "referrer", "ipAddress"):
+            self.assertNotIn(prohibited, logs)
+
+    def test_context_is_exact_for_waitlist_and_contact_events(self):
+        waitlist = {**self.valid_payload(), "eventName": "waitlist_attempt", "context": "hero"}
+        contact_event = {**self.valid_payload(), "eventName": "contact_form_view", "path": "/contact", "context": "contact"}
+        with patch.object(analytics, "metric") as emitted:
+            results = [analytics.handler(event(payload), Context()) for payload in (waitlist, contact_event)]
+        self.assertEqual([result["statusCode"] for result in results], [202, 202])
+        self.assertEqual([call.args[0] for call in emitted.call_args_list], ["WaitlistAttempts", "ContactFormViews"])
+
+    def test_visit_is_a_context_free_aggregate_count(self):
+        visit = {**self.valid_payload(), "eventName": "visit", "path": "/"}
+        with patch.object(analytics, "metric") as emitted:
+            result = analytics.handler(event(visit), Context())
+        self.assertEqual(result["statusCode"], 202)
+        self.assertEqual(emitted.call_args.args[0], "Visits")
+
+    def test_personal_arbitrary_action_and_malformed_values_are_rejected_without_metrics(self):
+        valid = self.valid_payload()
+        cases = [
+            {**valid, "email": "person@example.com"},
+            {**valid, "path": "/waitlist/confirm"},
+            {**valid, "path": "/about?token=private"},
+            {**valid, "eventName": "contact_attempt", "context": "hero"},
+            {**valid, "eventName": "contact_attempt", "context": "contact", "path": "/about"},
+            {**valid, "campaign": {"source": "personal value with spaces"}},
+            {**valid, "campaign": {"visitor": "identifier"}},
+            {**valid, "viewport": "exact-device-model"},
+            {**valid, "trafficClass": "developer-name"},
+            {**valid, "acquisition": "exact-referrer-host"},
+            {**valid, "campaign": {"source": "bernard_mcgeever"}},
+        ]
+        with patch.object(analytics, "metric") as emitted:
+            results = [analytics.handler(event(payload), Context()) for payload in cases]
+        self.assertTrue(all(result["statusCode"] == 400 for result in results))
+        emitted.assert_not_called()
+
+    def test_disabled_collection_fails_before_parsing_and_options_remains_available(self):
+        with patch.dict(os.environ, {**BASE_ENV, "ENABLE_ANALYTICS_COLLECTION": "false"}, clear=True), \
+             patch.object(analytics, "parse_json") as parser, \
+             patch.object(analytics, "metric") as emitted:
+            disabled = analytics.handler(event(self.valid_payload()), Context())
+            options = analytics.handler(event({}, method="OPTIONS"), Context())
+        self.assertEqual(disabled["statusCode"], 503)
+        self.assertEqual(body(disabled)["code"], "ANALYTICS_UNAVAILABLE")
+        self.assertEqual(options["statusCode"], 204)
+        parser.assert_not_called()
+        emitted.assert_not_called()
+
+    def test_collector_requires_an_exact_browser_origin(self):
+        missing_origin = event(self.valid_payload())
+        missing_origin["headers"].pop("origin")
+        with patch.object(analytics, "metric") as emitted:
+            missing = analytics.handler(missing_origin, Context())
+            denied = analytics.handler(
+                event(self.valid_payload(), origin="https://unapproved.example.test"), Context()
+            )
+        self.assertEqual([missing["statusCode"], denied["statusCode"]], [403, 403])
+        emitted.assert_not_called()
+
+    def test_template_is_fail_closed_log_only_and_low_cardinality(self):
+        template = TEMPLATE.read_text(encoding="utf-8")
+        parameter = template.split("  EnableAnalyticsCollection:", 1)[1].split("  ContactSenderEmail:", 1)[0]
+        self.assertIn("Default: 'false'", parameter)
+        self.assertEqual(template.count("Path: /analytics"), 2)
+        role = template.split("  AnalyticsExecutionRole:", 1)[1].split("  WaitlistFunction:", 1)[0]
+        self.assertIn("logs:CreateLogStream", role)
+        self.assertIn("logs:PutLogEvents", role)
+        self.assertNotIn("dynamodb:", role)
+        self.assertNotIn("ses:", role)
+        self.assertNotIn("Resource: '*'", role)
+        self.assertIn("AnalyticsLambdaErrorAlarm", template)
+        self.assertIn("JobSeekerCopilot/Analytics", template)
+        self.assertIn('"TrafficClass","production"', template)
+
+
+@patch.dict(os.environ, BASE_ENV, clear=True)
 class ContactTests(unittest.TestCase):
     def setUp(self):
         self.dedupe = Mock()
@@ -939,6 +1055,7 @@ class ContactTests(unittest.TestCase):
         self.assertIn("&lt;script&gt;alert(&#x27;x&#x27;)&lt;/script&gt;", html_content)
         self.assertNotIn("<script>", html_content)
         logs = " ".join(captured.output)
+        self.assertIn("ContactAcceptedRequests", logs)
         self.assertNotIn("person@example.com", logs)
         self.assertNotIn("Merci", logs)
         reservation = self.dedupe.put_item.call_args.kwargs
@@ -1050,6 +1167,7 @@ class ContactTests(unittest.TestCase):
         ses.send_email.assert_not_called()
         logs = " ".join(captured.output)
         self.assertIn("ContactDuplicateSuppressions", logs)
+        self.assertNotIn("ContactAcceptedRequests", logs)
         self.assertNotIn("private duplicate detail", logs)
         self.assertNotIn("person@example.com", logs)
 
