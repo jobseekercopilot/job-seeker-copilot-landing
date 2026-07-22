@@ -1,7 +1,9 @@
 # Landing launch current-state audit
 
-Audit date: 22 July 2026  
-Region: `eu-west-2`  
+Audit date: 22 July 2026
+
+Region: `eu-west-2`
+
 Tracking: [launch epic #8](https://github.com/jobseekercopilot/job-seeker-copilot-landing/issues/8) and [LANDING-01 #9](https://github.com/jobseekercopilot/job-seeker-copilot-landing/issues/9)
 
 ## Outcome
