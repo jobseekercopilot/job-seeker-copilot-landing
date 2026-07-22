@@ -19,6 +19,10 @@ from workflow import create_pending, mark_confirmation_failure, mark_confirmatio
 
 LOGGER = logging.getLogger()
 OPERATION = "waitlist-subscribe"
+NEUTRAL_CODE = "WAITLIST_REQUEST_ACCEPTED"
+NEUTRAL_MESSAGE = (
+    "Request received. If this address needs confirmation, check its inbox or request a new confirmation email."
+)
 
 
 def handler(event, context):
@@ -44,40 +48,37 @@ def handler(event, context):
                 if current:
                     return _existing(event, context, current)
             raise
-        return _send(event, context, email, raw_token, hashed, 201)
+        return _send(event, context, email, raw_token, hashed)
     except RequestError as exc:
         log_result(context, OPERATION, exc.status_code, exc.code)
         return response(event, exc.status_code, exc.code, exc.message)
-    except Exception:
-        LOGGER.exception("Waitlist subscription failed")
+    except Exception as exc:
+        LOGGER.error("Waitlist subscription failed: %s", aws_error_code(exc) or "unknown")
         log_result(context, OPERATION, 503, "service-unavailable")
         return response(event, 503, "SERVICE_UNAVAILABLE", "We could not process the request. Please try again later.")
 
 
 def _existing(event, context, record):
     status = str(record.get("status", "")).upper()
-    if status == "CONFIRMED":
-        log_result(context, OPERATION, 200, "already-confirmed")
-        return response(event, 200, "WAITLIST_ALREADY_CONFIRMED", "This address does not need another confirmation email.", success=True)
     if status == "PENDING":
         from common import now_epoch
         if int(record.get("confirmationExpiresAt", 0)) > now_epoch() and record.get("currentConfirmationTokenHash"):
-            log_result(context, OPERATION, 200, "confirmation-required")
-            return response(event, 200, "WAITLIST_CONFIRMATION_REQUIRED", "Check your inbox or request a new confirmation email.", success=True)
-        raw_token, hashed, result = rotate_pending_token(record)
+            return _accepted(event, context, "pending-active")
+        try:
+            raw_token, hashed, result = rotate_pending_token(record)
+        except Exception as exc:
+            if aws_error_code(exc) in {"TransactionCanceledException", "ConditionalCheckFailedException"}:
+                return _accepted(event, context, "pending-concurrent-update")
+            raise
         if result != "issued":
-            log_result(context, OPERATION, 200, f"confirmation-{result}")
-            return response(event, 200, "WAITLIST_CONFIRMATION_REQUIRED", "Check your inbox or request a new confirmation email.", success=True)
-        return _send(event, context, str(record["email"]), raw_token, hashed, 200)
-    if status == "UNSUBSCRIBED":
-        return response(event, 200, "WAITLIST_RESUBSCRIPTION_REQUIRED", "A fresh confirmation flow is required before this address can rejoin.", success=True)
-    return response(event, 200, "WAITLIST_REQUEST_NOT_ACCEPTED", "This request cannot be completed automatically.", success=True)
+            return _accepted(event, context, f"pending-{result}")
+        return _send(event, context, str(record["email"]), raw_token, hashed)
+    return _accepted(event, context, f"existing-{status.lower() or 'unknown'}")
 
 
-def _send(event, context, email, raw_token, hashed, status_code):
+def _send(event, context, email, raw_token, hashed):
     try:
         send_confirmation_email(email, raw_token)
-        mark_confirmation_sent(email, hashed)
     except Exception as exc:
         LOGGER.error(
             "Confirmation delivery failed: %s (%s)",
@@ -94,8 +95,18 @@ def _send(event, context, email, raw_token, hashed, status_code):
             event, 503, "CONFIRMATION_EMAIL_TEMPORARILY_UNAVAILABLE",
             "Your request is pending, but we could not send the confirmation email. Please try again later.",
         )
-    log_result(context, OPERATION, status_code, "pending-confirmation")
-    return response(
-        event, status_code, "WAITLIST_PENDING_CONFIRMATION",
-        "Check your inbox to confirm your email address.", success=True,
-    )
+    try:
+        mark_confirmation_sent(email, hashed)
+    except Exception as exc:
+        LOGGER.error(
+            "Could not record confirmation delivery metadata: %s (%s)",
+            aws_error_code(exc) or "unknown",
+            aws_error_scope(exc),
+        )
+        metric("ConfirmationStateUpdateFailures")
+    return _accepted(event, context, "pending-confirmation")
+
+
+def _accepted(event, context, outcome):
+    log_result(context, OPERATION, 202, outcome)
+    return response(event, 202, NEUTRAL_CODE, NEUTRAL_MESSAGE, success=True)

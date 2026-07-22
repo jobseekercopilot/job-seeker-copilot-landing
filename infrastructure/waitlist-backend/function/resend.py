@@ -42,7 +42,6 @@ def handler(event, context):
         metric("ResendIssued")
         try:
             send_confirmation_email(email, raw_token)
-            mark_confirmation_sent(email, hashed)
         except Exception as exc:
             LOGGER.error(
                 "Resend delivery failed: %s (%s)",
@@ -54,6 +53,16 @@ def handler(event, context):
                 mark_confirmation_failure(email, hashed)
             except Exception:
                 LOGGER.error("Could not record resend delivery failure")
+        else:
+            try:
+                mark_confirmation_sent(email, hashed)
+            except Exception as exc:
+                LOGGER.error(
+                    "Could not record resend delivery metadata: %s (%s)",
+                    aws_error_code(exc) or "unknown",
+                    aws_error_scope(exc),
+                )
+                metric("ConfirmationStateUpdateFailures")
         return _neutral(event, context, "accepted")
     except RequestError as exc:
         log_result(context, OPERATION, exc.status_code, exc.code)

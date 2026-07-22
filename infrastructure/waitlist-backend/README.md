@@ -19,6 +19,11 @@ No handler calls `Scan`. Confirmation performs a consistent `GetItem` using the 
 
 A new subscriber record has `status=PENDING`, `source=landing-page`, `consentVersion`, timestamps, the current token hash, token expiry, send controls and `pendingExpiresAt`. The raw 256-bit token exists only in process memory, the confirmation URL and the email.
 
+Creation of the subscriber and hashed-token records uses one conditional
+`TransactWriteItems` call. All three transaction-capable Lambda roles grant the
+explicit `dynamodb:TransactWriteItems` action against only the external
+waitlist table and retained token table; none uses wildcard data permissions.
+
 Confirmation performs one transaction which:
 
 1. conditionally changes the current PENDING subscriber to `CONFIRMED`;
@@ -34,7 +39,12 @@ The old token is deleted when a resend rotates it. Confirmed records have no `pe
 - confirmed record: until unsubscribe, approved deletion, or end of purpose;
 - bounce/complaint suppression: only as long as operationally and legally necessary.
 
-An existing `UNSUBSCRIBED` record is never silently reactivated. `POST /waitlist` returns `WAITLIST_RESUBSCRIPTION_REQUIRED`; a future re-subscription feature must collect a fresh explicit request, issue a new token and reconfirm before changing that state. `BOUNCED` and `COMPLAINED` records are likewise never reactivated by these endpoints.
+An existing `UNSUBSCRIBED` record is never silently reactivated. A future
+re-subscription feature must collect a fresh explicit request, issue a new
+token and reconfirm before changing that state. `BOUNCED` and `COMPLAINED`
+records are likewise never reactivated by these endpoints. The public
+registration response is deliberately the same for new, pending, confirmed,
+unsubscribed, bounced and complained records; internal state is not disclosed.
 
 DynamoDB TTL deletion is asynchronous and can occur several days after expiry.
 
@@ -49,7 +59,11 @@ All JSON API calls use exact-origin CORS and return typed, public-safe responses
 | `POST` | `/waitlist/resend` | Accept `{ "email": "..." }` with neutral response |
 | `OPTIONS` | each route | Exact-origin preflight |
 
-Development allows only `https://develop.d3gd9ezfa3aujn.amplifyapp.com` and the temporary `https://feature-waitlist-double-opt-in.d3gd9ezfa3aujn.amplifyapp.com` test branch. Production allows only `https://jobseekercopilot.com`. There is no wildcard origin and no public subscriber-list endpoint.
+Development allows only `https://develop.d3gd9ezfa3aujn.amplifyapp.com` and
+the canonical `https://www.jobseekercopilot.com` host. Production allows only
+the canonical `www` host. The apex redirects to `www` before the application
+runs. The deleted feature host and lookalike subdomains are denied. There is no
+wildcard origin and no public subscriber-list endpoint.
 
 Confirmation links have this format:
 
@@ -93,7 +107,7 @@ Before public signup is enabled:
 
 1. confirm the SES domain identity and DKIM status are `SUCCESS`;
 2. obtain SES production access in `eu-west-2`;
-3. deploy with `EnvironmentName=production` and `PublicSiteUrl=https://jobseekercopilot.com`;
+3. deploy with `EnvironmentName=production` and `PublicSiteUrl=https://www.jobseekercopilot.com`;
 4. complete a real submit, receive, confirm, repeat-token, expiry and resend test;
 5. confirm bounce/complaint processing and alarms;
 6. enable the Angular live-submission runtime values.
@@ -135,9 +149,9 @@ sam deploy \
     EnvironmentName=development \
     WaitlistTableName=JobSeekerCopilotWaitlist \
     DevelopmentOrigin=https://develop.d3gd9ezfa3aujn.amplifyapp.com \
-    FeatureOrigin=https://feature-waitlist-double-opt-in.d3gd9ezfa3aujn.amplifyapp.com \
-    ProductionOrigin=https://jobseekercopilot.com \
-    PublicSiteUrl=https://feature-waitlist-double-opt-in.d3gd9ezfa3aujn.amplifyapp.com \
+    AdditionalDevelopmentOrigin=https://www.jobseekercopilot.com \
+    ProductionOrigin=https://www.jobseekercopilot.com \
+    PublicSiteUrl=https://www.jobseekercopilot.com \
   --no-execute-changeset
 ```
 

@@ -6,6 +6,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 FUNCTION = Path(__file__).resolve().parents[1] / "function"
+TEMPLATE = Path(__file__).resolve().parents[1] / "template.yaml"
 sys.path.insert(0, str(FUNCTION))
 
 import app  # noqa: E402
@@ -23,14 +24,14 @@ class Context:
 BASE_ENV = {
     "ENVIRONMENT_NAME": "development",
     "DEVELOPMENT_ORIGIN": "https://develop.d3gd9ezfa3aujn.amplifyapp.com",
-    "FEATURE_ORIGIN": "https://feature-waitlist-double-opt-in.d3gd9ezfa3aujn.amplifyapp.com",
-    "PRODUCTION_ORIGIN": "https://jobseekercopilot.com",
+    "ADDITIONAL_DEVELOPMENT_ORIGIN": "https://www.jobseekercopilot.com",
+    "PRODUCTION_ORIGIN": "https://www.jobseekercopilot.com",
     "WAITLIST_TABLE_NAME": "waitlist",
     "TOKEN_TABLE_NAME": "tokens",
     "SES_REGION": "eu-west-2",
     "WAITLIST_SENDER_EMAIL": "updates@jobseekercopilot.com",
     "PUBLIC_SUPPORT_EMAIL": "support@jobseekercopilot.com",
-    "PUBLIC_SITE_URL": "https://develop.d3gd9ezfa3aujn.amplifyapp.com",
+    "PUBLIC_SITE_URL": "https://www.jobseekercopilot.com",
     "SES_CONFIGURATION_SET": "WaitlistEmails",
     "CONFIRMATION_TOKEN_TTL_SECONDS": "172800",
     "CONFIRMATION_RESEND_COOLDOWN_SECONDS": "900",
@@ -84,6 +85,9 @@ class TokenTests(unittest.TestCase):
         request = ses.send_email.call_args.kwargs
         self.assertEqual(request["FromEmailAddress"], "updates@jobseekercopilot.com")
         self.assertEqual(request["ConfigurationSetName"], "WaitlistEmails")
+        self.assertEqual(
+            request["EmailTags"], [{"Name": "message-purpose", "Value": "waitlist-confirmation"}]
+        )
         self.assertEqual(request["Content"]["Simple"]["Subject"]["Data"], "Confirm your Job Seeker Copilot waitlist email")
         text = request["Content"]["Simple"]["Body"]["Text"]["Data"]
         html = request["Content"]["Simple"]["Body"]["Html"]["Data"]
@@ -97,6 +101,25 @@ class TokenTests(unittest.TestCase):
 
 @patch.dict(os.environ, BASE_ENV, clear=True)
 class SubscribeTests(unittest.TestCase):
+    def test_server_validation_normalises_strict_addresses_and_rejects_invalid_payloads(self):
+        self.assertEqual(common.normalise_email(" Person+Launch@Example.COM "), "person+launch@example.com")
+        for invalid in (
+            "not-an-email", ".person@example.com", "person..two@example.com",
+            "person@-example.com", "person@example", f"{'a' * 65}@example.com",
+        ):
+            with self.subTest(invalid=invalid):
+                self.assertEqual(common.normalise_email(invalid), "")
+
+        table = Mock()
+        table.get_item.return_value = {}
+        with patch.object(app, "subscriber_table", return_value=table), \
+             patch.object(app, "create_pending") as create:
+            invalid_email = app.handler(event({"email": "person..two@example.com"}), Context())
+            extra_field = app.handler(event({"email": "person@example.com", "status": "CONFIRMED"}), Context())
+        self.assertEqual(body(invalid_email)["code"], "INVALID_EMAIL")
+        self.assertEqual(body(extra_field)["code"], "INVALID_REQUEST")
+        create.assert_not_called()
+
     def test_new_subscription_is_pending_and_only_hash_is_stored(self):
         ddb = Mock()
         with patch.object(workflow, "dynamodb_client", return_value=ddb), \
@@ -111,7 +134,12 @@ class SubscribeTests(unittest.TestCase):
         self.assertEqual(subscriber["status"], {"S": "PENDING"})
         self.assertEqual(subscriber["source"], {"S": "landing-page"})
         self.assertEqual(subscriber["consentVersion"], {"S": "1.0"})
+        self.assertEqual(subscriber["confirmationExpiresAt"], {"N": str(1_780_000_000 + 172_800)})
+        self.assertEqual(subscriber["pendingExpiresAt"], {"N": str(1_780_000_000 + 2_592_000)})
         self.assertEqual(token["tokenHash"], {"S": hashed})
+        self.assertEqual(token["expiresAt"], {"N": str(1_780_000_000 + 172_800)})
+        self.assertEqual(transaction[0]["Put"]["ConditionExpression"], "attribute_not_exists(email)")
+        self.assertEqual(transaction[1]["Put"]["ConditionExpression"], "attribute_not_exists(tokenHash)")
         self.assertNotIn(raw, json.dumps(transaction))
 
     def test_subscribe_sends_email_then_reports_pending_confirmation(self):
@@ -122,31 +150,47 @@ class SubscribeTests(unittest.TestCase):
              patch.object(app, "send_confirmation_email") as send, \
              patch.object(app, "mark_confirmation_sent") as mark:
             result = app.handler(event({"email": " Person@Example.com "}), Context())
-        self.assertEqual(result["statusCode"], 201)
-        self.assertEqual(body(result)["code"], "WAITLIST_PENDING_CONFIRMATION")
-        self.assertIn("Check your inbox", body(result)["message"])
+        self.assertEqual(result["statusCode"], 202)
+        self.assertEqual(body(result)["code"], "WAITLIST_REQUEST_ACCEPTED")
+        self.assertIn("If this address needs confirmation", body(result)["message"])
         send.assert_called_once_with("person@example.com", "raw-token")
         mark.assert_called_once_with("person@example.com", "hash")
 
-    def test_pending_duplicate_does_not_send_unlimited_email(self):
+    def test_existing_states_return_one_neutral_contract_without_sending(self):
+        results = []
+        records = [
+            {"email": "person@example.com", "status": "PENDING",
+             "confirmationExpiresAt": 9_999_999_999, "currentConfirmationTokenHash": "hash"},
+            {"email": "person@example.com", "status": "CONFIRMED"},
+            {"email": "person@example.com", "status": "UNSUBSCRIBED"},
+            {"email": "person@example.com", "status": "BOUNCED"},
+            {"email": "person@example.com", "status": "COMPLAINED"},
+        ]
         table = Mock()
-        table.get_item.return_value = {"Item": {
-            "email": "person@example.com", "status": "PENDING",
-            "confirmationExpiresAt": 9_999_999_999, "currentConfirmationTokenHash": "hash",
-        }}
+        table.get_item.side_effect = [{"Item": record} for record in records]
         with patch.object(app, "subscriber_table", return_value=table), \
              patch.object(app, "send_confirmation_email") as send:
-            result = app.handler(event({"email": "person@example.com"}), Context())
-        self.assertEqual(body(result)["code"], "WAITLIST_CONFIRMATION_REQUIRED")
+            for _ in records:
+                results.append(app.handler(event({"email": "person@example.com"}), Context()))
+        public_results = [(result["statusCode"], body(result)["code"], body(result)["message"]) for result in results]
+        self.assertTrue(all(result == public_results[0] for result in public_results))
+        self.assertEqual(public_results[0][0:2], (202, "WAITLIST_REQUEST_ACCEPTED"))
         send.assert_not_called()
 
-    def test_confirmed_duplicate_is_not_modified_or_emailed(self):
+    def test_concurrent_create_loser_resolves_to_the_neutral_existing_contract(self):
+        conflict = Exception("private transaction detail")
+        conflict.response = {"Error": {"Code": "TransactionCanceledException"}}
         table = Mock()
-        table.get_item.return_value = {"Item": {"email": "person@example.com", "status": "CONFIRMED"}}
+        table.get_item.side_effect = [
+            {},
+            {"Item": {"email": "person@example.com", "status": "CONFIRMED"}},
+        ]
         with patch.object(app, "subscriber_table", return_value=table), \
+             patch.object(app, "create_pending", side_effect=conflict), \
              patch.object(app, "send_confirmation_email") as send:
             result = app.handler(event({"email": "person@example.com"}), Context())
-        self.assertEqual(body(result)["code"], "WAITLIST_ALREADY_CONFIRMED")
+        self.assertEqual(result["statusCode"], 202)
+        self.assertEqual(body(result)["code"], "WAITLIST_REQUEST_ACCEPTED")
         send.assert_not_called()
 
     def test_ses_failure_preserves_recoverable_pending_record(self):
@@ -162,9 +206,48 @@ class SubscribeTests(unittest.TestCase):
         self.assertNotIn("SES private detail", result["body"])
         failed.assert_called_once_with("person@example.com", "hash")
 
+    def test_successful_ses_send_survives_delivery_metadata_write_failure(self):
+        table = Mock()
+        table.get_item.return_value = {}
+        with patch.object(app, "subscriber_table", return_value=table), \
+             patch.object(app, "create_pending", return_value=("raw-token", "hash")), \
+             patch.object(app, "send_confirmation_email") as send, \
+             patch.object(app, "mark_confirmation_sent", side_effect=RuntimeError("private table detail")), \
+             patch.object(app, "mark_confirmation_failure") as failed, \
+             self.assertLogs(level="INFO") as captured:
+            result = app.handler(event({"email": "person@example.com"}), Context())
+        self.assertEqual(result["statusCode"], 202)
+        self.assertEqual(body(result)["code"], "WAITLIST_REQUEST_ACCEPTED")
+        send.assert_called_once()
+        failed.assert_not_called()
+        self.assertNotIn("private table detail", " ".join(captured.output))
+
+    def test_dynamodb_failure_returns_a_stable_safe_error_without_sending(self):
+        table = Mock()
+        table.get_item.return_value = {}
+        with patch.object(app, "subscriber_table", return_value=table), \
+             patch.object(app, "create_pending", side_effect=RuntimeError("private table and email detail")), \
+             patch.object(app, "send_confirmation_email") as send, \
+             self.assertLogs(level="INFO") as captured:
+            result = app.handler(event({"email": "person@example.com"}), Context())
+        self.assertEqual(result["statusCode"], 503)
+        self.assertEqual(body(result)["code"], "SERVICE_UNAVAILABLE")
+        self.assertNotIn("private table and email detail", result["body"])
+        self.assertNotIn("private table and email detail", " ".join(captured.output))
+        send.assert_not_called()
+
 
 @patch.dict(os.environ, BASE_ENV, clear=True)
 class ResendTests(unittest.TestCase):
+    def test_failed_delivery_state_clears_the_attempt_cooldown_for_recovery(self):
+        table = Mock()
+        with patch.object(workflow, "subscriber_table", return_value=table), \
+             patch.object(workflow, "now_epoch", return_value=2_000):
+            workflow.mark_confirmation_failure("person@example.com", "hash")
+        request = table.update_item.call_args.kwargs
+        self.assertIn("REMOVE lastConfirmationAttemptAtEpoch", request["UpdateExpression"])
+        self.assertIn("currentConfirmationTokenHash=:hash", request["ConditionExpression"])
+
     def test_resend_cooldown_and_window_limit_do_not_write(self):
         ddb = Mock()
         base = {
@@ -252,6 +335,12 @@ class ConfirmationTests(unittest.TestCase):
 
 @patch.dict(os.environ, BASE_ENV, clear=True)
 class EventAndSecurityTests(unittest.TestCase):
+    def test_transaction_iam_is_explicit_and_never_wildcarded(self):
+        template = TEMPLATE.read_text(encoding="utf-8")
+        self.assertEqual(template.count("Action: dynamodb:TransactWriteItems"), 3)
+        self.assertNotIn("Action: dynamodb:*", template)
+        self.assertNotIn("Resource: '*'", template)
+
     def test_bounce_and_complaint_mark_suppression_states(self):
         table = Mock()
         with patch.object(ses_events, "subscriber_table", return_value=table):
@@ -278,17 +367,23 @@ class EventAndSecurityTests(unittest.TestCase):
         self.assertNotIn("person@example.com", output)
         self.assertNotIn(raw, output)
 
-    def test_cors_allows_only_exact_staging_feature_and_production_origins(self):
+    def test_cors_allows_only_exact_development_canonical_and_production_origins(self):
         allowed = app.handler(event({}, method="OPTIONS"), Context())
-        feature = app.handler(event({}, origin=BASE_ENV["FEATURE_ORIGIN"], method="OPTIONS"), Context())
+        canonical = app.handler(
+            event({}, origin=BASE_ENV["ADDITIONAL_DEVELOPMENT_ORIGIN"], method="OPTIONS"), Context()
+        )
         denied = app.handler(event({}, origin="https://develop.attacker.amplifyapp.com", method="OPTIONS"), Context())
         self.assertEqual(allowed["headers"]["Access-Control-Allow-Origin"], BASE_ENV["DEVELOPMENT_ORIGIN"])
-        self.assertEqual(feature["headers"]["Access-Control-Allow-Origin"], BASE_ENV["FEATURE_ORIGIN"])
+        self.assertEqual(
+            canonical["headers"]["Access-Control-Allow-Origin"], BASE_ENV["ADDITIONAL_DEVELOPMENT_ORIGIN"]
+        )
         self.assertEqual(denied["statusCode"], 403)
         self.assertNotIn("Access-Control-Allow-Origin", denied["headers"])
         with patch.dict(os.environ, {**BASE_ENV, "ENVIRONMENT_NAME": "production"}, clear=True):
             production = app.handler(event({}, origin=BASE_ENV["PRODUCTION_ORIGIN"], method="OPTIONS"), Context())
+            apex = app.handler(event({}, origin="https://jobseekercopilot.com", method="OPTIONS"), Context())
         self.assertEqual(production["headers"]["Access-Control-Allow-Origin"], BASE_ENV["PRODUCTION_ORIGIN"])
+        self.assertEqual(apex["statusCode"], 403)
 
 
 if __name__ == "__main__":
