@@ -362,13 +362,11 @@ Resources:
             Version: '2012-10-17'
             Statement:
               - Effect: Allow
-                Action: [dynamodb:GetItem, dynamodb:UpdateItem]
+                Action: [dynamodb:GetItem, dynamodb:PutItem, dynamodb:UpdateItem, dynamodb:TransactWriteItems]
                 Resource: !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${WaitlistTableName}
               - Effect: Allow
-                Action: dynamodb:TransactWriteItems
-                Resource:
-                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${WaitlistTableName}
-                  - !GetAtt TokenTable.Arn
+                Action: [dynamodb:PutItem, dynamodb:TransactWriteItems]
+                Resource: !GetAtt TokenTable.Arn
         - &SendEmailPolicy
           PolicyName: SendWaitlistConfirmationOnly
           PolicyDocument:
@@ -402,13 +400,11 @@ Resources:
             Version: '2012-10-17'
             Statement:
               - Effect: Allow
-                Action: dynamodb:GetItem
+                Action: [dynamodb:GetItem, dynamodb:UpdateItem, dynamodb:TransactWriteItems]
                 Resource: !GetAtt TokenTable.Arn
               - Effect: Allow
-                Action: dynamodb:TransactWriteItems
-                Resource:
-                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${WaitlistTableName}
-                  - !GetAtt TokenTable.Arn
+                Action: [dynamodb:UpdateItem, dynamodb:TransactWriteItems]
+                Resource: !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${WaitlistTableName}
         - PolicyName: WriteConfirmationLogs
           PolicyDocument:
             Version: '2012-10-17'
@@ -428,13 +424,11 @@ Resources:
             Version: '2012-10-17'
             Statement:
               - Effect: Allow
-                Action: [dynamodb:GetItem, dynamodb:UpdateItem]
+                Action: [dynamodb:GetItem, dynamodb:UpdateItem, dynamodb:TransactWriteItems]
                 Resource: !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${WaitlistTableName}
               - Effect: Allow
-                Action: dynamodb:TransactWriteItems
-                Resource:
-                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${WaitlistTableName}
-                  - !GetAtt TokenTable.Arn
+                Action: [dynamodb:DeleteItem, dynamodb:PutItem, dynamodb:TransactWriteItems]
+                Resource: !GetAtt TokenTable.Arn
         - *SendEmailPolicy
         - PolicyName: WriteResendLogs
           PolicyDocument:

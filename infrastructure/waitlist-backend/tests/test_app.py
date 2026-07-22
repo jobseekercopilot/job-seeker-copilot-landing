@@ -473,7 +473,36 @@ class ConfirmationTests(unittest.TestCase):
 class EventAndSecurityTests(unittest.TestCase):
     def test_transaction_iam_is_explicit_and_never_wildcarded(self):
         template = TEMPLATE.read_text(encoding="utf-8")
-        self.assertEqual(template.count("Action: dynamodb:TransactWriteItems"), 3)
+        waitlist_role = template.split("  WaitlistExecutionRole:", 1)[1].split(
+            "  ConfirmationExecutionRole:", 1
+        )[0]
+        confirmation_role = template.split("  ConfirmationExecutionRole:", 1)[1].split(
+            "  ResendExecutionRole:", 1
+        )[0]
+        resend_role = template.split("  ResendExecutionRole:", 1)[1].split(
+            "  SesEventsExecutionRole:", 1
+        )[0]
+        self.assertIn(
+            "Action: [dynamodb:GetItem, dynamodb:PutItem, dynamodb:UpdateItem, dynamodb:TransactWriteItems]",
+            waitlist_role,
+        )
+        self.assertIn("Action: [dynamodb:PutItem, dynamodb:TransactWriteItems]", waitlist_role)
+        self.assertIn(
+            "Action: [dynamodb:GetItem, dynamodb:UpdateItem, dynamodb:TransactWriteItems]",
+            confirmation_role,
+        )
+        self.assertIn(
+            "Action: [dynamodb:UpdateItem, dynamodb:TransactWriteItems]",
+            confirmation_role,
+        )
+        self.assertIn(
+            "Action: [dynamodb:GetItem, dynamodb:UpdateItem, dynamodb:TransactWriteItems]",
+            resend_role,
+        )
+        self.assertIn(
+            "Action: [dynamodb:DeleteItem, dynamodb:PutItem, dynamodb:TransactWriteItems]",
+            resend_role,
+        )
         self.assertNotIn("Action: dynamodb:*", template)
         self.assertNotIn("Resource: '*'", template)
 
