@@ -1,8 +1,8 @@
 # Job Seeker Copilot landing page
 
-Standalone public landing page for Job Seeker Copilot. This Angular application is intentionally separate from `../job-seeker-copilot-client`: it has its own dependencies, build, runtime configuration and future deployment stack. It copies approved brand assets and screenshots, but has no runtime dependency on the main client.
+Standalone public landing page for Job Seeker Copilot. This Angular application is intentionally separate from `../job-seeker-copilot-client`: it has its own dependencies, build and runtime configuration. The Angular frontend and its AWS SAM/Python backend remain together in this repository. It copies approved brand assets and screenshots, but has no runtime dependency on the main client.
 
-No AWS account, live API, database, domain or production mailbox is configured, and no infrastructure has been deployed.
+The public site and waiting-list AWS resources are deployed, but they are not yet verified for launch. The [22 July 2026 current-state audit](./docs/launch/current-state-audit-2026-07-22.md) records the deployed architecture, validation baseline and P0/P1 blockers. Do not treat the public hostname as launch-ready until the linked epic is complete.
 
 ## Local development
 
@@ -59,11 +59,11 @@ The production `POST /waitlist` contract leaves every new address `PENDING` unti
 
 The waitlist form retains a hidden honeypot as a weak client-side automation signal. API Gateway throttling, Lambda validation and the DynamoDB condition are authoritative. See [infrastructure/waitlist-backend/README.md](./infrastructure/waitlist-backend/README.md) for deployment details and `infrastructure/README.md` for future contact, email-confirmation and WAF/CAPTCHA work.
 
-## AWS Amplify Hosting preparation
+## AWS Amplify Hosting
 
 `amplify.yml` uses the lock file (`npm ci`), generates public runtime configuration, runs the production build, publishes the verified browser output directory and caches `node_modules`.
 
-When an Amplify app is created later:
+Before promoting the existing Amplify app to a verified production release:
 
 1. add only the public variables described above;
 2. add an SPA rewrite from `/<*>` to `/index.html` with HTTP 200 so `/privacy`, `/terms`, `/contact`, `/waitlist/confirm` and `/waitlist/unsubscribe` survive browser refreshes;
@@ -71,7 +71,7 @@ When an Amplify app is created later:
 4. inspect the built `config/app-config.json` and bundles to confirm there are no localhost URLs, private mailboxes or secrets;
 5. keep live submission disabled until SES, API, CORS, email receipt and single-use confirmation pass an end-to-end test.
 
-`amplify.yml` does not assume an Amplify application or AWS account already exists.
+`amplify.yml` remains portable and does not hard-code an Amplify application or AWS account.
 
 ## Serverless infrastructure
 
@@ -89,9 +89,10 @@ The landing page and dedicated statement describe accessibility as ongoing work,
 
 ## Owner decisions still required
 
-- AWS account, regions, stack names and separate test/production environments.
-- Final domains and all runtime URLs.
-- SES production access, permitted-recipient staging test, monitored operational alarms and a real end-to-end email-confirmation test.
+- Separate development/production stack ownership and final production naming.
+- Final main-application URLs and complete landing runtime URL configuration.
+- Approved alarm notification destination or explicit manual monitoring process.
+- SES simulator evidence, permitted-recipient development tests and real end-to-end confirmation and contact-delivery tests.
 - Final legal entity, privacy contact, lawful bases, retention periods, processors and legal approval. Legal drafts must receive owner/legal review before production publication.
 - Whether optional contact-record storage and acknowledgement email should be enabled.
 - Production abuse controls and alert thresholds after traffic is understood.
