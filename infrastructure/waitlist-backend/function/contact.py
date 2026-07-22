@@ -12,6 +12,7 @@ from typing import Any
 from common import (
     RequestError,
     aws_error_code,
+    aws_error_scope,
     dynamodb_resource,
     enforce_origin,
     env_int,
@@ -80,7 +81,11 @@ def handler(event, context):
         log_result(context, OPERATION, exc.status_code, exc.code)
         return response(event, exc.status_code, exc.code, exc.message)
     except Exception as exc:
-        LOGGER.error("Contact processing failed: %s", aws_error_code(exc) or "unknown")
+        LOGGER.error(
+            "Contact processing failed: %s (%s)",
+            aws_error_code(exc) or "unknown",
+            aws_error_scope(exc),
+        )
         log_result(context, OPERATION, 503, "delivery-failed")
         return response(
             event,

@@ -120,11 +120,12 @@ The SES-event role can only update the waitlist table and write its own log
 events. No deployed landing role has wildcard SES resources or a subscriber-list
 permission.
 
-The shared SAM design now mirrors this control for future contact deployment:
-the sender identity is the exact `ContactSenderEmail`, the From condition must
-match it, and the only configuration-set resource is the supplied existing set.
-There is still no live contact role or route; CONTACT-02 must verify the
-generated change set before deployment.
+The deployed contact role permits both the verified domain identity and the
+separately verified exact `ContactSenderEmail` identity because SES may
+authorize the more-specific identity. The From condition must still match that
+exact sender, the recipient condition must match the single approved company
+inbox, and the only configuration-set resource is the supplied existing set.
+There is no wildcard identity, recipient or configuration-set permission.
 
 ## Validation and remaining gates
 

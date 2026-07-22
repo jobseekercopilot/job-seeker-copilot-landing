@@ -288,6 +288,8 @@ def aws_error_scope(error: Exception) -> str:
             return "sender-email-identity"
         if identity == os.getenv("PUBLIC_SUPPORT_EMAIL", ""):
             return "support-email-identity"
+        if identity == os.getenv("CONTACT_SENDER_EMAIL", ""):
+            return "contact-sender-email-identity"
         return "other-email-identity"
     if "ses:SendEmail" in message:
         return "send-email"

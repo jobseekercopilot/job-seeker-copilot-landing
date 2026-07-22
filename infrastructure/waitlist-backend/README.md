@@ -120,7 +120,7 @@ The message identifies Job Seeker Copilot, explains why it was sent, includes th
 
 The stack creates the `jobseekercopilot.com` SES domain identity and three Easy DKIM CNAME records in the existing Route 53 hosted zone. It creates an EventBridge configuration-set destination for sends, rejects, hard bounces, complaints, deliveries, rendering failures and delivery delays. A Lambda records `BOUNCED` or `COMPLAINED`, or safe delivery metadata, only when the internally controlled message-purpose tag is `waitlist-confirmation`. Contact and unknown-purpose events are ignored before any subscriber-table access, and recipient addresses are never logged.
 
-The sending roles grant `ses:SendEmail` only against the configured domain identity and the exact waitlist configuration set, constrained to the configured sender address. The contact role additionally constrains `ses:Recipients` to the private company recipient. The visitor address can appear only as Reply-To.
+The waitlist sending roles grant `ses:SendEmail` only against the configured domain identity and the exact waitlist configuration set, constrained to the configured sender address. The contact role names both that domain identity and the separately verified exact company sender identity because SES may authorize the more-specific identity; it still constrains From, the configuration set and the single private company recipient exactly. The visitor address can appear only as Reply-To.
 
 Contact email uses an internally prefixed subject, separate UTF-8 text/HTML
 bodies, and `message-purpose=contact-enquiry`. Name, subject and message values
