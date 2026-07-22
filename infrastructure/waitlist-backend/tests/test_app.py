@@ -502,7 +502,9 @@ class EventAndSecurityTests(unittest.TestCase):
         self.assertEqual(result, {"processed": 1})
         self.assertIn("lastEmailDeliveryIssueAt", request["UpdateExpression"])
         self.assertNotIn(":status", request["ExpressionAttributeValues"])
-        emit_metric.assert_called_once_with("SesTransientBounces")
+        emit_metric.assert_any_call("SesTransientBounces")
+        emit_metric.assert_any_call("SesDeliveryFailures")
+        self.assertEqual(emit_metric.call_count, 2)
 
     def test_delivery_and_delivery_issue_events_update_only_existing_non_suppressed_records(self):
         table = Mock()
@@ -512,7 +514,8 @@ class EventAndSecurityTests(unittest.TestCase):
             "Email Rejected",
             "Email Rendering Failed",
         ]
-        with patch.object(ses_events, "subscriber_table", return_value=table):
+        with patch.object(ses_events, "subscriber_table", return_value=table), \
+             patch.object(ses_events, "metric") as emit_metric:
             results = [ses_events.handler(ses_event(value), Context()) for value in detail_types]
         self.assertEqual(results, [{"processed": 1}] * len(detail_types))
         updates = [call.kwargs for call in table.update_item.call_args_list]
@@ -520,6 +523,11 @@ class EventAndSecurityTests(unittest.TestCase):
         self.assertTrue(all("#status<>:complained" in value["ConditionExpression"] for value in updates))
         self.assertTrue(
             all("lastEmailDeliveryIssueAt" in value["UpdateExpression"] for value in updates[1:])
+        )
+        emit_metric.assert_any_call("SesDeliveries")
+        self.assertEqual(
+            sum(call.args == ("SesDeliveryFailures",) for call in emit_metric.call_args_list),
+            3,
         )
 
     def test_duplicate_or_out_of_order_suppression_is_an_idempotent_no_op(self):
@@ -536,25 +544,43 @@ class EventAndSecurityTests(unittest.TestCase):
         self.assertNotIn("person@example.com", output)
         self.assertNotIn("conditional details", output)
 
-    def test_contact_and_missing_purpose_events_never_touch_subscriber_data(self):
+    def test_contact_events_emit_purpose_specific_metrics_without_touching_subscriber_data(self):
         table = Mock()
-        contact_event = ses_event(
-            "Email Delivered",
-            destination="private-company-inbox@example.com",
-            purpose="contact-enquiry",
-        )
+        contact_events = [
+            ses_event(
+                detail_type,
+                destination="private-company-inbox@example.com",
+                purpose="contact-enquiry",
+            )
+            for detail_type in (
+                "Email Delivered",
+                "Email Bounced",
+                "Email Complaint Received",
+                "Email Rejected",
+            )
+        ]
         missing_tag_event = ses_event("Email Bounced")
         del missing_tag_event["detail"]["mail"]["tags"]["message-purpose"]
         with patch.object(ses_events, "subscriber_table", return_value=table) as subscriber, \
+             patch.object(ses_events, "metric") as emit_metric, \
              self.assertLogs(level="INFO") as captured:
-            contact_result = ses_events.handler(contact_event, Context())
+            contact_results = [ses_events.handler(value, Context()) for value in contact_events]
             missing_result = ses_events.handler(missing_tag_event, Context())
-        self.assertEqual(contact_result, {"processed": 0})
+        self.assertEqual(contact_results, [{"processed": 1}] * len(contact_events))
         self.assertEqual(missing_result, {"processed": 0})
         subscriber.assert_not_called()
         table.update_item.assert_not_called()
+        for metric_name in (
+            "ContactSesDeliveries",
+            "ContactSesBounces",
+            "ContactSesComplaints",
+            "ContactSesDeliveryFailures",
+        ):
+            emit_metric.assert_any_call(
+                metric_name, namespace=ses_events.CONTACT_METRIC_NAMESPACE
+            )
         logs = " ".join(captured.output)
-        self.assertIn("ignored-non-waitlist-purpose", logs)
+        self.assertIn("ignored-non-approved-purpose", logs)
         self.assertNotIn("private-company-inbox@example.com", logs)
         self.assertNotIn("person@example.com", logs)
 
@@ -593,6 +619,58 @@ class EventAndSecurityTests(unittest.TestCase):
         template = TEMPLATE.read_text(encoding="utf-8")
         function = template.split("  SesEventsFunction:", 1)[1].split("  TtlConfigurationFunction:", 1)[0]
         self.assertIn("SES_CONFIGURATION_SET: !Ref WaitlistEmailConfigurationSet", function)
+
+    def test_launch_monitoring_has_scoped_actions_valid_dimensions_and_no_private_output(self):
+        template = TEMPLATE.read_text(encoding="utf-8")
+        notification_parameter = template.split("  AlarmNotificationEmail:", 1)[1].split(
+            "\nConditions:", 1
+        )[0]
+        self.assertIn("NoEcho: true", notification_parameter)
+        self.assertIn("HasAlarmNotificationEmail:", template)
+        self.assertIn("  AlarmNotificationTopic:\n", template)
+        self.assertIn("  AlarmNotificationTopicPolicy:\n", template)
+        self.assertIn("Principal: {Service: cloudwatch.amazonaws.com}", template)
+        self.assertIn("aws:SourceAccount: !Ref AWS::AccountId", template)
+        self.assertIn("aws:SourceArn: !Sub arn:${AWS::Partition}:cloudwatch:", template)
+        self.assertIn("Condition: HasAlarmNotificationEmail", template)
+        self.assertIn("AlarmActions: &LandingAlarmActions [!Ref AlarmNotificationTopic]", template)
+        self.assertIn("OKActions: &LandingOkActions [!Ref AlarmNotificationTopic]", template)
+
+        for route_filter in (
+            "WaitlistSubmitThrottleMetricFilter",
+            "WaitlistConfirmationThrottleMetricFilter",
+            "WaitlistResendThrottleMetricFilter",
+            "ContactApiThrottleMetricFilter",
+        ):
+            self.assertIn(f"  {route_filter}:\n", template)
+        self.assertEqual(template.count('$.status = "429"'), 4)
+        self.assertNotIn("MetricName: ThrottledRequests", template)
+        self.assertEqual(template.count("MetricName: SystemErrors"), 11)
+        self.assertIn("- {Name: Operation, Value: PutItem}", template)
+        self.assertIn("- {Name: Operation, Value: TransactWriteItems}", template)
+
+        for alarm in (
+            "WaitlistThrottleVolumeAlarm",
+            "TokenDynamoThrottlingAlarm",
+            "ContactDynamoThrottlingAlarm",
+            "WaitlistDynamoSystemErrorAlarm",
+            "TokenDynamoSystemErrorAlarm",
+            "ContactDynamoSystemErrorAlarm",
+            "SesDeliveryFailureAlarm",
+            "ContactSesBounceAlarm",
+            "ContactSesComplaintAlarm",
+            "ContactSesDeliveryFailureAlarm",
+            "ContactDedupeReleaseFailureAlarm",
+            "TtlConfigurationLambdaErrorAlarm",
+            "MonitoringNotificationCanaryAlarm",
+        ):
+            self.assertIn(f"  {alarm}:\n", template)
+
+        self.assertIn("  LaunchMonitoringDashboard:\n", template)
+        outputs = template.split("Outputs:", 1)[1]
+        self.assertIn("AlarmNotificationTopicArn", outputs)
+        self.assertIn("LaunchMonitoringDashboardName", outputs)
+        self.assertNotIn("Value: !Ref AlarmNotificationEmail", outputs)
 
     def test_logs_do_not_contain_complete_email_or_token(self):
         table = Mock()
