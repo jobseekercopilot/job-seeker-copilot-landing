@@ -48,6 +48,12 @@ closed unless the waitlist endpoints and `CONTACT_API_URL` are absolute HTTPS
 URLs. The form also rejects a missing or insecure production contact endpoint
 at runtime.
 
+Static prerendering loads the same generated public configuration before
+rendering. Production HTML therefore never contains the development-only
+disconnected message, and a disabled production build includes the company
+fallback even before browser hydration. The build verification checks this
+against the copied runtime JSON.
+
 Keep live submissions disabled until CONTACT-02 deploys the endpoint and
 CONTACT-04 verifies controlled delivery and Reply-To behavior at the approved
 company inbox. The fallback address is public contact information, not the

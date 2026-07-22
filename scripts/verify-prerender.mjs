@@ -8,6 +8,8 @@ const article = await readFile(
   'utf8',
 );
 const faq = await readFile(join(output, 'faq', 'index.html'), 'utf8');
+const contact = await readFile(join(output, 'contact', 'index.html'), 'utf8');
+const runtimeConfig = JSON.parse(await readFile(join(output, 'config', 'app-config.json'), 'utf8'));
 
 const requirements = [
   [home, 'id="competitor-comparison"', 'homepage comparison section'],
@@ -28,6 +30,24 @@ const requirements = [
 
 for (const [html, expected, label] of requirements) {
   if (!html.includes(expected)) throw new Error(`Prerendered HTML is missing ${label}.`);
+}
+
+if (contact.includes('@gmail.com')) {
+  throw new Error('Prerendered contact HTML must not contain a personal Gmail address.');
+}
+if (runtimeConfig.environmentName === 'production') {
+  if (contact.includes('development mode')) {
+    throw new Error('Prerendered production contact HTML must not contain development-mode copy.');
+  }
+  if (!runtimeConfig.enableLiveSubmissions || !runtimeConfig.contactApiUrl) {
+    if (!contact.includes('Online contact is temporarily unavailable') ||
+        !contact.includes('hello@jobseekercopilot.com')) {
+      throw new Error('Disabled production contact HTML must include the company fallback.');
+    }
+  }
+} else if (runtimeConfig.environmentName === 'development' &&
+           !contact.includes('development mode')) {
+  throw new Error('Disconnected development contact HTML must explain its development state.');
 }
 
 if (home.indexOf('id="competitor-comparison"') > home.indexOf('id="roadmap"')) {
