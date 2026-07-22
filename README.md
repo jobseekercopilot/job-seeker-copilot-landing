@@ -41,7 +41,7 @@ Important switches:
 
 - `PUBLIC_ENVIRONMENT_NAME` must be `development`, `test` or `production`.
 - `ENABLE_LIVE_SUBMISSIONS` must remain `false` until SES identity/DKIM verification and a permitted-recipient end-to-end confirmation test have passed.
-- `WAITLIST_API_URL`, `WAITLIST_CONFIRMATION_API_URL`, `WAITLIST_RESEND_API_URL`, `WAITLIST_UNSUBSCRIBE_API_URL` and `CONTACT_API_URL` are full public route URLs.
+- `WAITLIST_API_URL`, `WAITLIST_CONFIRMATION_API_URL`, `WAITLIST_RESEND_API_URL`, `WAITLIST_UNSUBSCRIBE_API_URL` and `CONTACT_API_URL` are full public route URLs. A production build with live submissions enabled fails before writing runtime configuration unless the submit, confirmation and resend routes are valid absolute HTTPS URLs.
 - main-application, registration, sign-in, pricing, legal and support URLs are separately configurable because the final domain layout is undecided.
 - anti-bot fields reserve public provider configuration only. The backend controls remain independent.
 
@@ -55,7 +55,7 @@ Every API returns JSON in this shape:
 {"success":true,"code":"WAITLIST_PENDING_CONFIRMATION","message":"Check your inbox to confirm your email address."}
 ```
 
-The production `POST /waitlist` contract leaves every new address `PENDING` until its secure single-use link is confirmed. Only a token hash is stored. Confirmation and resend use separate runtime-configured endpoints; resend responses are neutral to reduce address enumeration. The dedicated implementation and deployment guide are in [infrastructure/waitlist-backend/README.md](./infrastructure/waitlist-backend/README.md).
+The production `POST /waitlist` contract leaves every new address `PENDING` until its secure single-use link is confirmed. Only a token hash is stored. The browser normalises and validates an address with the same rules as the deployed backend. Confirmation and resend use separate runtime-configured endpoints; all accepted registration states render the same neutral message and resend responses stay neutral to reduce address enumeration. The dedicated implementation and deployment guide are in [infrastructure/waitlist-backend/README.md](./infrastructure/waitlist-backend/README.md).
 
 The waitlist form retains a hidden honeypot as a weak client-side automation signal. API Gateway throttling, Lambda validation and the DynamoDB condition are authoritative. See [infrastructure/waitlist-backend/README.md](./infrastructure/waitlist-backend/README.md) for deployment details and `infrastructure/README.md` for future contact, email-confirmation and WAF/CAPTCHA work.
 
@@ -66,7 +66,7 @@ The waitlist form retains a hidden honeypot as a weak client-side automation sig
 Before promoting the existing Amplify app to a verified production release:
 
 1. add only the public variables described above;
-2. add an SPA rewrite from `/<*>` to `/index.html` with HTTP 200 so `/privacy`, `/terms`, `/contact`, `/waitlist/confirm` and `/waitlist/unsubscribe` survive browser refreshes;
+2. add an SPA rewrite from `/<*>` to `/index.html` with HTTP 200 so `/privacy`, `/terms`, `/contact`, `/waitlist/confirm`, `/waitlist/resend` and `/waitlist/unsubscribe` survive browser refreshes;
 3. set exact API CORS origins to the final Amplify/custom domain;
 4. inspect the built `config/app-config.json` and bundles to confirm there are no localhost URLs, private mailboxes or secrets;
 5. keep live submission disabled until SES, API, CORS, email receipt and single-use confirmation pass an end-to-end test.

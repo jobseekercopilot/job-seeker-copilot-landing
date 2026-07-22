@@ -2,6 +2,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, map, of, throwError } from 'rxjs';
 import { PUBLIC_APP_CONFIG } from '../config/public-app-config';
+import { isValidWaitlistEmail, normaliseWaitlistEmail } from './waitlist-email';
 
 interface WaitlistApiResponse {
   success: boolean;
@@ -25,8 +26,8 @@ export class WaitlistService {
   private readonly config = inject(PUBLIC_APP_CONFIG);
 
   join(email: string): Observable<WaitlistResult> {
-    const normalisedEmail = email.trim().toLowerCase();
-    if (!this.isValidEmail(normalisedEmail)) {
+    const normalisedEmail = normaliseWaitlistEmail(email);
+    if (!isValidWaitlistEmail(normalisedEmail)) {
       throw new Error('A valid email address is required.');
     }
     if (!this.config.enableLiveSubmissions || !this.config.waitlistApiUrl.trim()) {
@@ -57,7 +58,4 @@ export class WaitlistService {
     );
   }
 
-  private isValidEmail(email: string): boolean {
-    return email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  }
 }

@@ -52,6 +52,12 @@ export const routes: Routes = [
     title: 'Confirm your email | Job Seeker Copilot',
   },
   {
+    path: 'waitlist/resend',
+    loadComponent: () => import('./pages/waitlist-action/waitlist-action').then(module => module.WaitlistActionPage),
+    data: { action: 'resend' },
+    title: 'Request a confirmation email | Job Seeker Copilot',
+  },
+  {
     path: 'waitlist/unsubscribe',
     loadComponent: () => import('./pages/waitlist-action/waitlist-action').then(module => module.WaitlistActionPage),
     data: { action: 'unsubscribe' },

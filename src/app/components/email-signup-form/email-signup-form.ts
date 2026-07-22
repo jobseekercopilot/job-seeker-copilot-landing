@@ -1,10 +1,11 @@
 import { ChangeDetectionStrategy, Component, inject, input, signal } from '@angular/core';
-import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { BUSINESS_CONTACT_DETAILS } from '../../config/business-contact-details';
 import { EARLY_ACCESS_OFFER_CONFIG, formatOfferTokenAmount } from '../../config/early-access-offer';
 import { PUBLIC_APP_CONFIG } from '../../config/public-app-config';
+import { normaliseWaitlistEmail, waitlistEmailValidator } from '../../services/waitlist-email';
 import { WaitlistService } from '../../services/waitlist.service';
 
 type FormState = 'idle' | 'pending-confirmation' | 'already-confirmed' | 'confirmation-required' |
@@ -28,7 +29,7 @@ export class EmailSignupFormComponent {
   readonly context = input<'hero' | 'footer'>('hero');
   protected readonly email = new FormControl('', {
     nonNullable: true,
-    validators: [Validators.required, Validators.email, Validators.maxLength(254)],
+    validators: [waitlistEmailValidator],
   });
   protected readonly submitting = signal(false);
   protected readonly state = signal<FormState>('idle');
@@ -40,6 +41,9 @@ export class EmailSignupFormComponent {
     event?.preventDefault();
     if (this.submitting()) return;
 
+    const normalisedEmail = normaliseWaitlistEmail(this.email.value);
+    this.email.setValue(normalisedEmail, { emitEvent: false });
+    this.email.updateValueAndValidity({ emitEvent: false });
     if (this.email.invalid) {
       this.email.markAsTouched();
       return;
@@ -51,19 +55,38 @@ export class EmailSignupFormComponent {
 
     this.submitting.set(true);
     this.state.set('idle');
+    this.email.disable({ emitEvent: false });
 
-    this.waitlistService.join(this.email.value).pipe(
-      finalize(() => this.submitting.set(false)),
+    this.waitlistService.join(normalisedEmail).pipe(
+      finalize(() => {
+        this.submitting.set(false);
+        this.email.enable({ emitEvent: false });
+      }),
     ).subscribe({
       next: result => {
-        if (result.status === 'pending-confirmation' || result.status === 'already-confirmed') {
-          this.state.set(result.status);
+        this.state.set(result.status);
+        if (result.status === 'pending-confirmation' || result.status === 'already-confirmed' ||
+            result.status === 'confirmation-required' || result.status === 'resubscription-required') {
           this.email.reset();
-        } else {
-          this.state.set(result.status);
         }
       },
       error: () => this.state.set('error'),
     });
+  }
+
+  protected clearStatus(): void {
+    if (!this.submitting()) this.state.set('idle');
+  }
+
+  protected isRequestAccepted(): boolean {
+    return this.state() === 'pending-confirmation' || this.state() === 'already-confirmed' ||
+      this.state() === 'confirmation-required' || this.state() === 'resubscription-required';
+  }
+
+  protected announcementRole(): 'alert' | 'status' {
+    return this.email.touched && this.email.invalid ||
+      ['validation-error', 'email-delivery-error', 'rate-limited', 'error'].includes(this.state())
+      ? 'alert'
+      : 'status';
   }
 }

@@ -10,9 +10,11 @@ import { EmailSignupFormComponent } from './email-signup-form';
 class WaitlistServiceStub {
   response: Observable<WaitlistResult> = of({ status: 'pending-confirmation' });
   calls = 0;
+  lastEmail = '';
 
-  join(): Observable<WaitlistResult> {
+  join(email: string): Observable<WaitlistResult> {
     this.calls += 1;
+    this.lastEmail = email;
     return this.response;
   }
 }
@@ -45,15 +47,22 @@ describe('EmailSignupFormComponent', () => {
     expect(emailInput().getAttribute('aria-invalid')).toBe('true');
   });
 
-  it('asks for confirmation without claiming that joining is complete', () => {
+  it('shows neutral accepted copy without claiming that joining is complete', () => {
     setEmail('person@example.com');
     submitForm();
 
     expect(service.calls).toBe(1);
-    expect(fixture.nativeElement.textContent).toContain('Check your inbox to confirm your email address');
-    expect(fixture.nativeElement.textContent).toContain('Joining is not complete');
+    expect(fixture.nativeElement.textContent).toContain('If this address needs confirmation');
+    expect(fixture.nativeElement.textContent).toContain('If it is already confirmed, no further action is needed');
     expect(fixture.nativeElement.textContent).not.toContain('You are now subscribed');
     expect(fixture.nativeElement.textContent).not.toContain('tokens credited');
+  });
+
+  it('trims and normalises before applying the same validation as the service', () => {
+    setEmail(' Person@Example.COM ');
+    submitForm();
+
+    expect(service.lastEmail).toBe('person@example.com');
   });
 
   it('states that the email was not stored when the endpoint is not configured', () => {
@@ -71,15 +80,23 @@ describe('EmailSignupFormComponent', () => {
     submitForm();
 
     expect(fixture.nativeElement.textContent).toContain('We couldn’t add you just now.');
+    expect(fixture.nativeElement.querySelector('.form-messages').getAttribute('role')).toBe('alert');
   });
 
-  it('handles an existing pending address without implying confirmation', () => {
-    service.response = of({ status: 'confirmation-required' });
-    setEmail('person@example.com');
-    submitForm();
+  it.each(['confirmation-required', 'already-confirmed', 'resubscription-required'] as const)(
+    'keeps the %s response neutral and provides resend recovery', status => {
+      service.response = of({ status });
+      setEmail('person@example.com');
+      submitForm();
 
-    expect(fixture.nativeElement.textContent).toContain('still needs confirmation');
-  });
+      const text = fixture.nativeElement.textContent;
+      expect(text).toContain('Request received');
+      expect(text).not.toContain('This address is already confirmed');
+      expect(text).not.toContain('still needs confirmation');
+      expect(text).not.toContain('previously unsubscribed');
+      expect(fixture.nativeElement.querySelector('a[href="/waitlist/resend"]')).toBeTruthy();
+    },
+  );
 
   it('shows a validation message when the API rejects the email format', () => {
     service.response = of({ status: 'validation-error' });
@@ -98,7 +115,9 @@ describe('EmailSignupFormComponent', () => {
 
     expect(service.calls).toBe(1);
     expect((fixture.nativeElement.querySelector('button[type="submit"]') as HTMLButtonElement).disabled).toBe(true);
-    expect(fixture.nativeElement.textContent).toContain('Joining…');
+    expect(emailInput().disabled).toBe(true);
+    expect(fixture.nativeElement.textContent).toContain('Submitting your request securely');
+    expect((fixture.nativeElement.querySelector('form') as HTMLFormElement).getAttribute('aria-busy')).toBe('true');
     pending.next({ status: 'pending-confirmation' });
     pending.complete();
     fixture.detectChanges();
