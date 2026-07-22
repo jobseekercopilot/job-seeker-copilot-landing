@@ -142,6 +142,7 @@ Resources:
       TimeToLiveSpecification:
         AttributeName: deleteAfter
         Enabled: true
+      DeletionProtectionEnabled: true
       Tags:
         - Key: Application
           Value: JobSeekerCopilot
@@ -357,15 +358,21 @@ Resources:
   TtlConfigurationExecutionRole:
     Type: AWS::IAM::Role
     Properties:
-      Description: Configures only pendingExpiresAt TTL on the external waitlist table; delete is a no-op.
+      Description: Enables TTL, PITR, and deletion protection on the external waitlist table; delete is a no-op.
       AssumeRolePolicyDocument: *LambdaTrust
       Policies:
-        - PolicyName: ConfigurePendingRecordTtl
+        - PolicyName: ConfigureWaitlistTableSafeguards
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
               - Effect: Allow
-                Action: [dynamodb:DescribeTimeToLive, dynamodb:UpdateTimeToLive]
+                Action:
+                  - dynamodb:DescribeTimeToLive
+                  - dynamodb:UpdateTimeToLive
+                  - dynamodb:DescribeContinuousBackups
+                  - dynamodb:UpdateContinuousBackups
+                  - dynamodb:DescribeTable
+                  - dynamodb:UpdateTable
                 Resource: !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${WaitlistTableName}
         - PolicyName: WriteTtlConfigurationLogs
           PolicyDocument:
@@ -482,7 +489,7 @@ Resources:
     DependsOn: TtlFunctionLogGroup
     Properties:
       FunctionName: JobSeekerCopilotWaitlistTtlConfiguration
-      Description: Safely enables pendingExpiresAt TTL on the existing waitlist table.
+      Description: Enable-only TTL, PITR, and deletion protection safeguards for the existing waitlist table.
       CodeUri: function/
       Handler: ttl_configurator.handler
       Role: !GetAtt TtlConfigurationExecutionRole.Arn
@@ -494,6 +501,8 @@ Resources:
       ServiceToken: !GetAtt TtlConfigurationFunction.Arn
       TableName: !Ref WaitlistTableName
       AttributeName: pendingExpiresAt
+      PointInTimeRecoveryEnabled: true
+      DeletionProtectionEnabled: true
 
   ConfirmationSendFailureAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -603,7 +612,7 @@ Outputs:
   TokenTableName: {Value: !Ref TokenTable}
   WaitlistTableProtection:
     Description: The existing table is an external parameter, not a stack resource, so this stack cannot replace or delete it.
-    Value: !Sub '${WaitlistTableName} is external; pendingExpiresAt TTL only'
+    Value: !Sub '${WaitlistTableName} is external; pendingExpiresAt TTL, PITR, and deletion protection enabled'
   SesIdentity: {Value: !Ref WaitlistEmailIdentity}
   SesConfigurationSet: {Value: !Ref WaitlistEmailConfigurationSet}
   DkimRecordName1: {Value: !GetAtt WaitlistEmailIdentity.DkimDNSTokenName1}

@@ -14,6 +14,7 @@ import common  # noqa: E402
 import confirm  # noqa: E402
 import resend  # noqa: E402
 import ses_events  # noqa: E402
+import ttl_configurator  # noqa: E402
 import workflow  # noqa: E402
 
 
@@ -468,6 +469,114 @@ class EventAndSecurityTests(unittest.TestCase):
             apex = app.handler(event({}, origin="https://jobseekercopilot.com", method="OPTIONS"), Context())
         self.assertEqual(production["headers"]["Access-Control-Allow-Origin"], BASE_ENV["PRODUCTION_ORIGIN"])
         self.assertEqual(apex["statusCode"], 403)
+
+
+@patch.dict(os.environ, {"WAITLIST_TABLE_NAME": "waitlist"}, clear=True)
+class TableSafeguardTests(unittest.TestCase):
+    def test_disabled_safeguards_are_enabled_without_accessing_items(self):
+        client = Mock()
+        client.describe_time_to_live.return_value = {
+            "TimeToLiveDescription": {"TimeToLiveStatus": "DISABLED"}
+        }
+        client.describe_continuous_backups.return_value = {
+            "ContinuousBackupsDescription": {
+                "PointInTimeRecoveryDescription": {"PointInTimeRecoveryStatus": "DISABLED"}
+            }
+        }
+        client.describe_table.return_value = {
+            "Table": {"TableStatus": "ACTIVE", "DeletionProtectionEnabled": False}
+        }
+        with patch.object(ttl_configurator, "_dynamodb_client", return_value=client):
+            ttl_configurator._ensure_safeguards()
+        client.update_time_to_live.assert_called_once_with(
+            TableName="waitlist",
+            TimeToLiveSpecification={"Enabled": True, "AttributeName": "pendingExpiresAt"},
+        )
+        client.update_continuous_backups.assert_called_once_with(
+            TableName="waitlist",
+            PointInTimeRecoverySpecification={"PointInTimeRecoveryEnabled": True},
+        )
+        client.update_table.assert_called_once_with(
+            TableName="waitlist", DeletionProtectionEnabled=True
+        )
+        self.assertFalse(hasattr(client, "scan") and client.scan.called)
+
+    def test_enabled_safeguards_are_idempotent(self):
+        client = Mock()
+        client.describe_time_to_live.return_value = {
+            "TimeToLiveDescription": {
+                "TimeToLiveStatus": "ENABLED", "AttributeName": "pendingExpiresAt"
+            }
+        }
+        client.describe_continuous_backups.return_value = {
+            "ContinuousBackupsDescription": {
+                "PointInTimeRecoveryDescription": {"PointInTimeRecoveryStatus": "ENABLED"}
+            }
+        }
+        client.describe_table.return_value = {
+            "Table": {"TableStatus": "ACTIVE", "DeletionProtectionEnabled": True}
+        }
+        with patch.object(ttl_configurator, "_dynamodb_client", return_value=client):
+            ttl_configurator._ensure_safeguards()
+        client.update_time_to_live.assert_not_called()
+        client.update_continuous_backups.assert_not_called()
+        client.update_table.assert_not_called()
+
+    def test_conflicting_ttl_attribute_fails_closed_before_other_updates(self):
+        client = Mock()
+        client.describe_time_to_live.return_value = {
+            "TimeToLiveDescription": {
+                "TimeToLiveStatus": "ENABLED", "AttributeName": "otherExpiry"
+            }
+        }
+        with patch.object(ttl_configurator, "_dynamodb_client", return_value=client):
+            with self.assertRaisesRegex(RuntimeError, "different attribute"):
+                ttl_configurator._ensure_safeguards()
+        client.describe_continuous_backups.assert_not_called()
+        client.describe_table.assert_not_called()
+        client.update_time_to_live.assert_not_called()
+        client.update_continuous_backups.assert_not_called()
+        client.update_table.assert_not_called()
+
+    def test_stack_delete_is_a_no_op_and_failures_are_sanitized(self):
+        context = Mock()
+        event_base = {
+            "StackId": "stack", "RequestId": "request", "LogicalResourceId": "safeguards",
+            "ResponseURL": "https://cloudformation-response.invalid",
+        }
+        with patch.object(ttl_configurator, "_ensure_safeguards") as ensure, \
+             patch.object(ttl_configurator, "_send_response") as send:
+            ttl_configurator.handler({**event_base, "RequestType": "Delete"}, context)
+        ensure.assert_not_called()
+        self.assertEqual(send.call_args.args[2], "SUCCESS")
+        self.assertIn("no-op", send.call_args.args[3])
+
+        with patch.object(
+            ttl_configurator, "_ensure_safeguards", side_effect=RuntimeError("private table detail")
+        ), patch.object(ttl_configurator, "_send_response") as send:
+            ttl_configurator.handler({**event_base, "RequestType": "Update"}, context)
+        self.assertEqual(send.call_args.args[2], "FAILED")
+        self.assertNotIn("private table detail", send.call_args.args[3])
+
+    def test_template_retains_and_protects_tables_with_exact_safeguard_iam(self):
+        template = TEMPLATE.read_text(encoding="utf-8")
+        token_section = template.split("  TokenTable:", 1)[1].split("  WaitlistEmailConfigurationSet:", 1)[0]
+        self.assertIn("DeletionPolicy: Retain", token_section)
+        self.assertIn("UpdateReplacePolicy: Retain", token_section)
+        self.assertIn("PointInTimeRecoveryEnabled: true", token_section)
+        self.assertIn("SSEEnabled: true", token_section)
+        self.assertIn("AttributeName: deleteAfter", token_section)
+        self.assertIn("DeletionProtectionEnabled: true", token_section)
+        role_section = template.split("  TtlConfigurationExecutionRole:", 1)[1].split(
+            "  WaitlistFunction:", 1
+        )[0]
+        for action in (
+            "DescribeTimeToLive", "UpdateTimeToLive", "DescribeContinuousBackups",
+            "UpdateContinuousBackups", "DescribeTable", "UpdateTable",
+        ):
+            self.assertIn(f"dynamodb:{action}", role_section)
+        self.assertNotIn("dynamodb:*", role_section)
+        self.assertNotIn("Resource: '*'", role_section)
 
 
 if __name__ == "__main__":
