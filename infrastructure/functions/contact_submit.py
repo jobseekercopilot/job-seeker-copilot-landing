@@ -6,7 +6,7 @@ from common.aws_clients import table
 from common.config import enabled, integer, required
 from common.email_provider import send_email
 from common.email_templates import contact_acknowledgement, contact_owner
-from common.http import ApiError, error_response, parse_json, response
+from common.http import ApiError, enforce_origin, error_response, parse_json, response
 from common.logging_utils import log_result, logger
 from common.validation import anti_automation, email, exact_fields, text
 
@@ -17,6 +17,7 @@ def handler(event, context):
     started = time.monotonic()
     submission_id = ""
     try:
+        enforce_origin(event)
         if not enabled("ENABLE_LIVE_SUBMISSIONS"):
             raise ApiError(503, "BACKEND_DISABLED", "Online contact is not currently available.", "configuration")
         data = parse_json(event)
@@ -36,7 +37,15 @@ def handler(event, context):
         owner_subject, owner_text, owner_html = contact_owner(
             name, address, subject_value, message, created_at, request_id, source
         )
-        send_email(sender, required("CONTACT_RECIPIENT_EMAIL"), owner_subject, owner_text, owner_html, address)
+        send_email(
+            sender,
+            required("CONTACT_RECIPIENT_EMAIL"),
+            owner_subject,
+            owner_text,
+            owner_html,
+            address,
+            message_purpose="contact-enquiry",
+        )
         submission_id = str(uuid.uuid4())
         if enabled("STORE_CONTACT_SUBMISSIONS"):
             try:
@@ -60,7 +69,15 @@ def handler(event, context):
                 ack_subject, ack_text, ack_html = contact_acknowledgement(
                     name, required("PUBLIC_SUPPORT_EMAIL"), required("PUBLIC_SITE_URL")
                 )
-                send_email(sender, address, ack_subject, ack_text, ack_html, required("REPLY_TO_EMAIL"))
+                send_email(
+                    sender,
+                    address,
+                    ack_subject,
+                    ack_text,
+                    ack_html,
+                    required("REPLY_TO_EMAIL"),
+                    message_purpose="contact-acknowledgement",
+                )
             except Exception:
                 logger.error("Optional contact acknowledgement failed")
         result = response(event, 202, True, "CONTACT_ACCEPTED", "Your message has been sent.")

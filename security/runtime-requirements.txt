@@ -1,0 +1,2 @@
+# The deployed Lambda packages contain no PyPI dependencies. boto3/botocore are
+# supplied by the managed AWS Lambda Python 3.12 runtime.

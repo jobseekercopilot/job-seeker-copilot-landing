@@ -1,6 +1,13 @@
 # Landing-page AWS infrastructure
 
-This directory contains an undeployed AWS SAM template and Python 3.12 Lambda code for the landing-page waiting list and contact form. AWS SAM was chosen because the repository had no infrastructure standard and the required backend is a compact serverless stack. Normal frontend development and unit tests need no AWS credentials, SAM CLI or Docker.
+This directory contains two SAM designs. `waitlist-backend/` is the deployed
+landing stack and now owns the production-shaped double-opt-in and content-free
+contact endpoints. Its contact deduplication store contains only short-lived
+HMAC fingerprints, not enquiries. The top-level `template.yaml` and
+`functions/` are the broader, still-undeployed
+HMAC/unsubscribe/optional-contact-storage design.
+Normal frontend development and unit tests need no AWS credentials, SAM CLI or
+Docker.
 
 ## Resources defined
 
@@ -14,14 +21,21 @@ This directory contains an undeployed AWS SAM template and Python 3.12 Lambda co
 
 The stack never creates an SES identity or public domain. It grants send permission only for deployment-supplied verified sender identities.
 
+Every send must use the deployment-supplied SES configuration set and one
+internally controlled `message-purpose` tag. Supported purposes are
+`waitlist-confirmation`, `waitlist-confirmed`, `contact-enquiry` and
+`contact-acknowledgement`. Browser input cannot select a purpose, sender,
+recipient, configuration set or template. This lets the SES event pipeline
+separate the two public journeys without recording message content.
+
 ## API routes
 
 | Method | Route | Purpose |
 | --- | --- | --- |
 | `POST` | `/v1/waitlist` | Validate a new request and send a confirmation email. |
-| `GET` | `/v1/waitlist/confirm?token=…` | Consume a single confirmation token. |
+| `POST` | `/v1/waitlist/confirm` | Consume a single confirmation token from a bounded JSON body. |
 | `POST` | `/v1/waitlist/resend` | Replace a confirmation token, limited to once per minute per record. |
-| `GET` | `/v1/waitlist/unsubscribe?token=…` | Unsubscribe without putting an email in the URL. |
+| `POST` | `/v1/waitlist/unsubscribe` | Consume an unsubscribe token from a bounded JSON body. |
 | `POST` | `/v1/contact` | Send a contact message through SES. |
 | `OPTIONS` | `/v1/{proxy+}` | Permit only exact configured origins. |
 
@@ -78,7 +92,18 @@ sam deploy --guided
 
 The guided prompts must provide environment/stack/region and every parameter without a default. Start with `EnableLiveSubmissions=false`, verify resources and SES, then update deliberately. Capture the `ApiBaseUrl` output and form route URLs as Amplify public runtime variables. Keep test and production stacks, tables, peppers and sender identities separate.
 
-Required owner-supplied parameters include exact HTTPS origins, public site URL, hash pepper, verified sender addresses, private recipient, reply-to and public support address. The template contains no account IDs, regions, domains, emails or secrets.
+Required owner-supplied parameters include exact HTTPS origins, public site URL,
+hash pepper, verified sender addresses, private recipient, reply-to, public
+support address and the existing SES configuration-set name. The template
+contains no account IDs, regions, domains, emails or secrets.
+
+The production mailbox mapping is:
+
+- `WaitlistSenderEmail`: `updates@jobseekercopilot.com`
+- `ContactSenderEmail` and `ContactRecipientEmail`: `hello@jobseekercopilot.com`
+- `ReplyToEmail` and `PublicSupportEmail`: `support@jobseekercopilot.com`
+
+Confirm that each sender identity is verified in the deployment region and each recipient is monitored before enabling live submissions.
 
 ## Teardown and retained data
 

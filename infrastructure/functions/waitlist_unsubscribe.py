@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 
 from common.aws_clients import table
 from common.config import enabled, required
-from common.http import ApiError, error_response, query_token, response
+from common.http import ApiError, body_token, enforce_origin, error_response, response
 from common.logging_utils import log_result, logger
 from common.tokens import same_hash, token_hash
 
@@ -14,9 +14,10 @@ def handler(event, context):
     started = time.monotonic()
     record_id = ""
     try:
+        enforce_origin(event)
         if not enabled("ENABLE_LIVE_SUBMISSIONS"):
             raise ApiError(503, "BACKEND_DISABLED", "Unsubscribe is not currently available.", "configuration")
-        hashed = token_hash(query_token(event))
+        hashed = token_hash(body_token(event))
         waitlist = table(required("WAITLIST_TABLE_NAME"))
         items = waitlist.query(
             IndexName="UnsubscribeTokenHashIndex",

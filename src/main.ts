@@ -14,4 +14,4 @@ async function start(): Promise<void> {
   await bootstrapApplication(App, appConfig);
 }
 
-start().catch(error => console.error(error));
+start().catch(() => console.error('Application startup failed.'));

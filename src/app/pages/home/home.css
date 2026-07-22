@@ -274,6 +274,28 @@
   margin-bottom: 0;
 }
 
+.final-cta app-waitlist-offer {
+  margin-top: 24px;
+}
+
+.contextual-faq-link {
+  color: #536071;
+  font-size: 0.86rem;
+  margin: -5px 0 21px;
+}
+
+.contextual-faq-link a,
+.final-faq-link a {
+  font-weight: 800;
+  text-underline-offset: 4px;
+}
+
+.final-cta .final-faq-link {
+  color: #d9e5f4;
+  font-size: 0.86rem;
+  margin-top: 20px;
+}
+
 @media (max-width: 1040px) {
   .hero-grid {
     align-items: start;

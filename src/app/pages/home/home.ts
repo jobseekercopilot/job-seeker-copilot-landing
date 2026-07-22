@@ -1,5 +1,7 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { AccessibilitySectionComponent } from '../../components/accessibility-section/accessibility-section';
+import { CompetitorComparisonSectionComponent } from '../../components/competitor-comparison-section/competitor-comparison-section';
 import { EmailSignupFormComponent } from '../../components/email-signup-form/email-signup-form';
 import { FeatureSectionComponent, LandingFeature } from '../../components/feature-section/feature-section';
 import { FooterComponent } from '../../components/footer/footer';
@@ -9,12 +11,14 @@ import { LabourMarketSectionComponent } from '../../components/labour-market-sec
 import { PricingSectionComponent } from '../../components/pricing-section/pricing-section';
 import { RoadmapSectionComponent } from '../../components/roadmap-section/roadmap-section';
 import { ScreenshotFrameComponent } from '../../components/screenshot-frame/screenshot-frame';
+import { WaitlistOfferComponent } from '../../components/waitlist-offer/waitlist-offer';
 
 @Component({
   selector: 'app-home-page',
   imports: [
     HeaderComponent,
     EmailSignupFormComponent,
+    WaitlistOfferComponent,
     ScreenshotFrameComponent,
     HowItWorksComponent,
     FeatureSectionComponent,
@@ -22,7 +26,9 @@ import { ScreenshotFrameComponent } from '../../components/screenshot-frame/scre
     RoadmapSectionComponent,
     LabourMarketSectionComponent,
     AccessibilitySectionComponent,
+    CompetitorComparisonSectionComponent,
     FooterComponent,
+    RouterLink,
   ],
   templateUrl: './home.html',
   styleUrl: './home.css',

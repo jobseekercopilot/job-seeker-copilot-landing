@@ -27,6 +27,7 @@ BASE_ENV = {
     "PUBLIC_SITE_URL": "https://landing.example",
     "PUBLIC_SUPPORT_EMAIL": "support@example.test",
     "REPLY_TO_EMAIL": "reply@example.test",
+    "SES_CONFIGURATION_SET": "LandingEmails",
     "WAITLIST_SENDER_EMAIL": "updates@example.test",
     "WAITLIST_TABLE_NAME": "waitlist",
     "SUBSCRIBER_HASH_PEPPER": "x" * 32,
@@ -68,6 +69,7 @@ class HandlerTests(unittest.TestCase):
         self.assertNotIn("confirmationToken", item)
         self.assertEqual(len(item["confirmationTokenHash"]), 64)
         send.assert_called_once()
+        self.assertEqual(send.call_args.kwargs["message_purpose"], "waitlist-confirmation")
 
     @patch.dict(os.environ, BASE_ENV, clear=True)
     def test_duplicate_confirmed_subscriber_is_not_written_or_emailed(self):
@@ -121,6 +123,17 @@ class HandlerTests(unittest.TestCase):
         self.assertNotIn("private database detail", result["body"])
 
     @patch.dict(os.environ, BASE_ENV, clear=True)
+    def test_actual_request_rejects_invalid_origin_before_data_access(self):
+        with patch.object(waitlist_submit, "table") as subscriber_table:
+            rejected = waitlist_submit.handler({
+                **post_event({"email": "person@example.com"}),
+                "headers": {"content-type": "application/json", "origin": "https://evil.example"},
+            }, Context())
+        self.assertEqual(rejected["statusCode"], 403)
+        self.assertNotIn("Access-Control-Allow-Origin", rejected["headers"])
+        subscriber_table.assert_not_called()
+
+    @patch.dict(os.environ, BASE_ENV, clear=True)
     def test_confirm_rejects_expired_single_use_token(self):
         raw_token = "valid-looking-token-that-is-long-enough"
         fake_table = Mock()
@@ -130,7 +143,7 @@ class HandlerTests(unittest.TestCase):
             "unsubscribeTokenHash": "hash", "unsubscribeTokenNonce": "nonce",
         }]}
         with patch.object(waitlist_confirm, "table", return_value=fake_table):
-            result = waitlist_confirm.handler({"headers": {}, "queryStringParameters": {"token": raw_token}}, Context())
+            result = waitlist_confirm.handler(post_event({"token": raw_token}), Context())
         self.assertEqual(result["statusCode"], 410)
         self.assertEqual(json.loads(result["body"])["code"], "TOKEN_EXPIRED")
         fake_table.update_item.assert_not_called()
@@ -146,14 +159,15 @@ class HandlerTests(unittest.TestCase):
         fake_table = Mock()
         fake_table.query.side_effect = lambda **_kwargs: {"Items": [item]}
         fake_table.update_item.side_effect = lambda **_kwargs: item.update({"status": "confirmed"})
-        event = {"headers": {}, "queryStringParameters": {"token": raw_token}}
+        event = post_event({"token": raw_token})
         with patch.object(waitlist_confirm, "table", return_value=fake_table), \
-             patch.object(waitlist_confirm, "send_email"):
+             patch.object(waitlist_confirm, "send_email") as send:
             first = waitlist_confirm.handler(event, Context())
             second = waitlist_confirm.handler(event, Context())
         self.assertEqual(json.loads(first["body"])["code"], "WAITLIST_CONFIRMED")
         self.assertEqual(json.loads(second["body"])["code"], "ALREADY_CONFIRMED")
         self.assertEqual(fake_table.update_item.call_count, 1)
+        self.assertEqual(send.call_args.kwargs["message_purpose"], "waitlist-confirmed")
 
     @patch.dict(os.environ, BASE_ENV, clear=True)
     def test_unsubscribe_updates_status_without_an_email_in_the_request(self):
@@ -166,7 +180,7 @@ class HandlerTests(unittest.TestCase):
         }]}
         with patch.object(waitlist_unsubscribe, "table", return_value=fake_table):
             result = waitlist_unsubscribe.handler(
-                {"headers": {}, "queryStringParameters": {"token": raw_token}}, Context()
+                post_event({"token": raw_token}), Context()
             )
         self.assertEqual(json.loads(result["body"])["code"], "WAITLIST_UNSUBSCRIBED")
         fake_table.update_item.assert_called_once()
@@ -188,6 +202,7 @@ class HandlerTests(unittest.TestCase):
         self.assertEqual(result["statusCode"], 202)
         html = send.call_args.args[4]
         self.assertIn("&lt;b&gt;early access&lt;/b&gt;", html)
+        self.assertEqual(send.call_args.kwargs["message_purpose"], "contact-enquiry")
         table.assert_not_called()
 
     @patch.dict(os.environ, {

@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { ScreenshotFrameComponent } from '../screenshot-frame/screenshot-frame';
 
 export interface LandingFeature {
@@ -16,7 +17,7 @@ export interface LandingFeature {
 
 @Component({
   selector: 'app-feature-section',
-  imports: [ScreenshotFrameComponent],
+  imports: [ScreenshotFrameComponent, RouterLink],
   templateUrl: './feature-section.html',
   styleUrl: './feature-section.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

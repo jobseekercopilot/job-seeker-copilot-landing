@@ -29,6 +29,18 @@
       }
     </div>
 
+    @if (offer.offerEnabled) {
+      <aside class="early-access-credit-note" aria-labelledby="early-access-credit-heading">
+        <div>
+          <span class="promotion-label">Early-access promotion</span>
+          <h3 id="early-access-credit-heading">{{ formattedBonusTokens }} bonus tokens for eligible early-access members</h3>
+          <p>{{ offer.offerSummary }}</p>
+          <small>This is promotional credit, not a permanent pricing plan or an additional paid package. Eligibility and use are subject to the early-access offer terms.</small>
+        </div>
+        <a class="button button-secondary" [routerLink]="offer.termsRoute" fragment="early-access-offer">Read the early-access offer terms</a>
+      </aside>
+    }
+
     <p class="pricing-note">Generation estimates vary with document length and complexity. These values reflect the current application configuration and may be reviewed before public launch.</p>
   </div>
 </section>

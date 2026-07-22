@@ -1,0 +1,1356 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: SES double-opt-in waitlist API for Job Seeker Copilot
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: development
+    AllowedValues: [development, production]
+  WaitlistTableName:
+    Type: String
+    Default: JobSeekerCopilotWaitlist
+    AllowedPattern: '^[A-Za-z0-9_.-]{3,255}$'
+    Description: Existing external table keyed by email. It is never created, replaced, or deleted by this stack.
+  TokenTableName:
+    Type: String
+    Default: JobSeekerCopilotWaitlistTokens
+    AllowedPattern: '^[A-Za-z0-9_.-]{3,255}$'
+  DevelopmentOrigin:
+    Type: String
+    Default: https://develop.d3gd9ezfa3aujn.amplifyapp.com
+    AllowedPattern: '^https://[A-Za-z0-9.-]+$'
+  AdditionalDevelopmentOrigin:
+    Type: String
+    Default: https://www.jobseekercopilot.com
+    AllowedPattern: '^https://[A-Za-z0-9.-]+$'
+  ProductionOrigin:
+    Type: String
+    Default: https://www.jobseekercopilot.com
+    AllowedPattern: '^https://[A-Za-z0-9.-]+$'
+  PublicSiteUrl:
+    Type: String
+    Default: https://www.jobseekercopilot.com
+    AllowedPattern: '^https://[A-Za-z0-9.-]+$'
+  SesDomainIdentity:
+    Type: String
+    Default: jobseekercopilot.com
+    AllowedPattern: '^[A-Za-z0-9.-]+$'
+  Route53HostedZoneId:
+    Type: String
+    Default: Z0582639PCVP9LP3RNMY
+    AllowedPattern: '^[A-Z0-9]+$'
+  WaitlistSenderEmail:
+    Type: String
+    Default: updates@jobseekercopilot.com
+  PublicSupportEmail:
+    Type: String
+    Default: support@jobseekercopilot.com
+  EnableContactSubmissions:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+  EnableAnalyticsCollection:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+  ContactSenderEmail:
+    Type: String
+    Default: hello@jobseekercopilot.com
+  ContactRecipientEmail:
+    Type: String
+    NoEcho: true
+    Description: Approved private company inbox. Never expose this parameter in browser configuration or stack outputs.
+  ContactDedupeTableName:
+    Type: String
+    Default: JobSeekerCopilotContactDedupe
+    AllowedPattern: '^[A-Za-z0-9_.-]{3,255}$'
+  ContactDedupePepper:
+    Type: String
+    NoEcho: true
+    MinLength: 32
+    MaxLength: 256
+    Description: Random secret used only to derive non-reversible contact duplicate fingerprints.
+  ContactDedupeTtlSeconds:
+    Type: Number
+    Default: 900
+    MinValue: 60
+    MaxValue: 86400
+  ContactMinimumFormCompletionMs:
+    Type: Number
+    Default: 1200
+    MinValue: 250
+    MaxValue: 10000
+  ContactMessageMaxLength:
+    Type: Number
+    Default: 3000
+    MinValue: 10
+    MaxValue: 3000
+  SesConfigurationSetName:
+    Type: String
+    Default: JobSeekerCopilotWaitlistEmails
+    AllowedPattern: '^[A-Za-z0-9_-]{1,64}$'
+  ConfirmationTokenTtlSeconds:
+    Type: Number
+    Default: 172800
+    MinValue: 3600
+    MaxValue: 604800
+  ConfirmationResendCooldownSeconds:
+    Type: Number
+    Default: 900
+    MinValue: 60
+    MaxValue: 86400
+  MaxConfirmationSends:
+    Type: Number
+    Default: 5
+    MinValue: 1
+    MaxValue: 20
+  ConfirmationSendWindowSeconds:
+    Type: Number
+    Default: 86400
+    MinValue: 3600
+    MaxValue: 604800
+  PendingRetentionSeconds:
+    Type: Number
+    Default: 2592000
+    MinValue: 86400
+    MaxValue: 7776000
+  UsedTokenRetentionSeconds:
+    Type: Number
+    Default: 604800
+    MinValue: 86400
+    MaxValue: 2592000
+  ConsentVersion:
+    Type: String
+    Default: '1.0'
+    MinLength: 1
+    MaxLength: 40
+  AlarmNotificationEmail:
+    Type: String
+    Default: ''
+    NoEcho: true
+    AllowedPattern: '^$|^[^@\s]+@[^@\s]+\.[^@\s]+$'
+    Description: Approved operator mailbox for SNS alarm state changes. Never expose it in outputs or logs.
+
+Conditions:
+  HasAlarmNotificationEmail: !Not [!Equals [!Ref AlarmNotificationEmail, '']]
+
+Globals:
+  Function:
+    Runtime: python3.12
+    Architectures: [arm64]
+    MemorySize: 256
+    Timeout: 8
+    Environment:
+      Variables:
+        ENVIRONMENT_NAME: !Ref EnvironmentName
+        DEVELOPMENT_ORIGIN: !Ref DevelopmentOrigin
+        ADDITIONAL_DEVELOPMENT_ORIGIN: !Ref AdditionalDevelopmentOrigin
+        PRODUCTION_ORIGIN: !Ref ProductionOrigin
+        WAITLIST_TABLE_NAME: !Ref WaitlistTableName
+        TOKEN_TABLE_NAME: !Ref TokenTable
+
+Resources:
+  AlarmNotificationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: JobSeekerCopilotLandingAlerts
+      DisplayName: JSC landing alerts
+      Tags:
+        - {Key: Service, Value: Landing Website}
+        - {Key: Environment, Value: !Ref EnvironmentName}
+
+  AlarmNotificationTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics: [!Ref AlarmNotificationTopic]
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowCloudWatchAlarmsFromThisAccount
+            Effect: Allow
+            Principal: {Service: cloudwatch.amazonaws.com}
+            Action: sns:Publish
+            Resource: !Ref AlarmNotificationTopic
+            Condition:
+              StringEquals: {aws:SourceAccount: !Ref AWS::AccountId}
+              ArnLike:
+                aws:SourceArn: !Sub arn:${AWS::Partition}:cloudwatch:${AWS::Region}:${AWS::AccountId}:alarm:*
+
+  AlarmEmailSubscription:
+    Type: AWS::SNS::Subscription
+    Condition: HasAlarmNotificationEmail
+    Properties:
+      Protocol: email
+      Endpoint: !Ref AlarmNotificationEmail
+      TopicArn: !Ref AlarmNotificationTopic
+
+  WaitlistApiAccessLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      RetentionInDays: 30
+
+  WaitlistApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      Name: JobSeekerCopilotWaitlistApi
+      StageName: '$default'
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 10
+        ThrottlingRateLimit: 5
+        DetailedMetricsEnabled: true
+      AccessLogSettings:
+        DestinationArn: !GetAtt WaitlistApiAccessLogGroup.Arn
+        Format: '{"requestId":"$context.requestId","routeKey":"$context.routeKey","status":"$context.status","responseLength":"$context.responseLength","integrationError":"$context.integrationErrorMessage"}'
+
+  TokenTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      TableName: !Ref TokenTableName
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: tokenHash
+          AttributeType: S
+      KeySchema:
+        - AttributeName: tokenHash
+          KeyType: HASH
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+      TimeToLiveSpecification:
+        AttributeName: deleteAfter
+        Enabled: true
+      DeletionProtectionEnabled: true
+      Tags:
+        - Key: Application
+          Value: JobSeekerCopilot
+        - Key: DataClassification
+          Value: personal-operational
+
+  ContactDedupeTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      TableName: !Ref ContactDedupeTableName
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: fingerprint
+          AttributeType: S
+      KeySchema:
+        - AttributeName: fingerprint
+          KeyType: HASH
+      SSESpecification:
+        SSEEnabled: true
+      TimeToLiveSpecification:
+        AttributeName: expiresAt
+        Enabled: true
+      Tags:
+        - Key: Application
+          Value: JobSeekerCopilot
+        - Key: DataClassification
+          Value: pseudonymous-transient
+
+  WaitlistEmailConfigurationSet:
+    Type: AWS::SES::ConfigurationSet
+    Properties:
+      Name: !Ref SesConfigurationSetName
+      ReputationOptions:
+        ReputationMetricsEnabled: true
+      SendingOptions:
+        SendingEnabled: true
+      SuppressionOptions:
+        SuppressedReasons: [BOUNCE, COMPLAINT]
+
+  WaitlistEmailIdentity:
+    Type: AWS::SES::EmailIdentity
+    Properties:
+      EmailIdentity: !Ref SesDomainIdentity
+      ConfigurationSetAttributes:
+        ConfigurationSetName: !Ref WaitlistEmailConfigurationSet
+      DkimSigningAttributes:
+        NextSigningKeyLength: RSA_2048_BIT
+      FeedbackAttributes:
+        EmailForwardingEnabled: false
+
+  WaitlistDkimRecords:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneId: !Ref Route53HostedZoneId
+      RecordSets:
+        - Name: !GetAtt WaitlistEmailIdentity.DkimDNSTokenName1
+          Type: CNAME
+          TTL: 1800
+          ResourceRecords: [!GetAtt WaitlistEmailIdentity.DkimDNSTokenValue1]
+        - Name: !GetAtt WaitlistEmailIdentity.DkimDNSTokenName2
+          Type: CNAME
+          TTL: 1800
+          ResourceRecords: [!GetAtt WaitlistEmailIdentity.DkimDNSTokenValue2]
+        - Name: !GetAtt WaitlistEmailIdentity.DkimDNSTokenName3
+          Type: CNAME
+          TTL: 1800
+          ResourceRecords: [!GetAtt WaitlistEmailIdentity.DkimDNSTokenValue3]
+
+  WaitlistSesEventDestination:
+    Type: AWS::SES::ConfigurationSetEventDestination
+    Properties:
+      ConfigurationSetName: !Ref WaitlistEmailConfigurationSet
+      EventDestination:
+        Name: WaitlistEvents
+        Enabled: true
+        MatchingEventTypes: [SEND, REJECT, BOUNCE, COMPLAINT, DELIVERY, RENDERING_FAILURE, DELIVERY_DELAY]
+        EventBridgeDestination:
+          EventBusArn: !Sub arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:event-bus/default
+
+  WaitlistFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: /aws/lambda/JobSeekerCopilotWaitlist
+      RetentionInDays: 30
+  ConfirmationFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: /aws/lambda/JobSeekerCopilotWaitlistConfirm
+      RetentionInDays: 30
+  ResendFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: /aws/lambda/JobSeekerCopilotWaitlistResend
+      RetentionInDays: 30
+  SesEventsFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: /aws/lambda/JobSeekerCopilotWaitlistSesEvents
+      RetentionInDays: 30
+  TtlFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: /aws/lambda/JobSeekerCopilotWaitlistTtlConfiguration
+      RetentionInDays: 30
+  ContactFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: /aws/lambda/JobSeekerCopilotContact
+      RetentionInDays: 30
+  AnalyticsFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: /aws/lambda/JobSeekerCopilotLandingAnalytics
+      RetentionInDays: 30
+
+  WaitlistExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: Least-privilege role for pending subscription creation and confirmation delivery.
+      AssumeRolePolicyDocument: &LambdaTrust
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: {Service: lambda.amazonaws.com}
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: WaitlistSubscriptionData
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [dynamodb:GetItem, dynamodb:PutItem, dynamodb:UpdateItem, dynamodb:TransactWriteItems]
+                Resource: !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${WaitlistTableName}
+              - Effect: Allow
+                Action: [dynamodb:PutItem, dynamodb:TransactWriteItems]
+                Resource: !GetAtt TokenTable.Arn
+        - &SendEmailPolicy
+          PolicyName: SendWaitlistConfirmationOnly
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: ses:SendEmail
+                Resource: !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesDomainIdentity}
+                Condition:
+                  StringEquals:
+                    ses:FromAddress: !Ref WaitlistSenderEmail
+              - Effect: Allow
+                Action: ses:SendEmail
+                Resource: !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:configuration-set/${SesConfigurationSetName}
+        - PolicyName: WriteWaitlistFunctionLogs
+          PolicyDocument: &WaitlistLogPolicy
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !GetAtt WaitlistFunctionLogGroup.Arn
+
+  ConfirmationExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: Least-privilege role for atomic single-use confirmation.
+      AssumeRolePolicyDocument: *LambdaTrust
+      Policies:
+        - PolicyName: ConfirmWaitlistRecord
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [dynamodb:GetItem, dynamodb:UpdateItem, dynamodb:TransactWriteItems]
+                Resource: !GetAtt TokenTable.Arn
+              - Effect: Allow
+                Action: [dynamodb:UpdateItem, dynamodb:TransactWriteItems]
+                Resource: !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${WaitlistTableName}
+        - PolicyName: WriteConfirmationLogs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !GetAtt ConfirmationFunctionLogGroup.Arn
+
+  ResendExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: Least-privilege role for controlled confirmation resends.
+      AssumeRolePolicyDocument: *LambdaTrust
+      Policies:
+        - PolicyName: RotatePendingConfirmation
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [dynamodb:GetItem, dynamodb:UpdateItem, dynamodb:TransactWriteItems]
+                Resource: !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${WaitlistTableName}
+              - Effect: Allow
+                Action: [dynamodb:DeleteItem, dynamodb:PutItem, dynamodb:TransactWriteItems]
+                Resource: !GetAtt TokenTable.Arn
+        - *SendEmailPolicy
+        - PolicyName: WriteResendLogs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !GetAtt ResendFunctionLogGroup.Arn
+
+  SesEventsExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: Least-privilege role for SES delivery, bounce, and complaint state updates.
+      AssumeRolePolicyDocument: *LambdaTrust
+      Policies:
+        - PolicyName: RecordSesOutcome
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: dynamodb:UpdateItem
+                Resource: !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${WaitlistTableName}
+        - PolicyName: WriteSesEventLogs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !GetAtt SesEventsFunctionLogGroup.Arn
+
+  TtlConfigurationExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: Enables TTL, PITR, and deletion protection on the external waitlist table; delete is a no-op.
+      AssumeRolePolicyDocument: *LambdaTrust
+      Policies:
+        - PolicyName: ConfigureWaitlistTableSafeguards
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:DescribeTimeToLive
+                  - dynamodb:UpdateTimeToLive
+                  - dynamodb:DescribeContinuousBackups
+                  - dynamodb:UpdateContinuousBackups
+                  - dynamodb:DescribeTable
+                  - dynamodb:UpdateTable
+                Resource: !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${WaitlistTableName}
+        - PolicyName: WriteTtlConfigurationLogs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !GetAtt TtlFunctionLogGroup.Arn
+
+  ContactExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: Deduplicates and sends validated contact enquiries only to the configured company inbox.
+      AssumeRolePolicyDocument: *LambdaTrust
+      Policies:
+        - PolicyName: ReserveContactFingerprint
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [dynamodb:PutItem, dynamodb:DeleteItem]
+                Resource: !GetAtt ContactDedupeTable.Arn
+        - PolicyName: SendContactEnquiryOnly
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: ses:SendEmail
+                Resource:
+                  - !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesDomainIdentity}
+                  - !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${ContactSenderEmail}
+                Condition:
+                  StringEquals:
+                    ses:FromAddress: !Ref ContactSenderEmail
+                  ForAllValues:StringEquals:
+                    ses:Recipients: !Ref ContactRecipientEmail
+              - Effect: Allow
+                Action: ses:SendEmail
+                Resource: !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:configuration-set/${SesConfigurationSetName}
+        - PolicyName: WriteContactLogs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !GetAtt ContactFunctionLogGroup.Arn
+
+  AnalyticsExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: Writes bounded aggregate landing analytics logs and metrics; no data-store or email access.
+      AssumeRolePolicyDocument: *LambdaTrust
+      Policies:
+        - PolicyName: WriteAnalyticsLogsOnly
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !GetAtt AnalyticsFunctionLogGroup.Arn
+
+  WaitlistFunction:
+    Type: AWS::Serverless::Function
+    DependsOn: [WaitlistFunctionLogGroup, WaitlistEmailIdentity]
+    Properties:
+      FunctionName: JobSeekerCopilotWaitlist
+      Description: Creates PENDING waitlist records and sends double-opt-in confirmation email.
+      CodeUri: function/
+      Handler: app.handler
+      Role: !GetAtt WaitlistExecutionRole.Arn
+      Environment:
+        Variables: &EmailEnvironment
+          SES_REGION: !Ref AWS::Region
+          WAITLIST_SENDER_EMAIL: !Ref WaitlistSenderEmail
+          PUBLIC_SUPPORT_EMAIL: !Ref PublicSupportEmail
+          PUBLIC_SITE_URL: !Ref PublicSiteUrl
+          SES_CONFIGURATION_SET: !Ref WaitlistEmailConfigurationSet
+          CONFIRMATION_TOKEN_TTL_SECONDS: !Ref ConfirmationTokenTtlSeconds
+          CONFIRMATION_RESEND_COOLDOWN_SECONDS: !Ref ConfirmationResendCooldownSeconds
+          MAX_CONFIRMATION_SENDS: !Ref MaxConfirmationSends
+          CONFIRMATION_SEND_WINDOW_SECONDS: !Ref ConfirmationSendWindowSeconds
+          PENDING_RETENTION_SECONDS: !Ref PendingRetentionSeconds
+          USED_TOKEN_RETENTION_SECONDS: !Ref UsedTokenRetentionSeconds
+          CONSENT_VERSION: !Ref ConsentVersion
+      Events:
+        PostWaitlist:
+          Type: HttpApi
+          Properties: {ApiId: !Ref WaitlistApi, Method: POST, Path: /waitlist, PayloadFormatVersion: '2.0'}
+        OptionsWaitlist:
+          Type: HttpApi
+          Properties: {ApiId: !Ref WaitlistApi, Method: OPTIONS, Path: /waitlist, PayloadFormatVersion: '2.0'}
+
+  ConfirmationFunction:
+    Type: AWS::Serverless::Function
+    DependsOn: ConfirmationFunctionLogGroup
+    Properties:
+      FunctionName: JobSeekerCopilotWaitlistConfirm
+      Description: Atomically consumes a token and confirms one pending subscriber.
+      CodeUri: function/
+      Handler: confirm.handler
+      Role: !GetAtt ConfirmationExecutionRole.Arn
+      Environment:
+        Variables:
+          USED_TOKEN_RETENTION_SECONDS: !Ref UsedTokenRetentionSeconds
+      Events:
+        Confirm:
+          Type: HttpApi
+          Properties: {ApiId: !Ref WaitlistApi, Method: POST, Path: /waitlist/confirm, PayloadFormatVersion: '2.0'}
+        ConfirmOptions:
+          Type: HttpApi
+          Properties: {ApiId: !Ref WaitlistApi, Method: OPTIONS, Path: /waitlist/confirm, PayloadFormatVersion: '2.0'}
+
+  ResendFunction:
+    Type: AWS::Serverless::Function
+    DependsOn: [ResendFunctionLogGroup, WaitlistEmailIdentity]
+    Properties:
+      FunctionName: JobSeekerCopilotWaitlistResend
+      Description: Applies per-address cooldown and send limits before rotating confirmation tokens.
+      CodeUri: function/
+      Handler: resend.handler
+      Role: !GetAtt ResendExecutionRole.Arn
+      Environment:
+        Variables: *EmailEnvironment
+      Events:
+        Resend:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref WaitlistApi
+            Method: POST
+            Path: /waitlist/resend
+            PayloadFormatVersion: '2.0'
+            RouteSettings: {ThrottlingBurstLimit: 3, ThrottlingRateLimit: 1}
+        ResendOptions:
+          Type: HttpApi
+          Properties: {ApiId: !Ref WaitlistApi, Method: OPTIONS, Path: /waitlist/resend, PayloadFormatVersion: '2.0'}
+
+  SesEventsFunction:
+    Type: AWS::Serverless::Function
+    DependsOn: SesEventsFunctionLogGroup
+    Properties:
+      FunctionName: JobSeekerCopilotWaitlistSesEvents
+      Description: Records SES bounce, complaint, delivery, delay, reject, and rendering outcomes.
+      CodeUri: function/
+      Handler: ses_events.handler
+      Role: !GetAtt SesEventsExecutionRole.Arn
+      Environment:
+        Variables:
+          SES_CONFIGURATION_SET: !Ref WaitlistEmailConfigurationSet
+      Events:
+        SesEvents:
+          Type: EventBridgeRule
+          Properties:
+            Pattern:
+              source: [aws.ses]
+              detail-type:
+                - Email Bounced
+                - Email Complaint Received
+                - Email Delivered
+                - Email Delivery Delayed
+                - Email Rejected
+                - Email Rendering Failed
+              detail:
+                mail:
+                  tags:
+                    'ses:configuration-set': [!Ref WaitlistEmailConfigurationSet]
+
+  TtlConfigurationFunction:
+    Type: AWS::Serverless::Function
+    DependsOn: TtlFunctionLogGroup
+    Properties:
+      FunctionName: JobSeekerCopilotWaitlistTtlConfiguration
+      Description: Enable-only TTL, PITR, and deletion protection safeguards for the existing waitlist table.
+      CodeUri: function/
+      Handler: ttl_configurator.handler
+      Role: !GetAtt TtlConfigurationExecutionRole.Arn
+      Timeout: 60
+
+  ContactFunction:
+    Type: AWS::Serverless::Function
+    DependsOn: [ContactFunctionLogGroup, WaitlistEmailIdentity]
+    Properties:
+      FunctionName: JobSeekerCopilotContact
+      Description: Validates and sends one contact enquiry to the configured company inbox.
+      CodeUri: function/
+      Handler: contact.handler
+      Role: !GetAtt ContactExecutionRole.Arn
+      Environment:
+        Variables:
+          SES_REGION: !Ref AWS::Region
+          SES_CONFIGURATION_SET: !Ref WaitlistEmailConfigurationSet
+          ENABLE_CONTACT_SUBMISSIONS: !Ref EnableContactSubmissions
+          CONTACT_SENDER_EMAIL: !Ref ContactSenderEmail
+          CONTACT_RECIPIENT_EMAIL: !Ref ContactRecipientEmail
+          CONTACT_MESSAGE_MAX_LENGTH: !Ref ContactMessageMaxLength
+          CONTACT_DEDUPE_TABLE_NAME: !Ref ContactDedupeTable
+          CONTACT_DEDUPE_PEPPER: !Ref ContactDedupePepper
+          CONTACT_DEDUPE_TTL_SECONDS: !Ref ContactDedupeTtlSeconds
+          CONTACT_MINIMUM_FORM_COMPLETION_MS: !Ref ContactMinimumFormCompletionMs
+      Events:
+        Contact:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref WaitlistApi
+            Method: POST
+            Path: /contact
+            PayloadFormatVersion: '2.0'
+            RouteSettings: {ThrottlingBurstLimit: 3, ThrottlingRateLimit: 1}
+        ContactOptions:
+          Type: HttpApi
+          Properties: {ApiId: !Ref WaitlistApi, Method: OPTIONS, Path: /contact, PayloadFormatVersion: '2.0'}
+
+  AnalyticsFunction:
+    Type: AWS::Serverless::Function
+    DependsOn: AnalyticsFunctionLogGroup
+    Properties:
+      FunctionName: JobSeekerCopilotLandingAnalytics
+      Description: Accepts only opt-in, bounded, non-personal landing analytics events.
+      CodeUri: function/
+      Handler: analytics.handler
+      Role: !GetAtt AnalyticsExecutionRole.Arn
+      Environment:
+        Variables:
+          ENABLE_ANALYTICS_COLLECTION: !Ref EnableAnalyticsCollection
+      Events:
+        Analytics:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref WaitlistApi
+            Method: POST
+            Path: /analytics
+            PayloadFormatVersion: '2.0'
+            RouteSettings: {ThrottlingBurstLimit: 10, ThrottlingRateLimit: 5}
+        AnalyticsOptions:
+          Type: HttpApi
+          Properties: {ApiId: !Ref WaitlistApi, Method: OPTIONS, Path: /analytics, PayloadFormatVersion: '2.0'}
+
+  WaitlistPendingTtlConfiguration:
+    Type: Custom::WaitlistPendingTtl
+    Properties:
+      ServiceToken: !GetAtt TtlConfigurationFunction.Arn
+      TableName: !Ref WaitlistTableName
+      AttributeName: pendingExpiresAt
+      PointInTimeRecoveryEnabled: true
+      DeletionProtectionEnabled: true
+
+  ContactApiThrottleMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: WaitlistApi
+    Properties:
+      LogGroupName: !Ref WaitlistApiAccessLogGroup
+      FilterPattern: '{ $.routeKey = "POST /contact" && $.status = "429" }'
+      MetricTransformations:
+        - MetricNamespace: JobSeekerCopilot/Contact
+          MetricName: ContactThrottleResponses
+          MetricValue: '1'
+
+  WaitlistSubmitThrottleMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: WaitlistApi
+    Properties: &WaitlistThrottleMetricFilter
+      LogGroupName: !Ref WaitlistApiAccessLogGroup
+      FilterPattern: '{ $.routeKey = "POST /waitlist" && $.status = "429" }'
+      MetricTransformations:
+        - MetricNamespace: JobSeekerCopilot/Waitlist
+          MetricName: WaitlistThrottleResponses
+          MetricValue: '1'
+  WaitlistConfirmationThrottleMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: WaitlistApi
+    Properties:
+      <<: *WaitlistThrottleMetricFilter
+      FilterPattern: '{ $.routeKey = "POST /waitlist/confirm" && $.status = "429" }'
+  WaitlistResendThrottleMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: WaitlistApi
+    Properties:
+      <<: *WaitlistThrottleMetricFilter
+      FilterPattern: '{ $.routeKey = "POST /waitlist/resend" && $.status = "429" }'
+
+  ConfirmationSendFailureAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties: &SingleCustomFailureAlarm
+      AlarmDescription: Job Seeker Copilot waitlist failure; use the launch monitoring runbook and redacted correlation fields.
+      Namespace: JobSeekerCopilot/Waitlist
+      MetricName: ConfirmationSendFailures
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: &LandingAlarmActions [!Ref AlarmNotificationTopic]
+      OKActions: &LandingOkActions [!Ref AlarmNotificationTopic]
+  SesBounceAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      <<: *SingleCustomFailureAlarm
+      MetricName: SesBounces
+  SesComplaintAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      <<: *SingleCustomFailureAlarm
+      MetricName: SesComplaints
+  SesDeliveryFailureAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      <<: *SingleCustomFailureAlarm
+      MetricName: SesDeliveryFailures
+  InvalidTokenVolumeAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      <<: *SingleCustomFailureAlarm
+      MetricName: InvalidConfirmationTokens
+      Threshold: 20
+  ResendVolumeAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      <<: *SingleCustomFailureAlarm
+      MetricName: ResendIssued
+      Threshold: 20
+  WaitlistThrottleVolumeAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      <<: *SingleCustomFailureAlarm
+      MetricName: WaitlistThrottleResponses
+      Threshold: 5
+  ContactValidationVolumeAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties: &ContactAbuseAlarm
+      AlarmDescription: Job Seeker Copilot contact-path signal; inspect only count/status and redacted correlation fields.
+      Namespace: JobSeekerCopilot/Contact
+      MetricName: ContactValidationRejections
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 10
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: *LandingAlarmActions
+      OKActions: *LandingOkActions
+  ContactThrottleVolumeAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      <<: *ContactAbuseAlarm
+      MetricName: ContactThrottleResponses
+      Threshold: 5
+  ContactDuplicateVolumeAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      <<: *ContactAbuseAlarm
+      MetricName: ContactDuplicateSuppressions
+      Threshold: 5
+  ContactSesFailureAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      <<: *ContactAbuseAlarm
+      MetricName: ContactSesFailures
+      Threshold: 1
+  ContactDedupeFailureAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      <<: *ContactAbuseAlarm
+      MetricName: ContactDedupeFailures
+      Threshold: 1
+  ContactDedupeReleaseFailureAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      <<: *ContactAbuseAlarm
+      MetricName: ContactDedupeReleaseFailures
+      Threshold: 1
+  ContactSesBounceAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      <<: *ContactAbuseAlarm
+      MetricName: ContactSesBounces
+      Threshold: 1
+  ContactSesComplaintAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      <<: *ContactAbuseAlarm
+      MetricName: ContactSesComplaints
+      Threshold: 1
+  ContactSesDeliveryFailureAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      <<: *ContactAbuseAlarm
+      MetricName: ContactSesDeliveryFailures
+      Threshold: 1
+  MonitoringNotificationCanaryAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Controlled notification-path canary; no customer or message data.
+      Namespace: JobSeekerCopilot/Monitoring
+      MetricName: NotificationCanary
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: *LandingAlarmActions
+      OKActions: *LandingOkActions
+  ApiServerErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: HTTP API server errors across waitlist and contact routes.
+      Namespace: AWS/ApiGateway
+      MetricName: 5xx
+      Dimensions:
+        - {Name: ApiId, Value: !Ref WaitlistApi}
+        - {Name: Stage, Value: '$default'}
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: *LandingAlarmActions
+      OKActions: *LandingOkActions
+  WaitlistDynamoThrottlingAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Read or write throttling on the external waitlist table.
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: *LandingAlarmActions
+      OKActions: *LandingOkActions
+      Metrics:
+        - Id: readThrottle
+          MetricStat:
+            Metric:
+              Namespace: AWS/DynamoDB
+              MetricName: ReadThrottleEvents
+              Dimensions:
+                - {Name: TableName, Value: !Ref WaitlistTableName}
+            Period: 300
+            Stat: Sum
+          ReturnData: false
+        - Id: writeThrottle
+          MetricStat:
+            Metric:
+              Namespace: AWS/DynamoDB
+              MetricName: WriteThrottleEvents
+              Dimensions:
+                - {Name: TableName, Value: !Ref WaitlistTableName}
+            Period: 300
+            Stat: Sum
+          ReturnData: false
+        - Id: totalThrottle
+          Expression: readThrottle + writeThrottle
+          Label: Waitlist table throttles
+          ReturnData: true
+  TokenDynamoThrottlingAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Read or write throttling on the confirmation-token table.
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: *LandingAlarmActions
+      OKActions: *LandingOkActions
+      Metrics:
+        - Id: readThrottle
+          MetricStat:
+            Metric:
+              Namespace: AWS/DynamoDB
+              MetricName: ReadThrottleEvents
+              Dimensions:
+                - {Name: TableName, Value: !Ref TokenTable}
+            Period: 300
+            Stat: Sum
+          ReturnData: false
+        - Id: writeThrottle
+          MetricStat:
+            Metric:
+              Namespace: AWS/DynamoDB
+              MetricName: WriteThrottleEvents
+              Dimensions:
+                - {Name: TableName, Value: !Ref TokenTable}
+            Period: 300
+            Stat: Sum
+          ReturnData: false
+        - Id: totalThrottle
+          Expression: readThrottle + writeThrottle
+          Label: Token table throttles
+          ReturnData: true
+  ContactDynamoThrottlingAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Read or write throttling on the content-free contact deduplication table.
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: *LandingAlarmActions
+      OKActions: *LandingOkActions
+      Metrics:
+        - Id: readThrottle
+          MetricStat:
+            Metric:
+              Namespace: AWS/DynamoDB
+              MetricName: ReadThrottleEvents
+              Dimensions:
+                - {Name: TableName, Value: !Ref ContactDedupeTable}
+            Period: 300
+            Stat: Sum
+          ReturnData: false
+        - Id: writeThrottle
+          MetricStat:
+            Metric:
+              Namespace: AWS/DynamoDB
+              MetricName: WriteThrottleEvents
+              Dimensions:
+                - {Name: TableName, Value: !Ref ContactDedupeTable}
+            Period: 300
+            Stat: Sum
+          ReturnData: false
+        - Id: totalThrottle
+          Expression: readThrottle + writeThrottle
+          Label: Contact deduplication table throttles
+          ReturnData: true
+  WaitlistDynamoSystemErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: DynamoDB HTTP 500 errors for waitlist table operations.
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: *LandingAlarmActions
+      OKActions: *LandingOkActions
+      Metrics:
+        - Id: getErrors
+          MetricStat:
+            Metric:
+              Namespace: AWS/DynamoDB
+              MetricName: SystemErrors
+              Dimensions:
+                - {Name: TableName, Value: !Ref WaitlistTableName}
+                - {Name: Operation, Value: GetItem}
+            Period: 300
+            Stat: Sum
+          ReturnData: false
+        - Id: putErrors
+          MetricStat:
+            Metric:
+              Namespace: AWS/DynamoDB
+              MetricName: SystemErrors
+              Dimensions:
+                - {Name: TableName, Value: !Ref WaitlistTableName}
+                - {Name: Operation, Value: PutItem}
+            Period: 300
+            Stat: Sum
+          ReturnData: false
+        - Id: updateErrors
+          MetricStat:
+            Metric:
+              Namespace: AWS/DynamoDB
+              MetricName: SystemErrors
+              Dimensions:
+                - {Name: TableName, Value: !Ref WaitlistTableName}
+                - {Name: Operation, Value: UpdateItem}
+            Period: 300
+            Stat: Sum
+          ReturnData: false
+        - Id: transactErrors
+          MetricStat:
+            Metric:
+              Namespace: AWS/DynamoDB
+              MetricName: SystemErrors
+              Dimensions:
+                - {Name: TableName, Value: !Ref WaitlistTableName}
+                - {Name: Operation, Value: TransactWriteItems}
+            Period: 300
+            Stat: Sum
+          ReturnData: false
+        - Id: totalErrors
+          Expression: SUM(METRICS())
+          Label: Waitlist table system errors
+          ReturnData: true
+  TokenDynamoSystemErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: DynamoDB HTTP 500 errors for confirmation-token table operations.
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: *LandingAlarmActions
+      OKActions: *LandingOkActions
+      Metrics:
+        - Id: getErrors
+          MetricStat:
+            Metric:
+              Namespace: AWS/DynamoDB
+              MetricName: SystemErrors
+              Dimensions:
+                - {Name: TableName, Value: !Ref TokenTable}
+                - {Name: Operation, Value: GetItem}
+            Period: 300
+            Stat: Sum
+          ReturnData: false
+        - Id: putErrors
+          MetricStat:
+            Metric:
+              Namespace: AWS/DynamoDB
+              MetricName: SystemErrors
+              Dimensions:
+                - {Name: TableName, Value: !Ref TokenTable}
+                - {Name: Operation, Value: PutItem}
+            Period: 300
+            Stat: Sum
+          ReturnData: false
+        - Id: updateErrors
+          MetricStat:
+            Metric:
+              Namespace: AWS/DynamoDB
+              MetricName: SystemErrors
+              Dimensions:
+                - {Name: TableName, Value: !Ref TokenTable}
+                - {Name: Operation, Value: UpdateItem}
+            Period: 300
+            Stat: Sum
+          ReturnData: false
+        - Id: deleteErrors
+          MetricStat:
+            Metric:
+              Namespace: AWS/DynamoDB
+              MetricName: SystemErrors
+              Dimensions:
+                - {Name: TableName, Value: !Ref TokenTable}
+                - {Name: Operation, Value: DeleteItem}
+            Period: 300
+            Stat: Sum
+          ReturnData: false
+        - Id: transactErrors
+          MetricStat:
+            Metric:
+              Namespace: AWS/DynamoDB
+              MetricName: SystemErrors
+              Dimensions:
+                - {Name: TableName, Value: !Ref TokenTable}
+                - {Name: Operation, Value: TransactWriteItems}
+            Period: 300
+            Stat: Sum
+          ReturnData: false
+        - Id: totalErrors
+          Expression: SUM(METRICS())
+          Label: Confirmation-token table system errors
+          ReturnData: true
+  ContactDynamoSystemErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: DynamoDB HTTP 500 errors for content-free contact deduplication operations.
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: *LandingAlarmActions
+      OKActions: *LandingOkActions
+      Metrics:
+        - Id: putErrors
+          MetricStat:
+            Metric:
+              Namespace: AWS/DynamoDB
+              MetricName: SystemErrors
+              Dimensions:
+                - {Name: TableName, Value: !Ref ContactDedupeTable}
+                - {Name: Operation, Value: PutItem}
+            Period: 300
+            Stat: Sum
+          ReturnData: false
+        - Id: deleteErrors
+          MetricStat:
+            Metric:
+              Namespace: AWS/DynamoDB
+              MetricName: SystemErrors
+              Dimensions:
+                - {Name: TableName, Value: !Ref ContactDedupeTable}
+                - {Name: Operation, Value: DeleteItem}
+            Period: 300
+            Stat: Sum
+          ReturnData: false
+        - Id: totalErrors
+          Expression: SUM(METRICS())
+          Label: Contact deduplication table system errors
+          ReturnData: true
+  WaitlistLambdaErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties: &LambdaErrorAlarm
+      AlarmDescription: Unhandled Lambda errors for a Job Seeker Copilot landing journey.
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - {Name: FunctionName, Value: !Ref WaitlistFunction}
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: *LandingAlarmActions
+      OKActions: *LandingOkActions
+  ConfirmationLambdaErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      <<: *LambdaErrorAlarm
+      Dimensions:
+        - {Name: FunctionName, Value: !Ref ConfirmationFunction}
+  ResendLambdaErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      <<: *LambdaErrorAlarm
+      Dimensions:
+        - {Name: FunctionName, Value: !Ref ResendFunction}
+  SesEventsLambdaErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      <<: *LambdaErrorAlarm
+      Dimensions:
+        - {Name: FunctionName, Value: !Ref SesEventsFunction}
+  TtlConfigurationLambdaErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      <<: *LambdaErrorAlarm
+      Dimensions:
+        - {Name: FunctionName, Value: !Ref TtlConfigurationFunction}
+  ContactLambdaErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      <<: *LambdaErrorAlarm
+      Dimensions:
+        - {Name: FunctionName, Value: !Ref ContactFunction}
+  AnalyticsLambdaErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      <<: *LambdaErrorAlarm
+      Dimensions:
+        - {Name: FunctionName, Value: !Ref AnalyticsFunction}
+
+  LaunchMonitoringDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: !Sub JobSeekerCopilotLanding-${EnvironmentName}
+      DashboardBody: !Sub |
+        {
+          "start":"-PT6H",
+          "periodOverride":"inherit",
+          "widgets":[
+            {
+              "type":"text","x":0,"y":0,"width":24,"height":2,
+              "properties":{"markdown":"# Job Seeker Copilot landing operations\nCounts and service status only. Use the launch monitoring runbook; never paste addresses, tokens, contact text or raw payloads into incident evidence."}
+            },
+            {
+              "type":"alarm","x":0,"y":2,"width":24,"height":6,
+              "properties":{"title":"Actionable launch alarms","alarms":[
+                "${ApiServerErrorAlarm.Arn}","${WaitlistThrottleVolumeAlarm.Arn}",
+                "${WaitlistDynamoThrottlingAlarm.Arn}","${TokenDynamoThrottlingAlarm.Arn}","${ContactDynamoThrottlingAlarm.Arn}",
+                "${WaitlistDynamoSystemErrorAlarm.Arn}","${TokenDynamoSystemErrorAlarm.Arn}","${ContactDynamoSystemErrorAlarm.Arn}",
+                "${WaitlistLambdaErrorAlarm.Arn}","${ConfirmationLambdaErrorAlarm.Arn}","${ResendLambdaErrorAlarm.Arn}",
+                "${SesEventsLambdaErrorAlarm.Arn}","${TtlConfigurationLambdaErrorAlarm.Arn}","${ContactLambdaErrorAlarm.Arn}","${AnalyticsLambdaErrorAlarm.Arn}",
+                "${ConfirmationSendFailureAlarm.Arn}","${SesBounceAlarm.Arn}","${SesComplaintAlarm.Arn}","${SesDeliveryFailureAlarm.Arn}",
+                "${InvalidTokenVolumeAlarm.Arn}","${ResendVolumeAlarm.Arn}",
+                "${ContactValidationVolumeAlarm.Arn}","${ContactThrottleVolumeAlarm.Arn}","${ContactDuplicateVolumeAlarm.Arn}",
+                "${ContactDedupeFailureAlarm.Arn}","${ContactDedupeReleaseFailureAlarm.Arn}","${ContactSesFailureAlarm.Arn}",
+                "${ContactSesBounceAlarm.Arn}","${ContactSesComplaintAlarm.Arn}","${ContactSesDeliveryFailureAlarm.Arn}",
+                "${MonitoringNotificationCanaryAlarm.Arn}"
+              ]}
+            },
+            {
+              "type":"metric","x":0,"y":8,"width":12,"height":6,
+              "properties":{"title":"HTTP API requests and failures","region":"${AWS::Region}","period":300,"stat":"Sum","metrics":[
+                ["AWS/ApiGateway","Count","ApiId","${WaitlistApi}","Stage","$default"],
+                [".","4xx",".",".",".","."],
+                [".","5xx",".",".",".","."]
+              ]}
+            },
+            {
+              "type":"metric","x":12,"y":8,"width":12,"height":6,
+              "properties":{"title":"Lambda errors","region":"${AWS::Region}","period":300,"stat":"Sum","metrics":[
+                ["AWS/Lambda","Errors","FunctionName","${WaitlistFunction}"],
+                [".",".",".","${ConfirmationFunction}"],
+                [".",".",".","${ResendFunction}"],
+                [".",".",".","${SesEventsFunction}"],
+                [".",".",".","${ContactFunction}"],
+                [".",".",".","${AnalyticsFunction}"]
+              ]}
+            },
+            {
+              "type":"metric","x":0,"y":14,"width":12,"height":7,
+              "properties":{"title":"Waitlist and SES count-only signals","region":"${AWS::Region}","period":300,"stat":"Sum","metrics":[
+                ["JobSeekerCopilot/Waitlist","WaitlistAcceptedRequests","Environment","${EnvironmentName}"],[".","WaitlistConfirmationSent",".","."],[".","WaitlistConfirmed",".","."],
+                ["JobSeekerCopilot/Waitlist","ConfirmationSendFailures"],
+                [".","WaitlistThrottleResponses"],[".","InvalidConfirmationTokens"],[".","ResendIssued"],
+                [".","SesDeliveries"],[".","SesDeliveryFailures"],[".","SesBounces"],[".","SesComplaints"]
+              ]}
+            },
+            {
+              "type":"metric","x":12,"y":14,"width":12,"height":7,
+              "properties":{"title":"Contact count-only signals","region":"${AWS::Region}","period":300,"stat":"Sum","metrics":[
+                ["JobSeekerCopilot/Contact","ContactAcceptedRequests","Environment","${EnvironmentName}"],
+                ["JobSeekerCopilot/Contact","ContactValidationRejections"],[".","ContactThrottleResponses"],
+                [".","ContactDuplicateSuppressions"],[".","ContactDedupeFailures"],[".","ContactDedupeReleaseFailures"],
+                [".","ContactSesFailures"],[".","ContactSesDeliveries"],[".","ContactSesDeliveryFailures"],
+                [".","ContactSesBounces"],[".","ContactSesComplaints"]
+              ]}
+            },
+            {
+              "type":"metric","x":0,"y":21,"width":24,"height":7,
+              "properties":{"title":"Opt-in web analytics funnel (production traffic only)","region":"${AWS::Region}","period":300,"stat":"Sum","metrics":[
+                ["JobSeekerCopilot/Analytics","Visits","Environment","${EnvironmentName}","TrafficClass","production"],
+                [".","PageViews",".",".",".","."],
+                [".","WaitlistFormViews",".",".",".","."],[".","WaitlistAttempts",".",".",".","."],
+                [".","ContactFormViews",".",".",".","."],[".","ContactAttempts",".",".",".","."]
+              ]}
+            },
+            {
+              "type":"metric","x":0,"y":28,"width":24,"height":6,
+              "properties":{"title":"DynamoDB table throttles","region":"${AWS::Region}","period":300,"stat":"Sum","metrics":[
+                ["AWS/DynamoDB","ReadThrottleEvents","TableName","${WaitlistTableName}"],[".","WriteThrottleEvents",".","."],
+                [".","ReadThrottleEvents",".","${TokenTable}"],[".","WriteThrottleEvents",".","."],
+                [".","ReadThrottleEvents",".","${ContactDedupeTable}"],[".","WriteThrottleEvents",".","."]
+              ]}
+            }
+          ]
+        }
+
+Outputs:
+  ApiBaseUrl:
+    Value: !Sub https://${WaitlistApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}
+  SubscribeEndpoint:
+    Value: !Sub https://${WaitlistApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/waitlist
+  ConfirmationEndpoint:
+    Value: !Sub https://${WaitlistApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/waitlist/confirm
+  ResendEndpoint:
+    Value: !Sub https://${WaitlistApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/waitlist/resend
+  ContactEndpoint:
+    Value: !Sub https://${WaitlistApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/contact
+  AnalyticsEndpoint:
+    Value: !Sub https://${WaitlistApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/analytics
+  SubscribeLambdaName: {Value: !Ref WaitlistFunction}
+  ConfirmationLambdaName: {Value: !Ref ConfirmationFunction}
+  ResendLambdaName: {Value: !Ref ResendFunction}
+  ContactLambdaName: {Value: !Ref ContactFunction}
+  AnalyticsLambdaName: {Value: !Ref AnalyticsFunction}
+  SesEventsLambdaName: {Value: !Ref SesEventsFunction}
+  TokenTableName: {Value: !Ref TokenTable}
+  ContactDedupeTableName: {Value: !Ref ContactDedupeTable}
+  AlarmNotificationTopicArn: {Value: !Ref AlarmNotificationTopic}
+  AlarmSubscriptionConfigured:
+    Value: !If [HasAlarmNotificationEmail, 'true', 'false']
+  LaunchMonitoringDashboardName: {Value: !Ref LaunchMonitoringDashboard}
+  WaitlistTableProtection:
+    Description: The existing table is an external parameter, not a stack resource, so this stack cannot replace or delete it.
+    Value: !Sub '${WaitlistTableName} is external; pendingExpiresAt TTL, PITR, and deletion protection enabled'
+  SesIdentity: {Value: !Ref WaitlistEmailIdentity}
+  SesConfigurationSet: {Value: !Ref WaitlistEmailConfigurationSet}
+  DkimRecordName1: {Value: !GetAtt WaitlistEmailIdentity.DkimDNSTokenName1}
+  DkimRecordValue1: {Value: !GetAtt WaitlistEmailIdentity.DkimDNSTokenValue1}
+  DkimRecordName2: {Value: !GetAtt WaitlistEmailIdentity.DkimDNSTokenName2}
+  DkimRecordValue2: {Value: !GetAtt WaitlistEmailIdentity.DkimDNSTokenValue2}
+  DkimRecordName3: {Value: !GetAtt WaitlistEmailIdentity.DkimDNSTokenName3}
+  DkimRecordValue3: {Value: !GetAtt WaitlistEmailIdentity.DkimDNSTokenValue3}

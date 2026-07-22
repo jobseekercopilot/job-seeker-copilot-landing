@@ -1,63 +1,117 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { DEFAULT_PUBLIC_APP_CONFIG, PUBLIC_APP_CONFIG, PublicAppConfig } from '../config/public-app-config';
+import { DEFAULT_PUBLIC_APP_CONFIG, PUBLIC_APP_CONFIG } from '../config/public-app-config';
 import { EmailSubscriptionService } from './email-subscription.service';
 
 describe('EmailSubscriptionService', () => {
-  it('makes the disabled backend explicit and does not call HTTP', () => {
-    configure({ enableLiveSubmissions: false, waitlistApiUrl: '' });
+  beforeEach(() => TestBed.configureTestingModule({
+    providers: [
+      provideHttpClient(),
+      provideHttpClientTesting(),
+      { provide: PUBLIC_APP_CONFIG, useValue: {
+        ...DEFAULT_PUBLIC_APP_CONFIG,
+        enableLiveSubmissions: true,
+        waitlistConfirmationApiUrl: '/api/waitlist/confirm',
+        waitlistResendApiUrl: '/api/waitlist/resend',
+        waitlistUnsubscribeApiUrl: '/api/waitlist/unsubscribe',
+      } },
+    ],
+  }));
+
+  it('posts the token and maps a successful confirmation', () => {
     let status = '';
-    TestBed.inject(EmailSubscriptionService).subscribe('person@example.com', metadata())
-      .subscribe(result => status = result.status);
-
-    expect(status).toBe('backend-disabled');
-    TestBed.inject(HttpTestingController).expectNone(() => true);
-  });
-
-  it('normalises the email and reports pending double opt-in', () => {
-    configure({ enableLiveSubmissions: true, waitlistApiUrl: '/api/waitlist' });
-    let status = '';
-    TestBed.inject(EmailSubscriptionService).subscribe('  PERSON@Example.com ', metadata())
-      .subscribe(result => status = result.status);
-
-    const request = TestBed.inject(HttpTestingController).expectOne('/api/waitlist');
+    TestBed.inject(EmailSubscriptionService).confirm('secure-token').subscribe(result => status = result.status);
+    const request = TestBed.inject(HttpTestingController).expectOne('/api/waitlist/confirm');
     expect(request.request.method).toBe('POST');
-    expect(request.request.body).toEqual({
-      email: 'person@example.com', source: 'landing-page', consentVersion: '2026-07-13',
-      website: '', formStartedAt: 123,
-    });
-    request.flush({ success: true, code: 'WAITLIST_PENDING_CONFIRMATION', message: 'Check your inbox.' });
-    expect(status).toBe('pending-confirmation');
+    expect(request.request.body).toEqual({ token: 'secure-token' });
+    request.flush({ success: true, code: 'WAITLIST_CONFIRMED', message: 'Confirmed.' });
+    expect(status).toBe('confirmed');
   });
 
-  it('recognises an existing subscription', () => {
-    configure({ enableLiveSubmissions: true, waitlistApiUrl: '/api/waitlist' });
+  it('posts unsubscribe tokens in the body rather than a URL', () => {
     let status = '';
-    TestBed.inject(EmailSubscriptionService).subscribe('person@example.com', metadata())
+    TestBed.inject(EmailSubscriptionService).unsubscribe('secure-unsubscribe-token')
       .subscribe(result => status = result.status);
-    TestBed.inject(HttpTestingController).expectOne('/api/waitlist')
-      .flush({ success: true, code: 'ALREADY_SUBSCRIBED', message: 'Already subscribed.' });
-    expect(status).toBe('already-subscribed');
+    const request = TestBed.inject(HttpTestingController).expectOne('/api/waitlist/unsubscribe');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.params.keys()).toEqual([]);
+    expect(request.request.body).toEqual({ token: 'secure-unsubscribe-token' });
+    request.flush({ success: true, code: 'WAITLIST_UNSUBSCRIBED', message: 'Unsubscribed.' });
+    expect(status).toBe('unsubscribed');
   });
 
-  it('rejects invalid email input before making a request', () => {
-    configure({ enableLiveSubmissions: true, waitlistApiUrl: '/api/waitlist' });
-    expect(() => TestBed.inject(EmailSubscriptionService).subscribe('not-an-email', metadata()))
+  it('maps already-confirmed, invalid, and expired responses', () => {
+    const service = TestBed.inject(EmailSubscriptionService);
+    const http = TestBed.inject(HttpTestingController);
+    const statuses: string[] = [];
+    service.confirm('token-one').subscribe(result => statuses.push(result.status));
+    http.expectOne('/api/waitlist/confirm').flush({ success: true, code: 'WAITLIST_ALREADY_CONFIRMED', message: 'Used.' });
+    service.confirm('token-two').subscribe(result => statuses.push(result.status));
+    http.expectOne('/api/waitlist/confirm').flush(
+      { success: false, code: 'CONFIRMATION_TOKEN_INVALID', message: 'Invalid.' },
+      { status: 400, statusText: 'Bad Request' },
+    );
+    service.confirm('token-three').subscribe(result => statuses.push(result.status));
+    http.expectOne('/api/waitlist/confirm').flush(
+      { success: false, code: 'CONFIRMATION_TOKEN_EXPIRED', message: 'Expired.' },
+      { status: 410, statusText: 'Gone' },
+    );
+    expect(statuses).toEqual(['already-confirmed', 'invalid', 'expired']);
+  });
+
+  it('normalises an email for the neutral resend endpoint', () => {
+    let status = '';
+    TestBed.inject(EmailSubscriptionService).resend(' Person@Example.com ').subscribe(result => status = result.status);
+    const request = TestBed.inject(HttpTestingController).expectOne('/api/waitlist/resend');
+    expect(request.request.body).toEqual({ email: 'person@example.com' });
+    request.flush({ success: true, code: 'WAITLIST_RESEND_ACCEPTED', message: 'If pending, it will be sent.' }, { status: 202, statusText: 'Accepted' });
+    expect(status).toBe('resent');
+  });
+
+  it('maps resend validation and throttling without rendering backend messages', () => {
+    const service = TestBed.inject(EmailSubscriptionService);
+    const http = TestBed.inject(HttpTestingController);
+    const statuses: string[] = [];
+
+    service.resend('person@example.com').subscribe(result => statuses.push(result.status));
+    http.expectOne('/api/waitlist/resend').flush(
+      { success: false, code: 'INVALID_EMAIL', message: 'private validation detail' },
+      { status: 400, statusText: 'Bad Request' },
+    );
+    service.resend('person@example.com').subscribe(result => statuses.push(result.status));
+    http.expectOne('/api/waitlist/resend').flush(
+      { success: false, code: 'TOO_MANY_REQUESTS', message: 'private throttling detail' },
+      { status: 429, statusText: 'Too Many Requests' },
+    );
+
+    expect(statuses).toEqual(['validation-error', 'rate-limited']);
+  });
+
+  it('rejects an invalid resend address before HTTP', () => {
+    const service = TestBed.inject(EmailSubscriptionService);
+
+    expect(() => service.resend('person..two@example.com'))
       .toThrowError('A valid email address is required.');
     TestBed.inject(HttpTestingController).expectNone(() => true);
   });
 
-  function configure(overrides: Partial<PublicAppConfig>): void {
-    TestBed.configureTestingModule({
-      providers: [
-        provideHttpClient(), provideHttpClientTesting(),
-        { provide: PUBLIC_APP_CONFIG, useValue: { ...DEFAULT_PUBLIC_APP_CONFIG, ...overrides } },
-      ],
-    });
-  }
+  it('surfaces confirmation and resend network failures to controlled page handling', () => {
+    const service = TestBed.inject(EmailSubscriptionService);
+    const http = TestBed.inject(HttpTestingController);
+    const errors: unknown[] = [];
 
-  function metadata() {
-    return { website: '', formStartedAt: 123 };
-  }
+    service.confirm('secure-token').subscribe({ error: value => errors.push(value) });
+    http.expectOne('/api/waitlist/confirm').flush(
+      { success: false, code: 'PRIVATE_CONFIRMATION_DETAIL', message: 'do not render' },
+      { status: 503, statusText: 'Unavailable' },
+    );
+    service.resend('person@example.com').subscribe({ error: value => errors.push(value) });
+    http.expectOne('/api/waitlist/resend').flush(
+      { success: false, code: 'PRIVATE_RESEND_DETAIL', message: 'do not render' },
+      { status: 503, statusText: 'Unavailable' },
+    );
+
+    expect(errors).toHaveLength(2);
+  });
 });

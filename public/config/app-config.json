@@ -1,6 +1,9 @@
 {
   "environmentName": "development",
   "enableLiveSubmissions": false,
+  "searchIndexingEnabled": false,
+  "analyticsEnabled": false,
+  "analyticsEndpointUrl": "",
   "waitlistApiUrl": "",
   "waitlistConfirmationApiUrl": "",
   "waitlistResendApiUrl": "",
@@ -14,10 +17,9 @@
   "privacyPolicyUrl": "/privacy",
   "termsUrl": "/terms",
   "supportUrl": "/contact",
-  "analyticsId": "",
   "antiBotProvider": "none",
   "antiBotSiteKey": "",
-  "consentVersion": "2026-07-13",
+  "consentVersion": "2026-07-22",
   "minimumFormCompletionMs": 1200,
   "contactMessageMaxLength": 3000,
   "copyrightNotice": "Job Seeker Copilot"

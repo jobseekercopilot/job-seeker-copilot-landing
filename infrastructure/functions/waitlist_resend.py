@@ -4,7 +4,7 @@ from common.aws_clients import table
 from common.config import enabled, integer, required
 from common.email_provider import send_email
 from common.email_templates import waitlist_confirmation
-from common.http import ApiError, error_response, parse_json, response
+from common.http import ApiError, enforce_origin, error_response, parse_json, response
 from common.logging_utils import log_result, logger
 from common.tokens import new_token, same_hash, token_hash
 from common.validation import exact_fields, text
@@ -16,6 +16,7 @@ def handler(event, context):
     started = time.monotonic()
     record_id = ""
     try:
+        enforce_origin(event)
         if not enabled("ENABLE_LIVE_SUBMISSIONS") or not enabled("ENABLE_WAITLIST_EMAIL"):
             raise ApiError(503, "BACKEND_DISABLED", "Confirmation email is not currently available.", "configuration")
         data = parse_json(event)
@@ -65,7 +66,13 @@ def handler(event, context):
         )
         try:
             send_email(
-                required("WAITLIST_SENDER_EMAIL"), item["email"], subject, text_body, html_body, required("REPLY_TO_EMAIL")
+                required("WAITLIST_SENDER_EMAIL"),
+                item["email"],
+                subject,
+                text_body,
+                html_body,
+                required("REPLY_TO_EMAIL"),
+                message_purpose="waitlist-confirmation",
             )
         except Exception:
             try:

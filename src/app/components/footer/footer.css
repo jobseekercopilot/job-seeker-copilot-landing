@@ -64,6 +64,20 @@ nav a {
   text-decoration: none;
 }
 
+.analytics-choice {
+  background: none;
+  border: 0;
+  color: #b9c5d4;
+  cursor: pointer;
+  font-size: 0.88rem;
+  padding: 0;
+  text-align: left;
+}
+
+.analytics-choice:hover {
+  color: #ffffff;
+}
+
 nav a:hover {
   color: #ffffff;
 }
@@ -79,6 +93,14 @@ nav a:hover {
 
 .footer-bottom p {
   margin: 0;
+}
+
+.footer-bottom a {
+  color: #b9c5d4;
+}
+
+.footer-bottom a:hover {
+  color: #ffffff;
 }
 
 @media (max-width: 680px) {

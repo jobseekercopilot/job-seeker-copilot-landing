@@ -5,6 +5,9 @@ export type PublicEnvironmentName = 'development' | 'test' | 'production';
 export interface PublicAppConfig {
   environmentName: PublicEnvironmentName;
   enableLiveSubmissions: boolean;
+  searchIndexingEnabled: boolean;
+  analyticsEnabled: boolean;
+  analyticsEndpointUrl: string;
   waitlistApiUrl: string;
   waitlistConfirmationApiUrl: string;
   waitlistResendApiUrl: string;
@@ -18,7 +21,6 @@ export interface PublicAppConfig {
   privacyPolicyUrl: string;
   termsUrl: string;
   supportUrl: string;
-  analyticsId: string;
   antiBotProvider: string;
   antiBotSiteKey: string;
   consentVersion: string;
@@ -30,6 +32,9 @@ export interface PublicAppConfig {
 export const DEFAULT_PUBLIC_APP_CONFIG: PublicAppConfig = {
   environmentName: 'development',
   enableLiveSubmissions: false,
+  searchIndexingEnabled: false,
+  analyticsEnabled: false,
+  analyticsEndpointUrl: '',
   waitlistApiUrl: '',
   waitlistConfirmationApiUrl: '',
   waitlistResendApiUrl: '',
@@ -43,10 +48,9 @@ export const DEFAULT_PUBLIC_APP_CONFIG: PublicAppConfig = {
   privacyPolicyUrl: '/privacy',
   termsUrl: '/terms',
   supportUrl: '/contact',
-  analyticsId: '',
   antiBotProvider: 'none',
   antiBotSiteKey: '',
-  consentVersion: '2026-07-13',
+  consentVersion: '2026-07-22',
   minimumFormCompletionMs: 1200,
   contactMessageMaxLength: 3000,
   copyrightNotice: 'Job Seeker Copilot',
@@ -61,12 +65,21 @@ export function setPublicAppConfig(value: unknown): void {
   }
 
   const environmentName = value['environmentName'];
+  const publicWebsiteUrl = asString(value['publicWebsiteUrl'], DEFAULT_PUBLIC_APP_CONFIG.publicWebsiteUrl);
+  const analyticsEndpointUrl = asString(value['analyticsEndpointUrl'], DEFAULT_PUBLIC_APP_CONFIG.analyticsEndpointUrl);
+  const waitlistApiUrl = asString(value['waitlistApiUrl'], DEFAULT_PUBLIC_APP_CONFIG.waitlistApiUrl);
   loadedConfig = {
     environmentName: isEnvironmentName(environmentName)
       ? environmentName
       : DEFAULT_PUBLIC_APP_CONFIG.environmentName,
     enableLiveSubmissions: value['enableLiveSubmissions'] === true,
-    waitlistApiUrl: asString(value['waitlistApiUrl'], DEFAULT_PUBLIC_APP_CONFIG.waitlistApiUrl),
+    searchIndexingEnabled: value['searchIndexingEnabled'] === true &&
+      environmentName === 'production' && publicWebsiteUrl === 'https://www.jobseekercopilot.com',
+    analyticsEnabled: value['analyticsEnabled'] === true &&
+      environmentName === 'production' && publicWebsiteUrl === 'https://www.jobseekercopilot.com' &&
+      isQueryFreeHttpsAnalyticsEndpoint(analyticsEndpointUrl, waitlistApiUrl),
+    analyticsEndpointUrl,
+    waitlistApiUrl,
     waitlistConfirmationApiUrl: asString(value['waitlistConfirmationApiUrl'], DEFAULT_PUBLIC_APP_CONFIG.waitlistConfirmationApiUrl),
     waitlistResendApiUrl: asString(value['waitlistResendApiUrl'], DEFAULT_PUBLIC_APP_CONFIG.waitlistResendApiUrl),
     waitlistUnsubscribeApiUrl: asString(value['waitlistUnsubscribeApiUrl'], DEFAULT_PUBLIC_APP_CONFIG.waitlistUnsubscribeApiUrl),
@@ -75,11 +88,10 @@ export function setPublicAppConfig(value: unknown): void {
     registrationUrl: asString(value['registrationUrl'], DEFAULT_PUBLIC_APP_CONFIG.registrationUrl),
     signInUrl: asString(value['signInUrl'], DEFAULT_PUBLIC_APP_CONFIG.signInUrl),
     pricingUrl: asString(value['pricingUrl'], DEFAULT_PUBLIC_APP_CONFIG.pricingUrl),
-    publicWebsiteUrl: asString(value['publicWebsiteUrl'], DEFAULT_PUBLIC_APP_CONFIG.publicWebsiteUrl),
+    publicWebsiteUrl,
     privacyPolicyUrl: asString(value['privacyPolicyUrl'], DEFAULT_PUBLIC_APP_CONFIG.privacyPolicyUrl),
     termsUrl: asString(value['termsUrl'], DEFAULT_PUBLIC_APP_CONFIG.termsUrl),
     supportUrl: asString(value['supportUrl'], DEFAULT_PUBLIC_APP_CONFIG.supportUrl),
-    analyticsId: asString(value['analyticsId'], DEFAULT_PUBLIC_APP_CONFIG.analyticsId),
     antiBotProvider: asString(value['antiBotProvider'], DEFAULT_PUBLIC_APP_CONFIG.antiBotProvider),
     antiBotSiteKey: asString(value['antiBotSiteKey'], DEFAULT_PUBLIC_APP_CONFIG.antiBotSiteKey),
     consentVersion: asString(value['consentVersion'], DEFAULT_PUBLIC_APP_CONFIG.consentVersion),
@@ -118,4 +130,15 @@ function asPositiveNumber(value: unknown, fallback: number): number {
 
 function asString(value: unknown, fallback: string): string {
   return typeof value === 'string' ? value.trim() : fallback;
+}
+
+function isQueryFreeHttpsAnalyticsEndpoint(value: string, waitlistApiUrl: string): boolean {
+  try {
+    const endpoint = new URL(value);
+    const waitlistEndpoint = new URL(waitlistApiUrl);
+    return endpoint.protocol === 'https:' && endpoint.pathname.endsWith('/analytics') &&
+      !endpoint.search && !endpoint.hash && endpoint.origin === waitlistEndpoint.origin;
+  } catch {
+    return false;
+  }
 }

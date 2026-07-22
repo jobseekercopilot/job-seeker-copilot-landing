@@ -38,6 +38,11 @@ Parameters:
   PublicSupportEmail:
     Type: String
     Description: Public support address shown in email templates.
+  SesConfigurationSetName:
+    Type: String
+    Default: JobSeekerCopilotWaitlistEmails
+    AllowedPattern: '^[A-Za-z0-9_-]{1,64}$'
+    Description: Existing SES configuration set used for purpose-tagged landing email events.
   EnableWaitlistEmail:
     Type: String
     Default: 'true'
@@ -99,6 +104,7 @@ Globals:
         PUBLIC_SITE_URL: !Ref PublicSiteUrl
         PUBLIC_SUPPORT_EMAIL: !Ref PublicSupportEmail
         REPLY_TO_EMAIL: !Ref ReplyToEmail
+        SES_CONFIGURATION_SET: !Ref SesConfigurationSetName
         POWERTOOLS_SERVICE_NAME: job-seeker-copilot-landing
 
 Resources:
@@ -211,6 +217,12 @@ Resources:
             - Effect: Allow
               Action: ses:SendEmail
               Resource: !Sub 'arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${WaitlistSenderEmail}'
+              Condition:
+                StringEquals:
+                  ses:FromAddress: !Ref WaitlistSenderEmail
+            - Effect: Allow
+              Action: ses:SendEmail
+              Resource: !Sub 'arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:configuration-set/${SesConfigurationSetName}'
       Events:
         Submit:
           Type: HttpApi
@@ -243,12 +255,18 @@ Resources:
             - Effect: Allow
               Action: ses:SendEmail
               Resource: !Sub 'arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${WaitlistSenderEmail}'
+              Condition:
+                StringEquals:
+                  ses:FromAddress: !Ref WaitlistSenderEmail
+            - Effect: Allow
+              Action: ses:SendEmail
+              Resource: !Sub 'arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:configuration-set/${SesConfigurationSetName}'
       Events:
         Confirm:
           Type: HttpApi
           Properties:
             ApiId: !Ref LandingApi
-            Method: GET
+            Method: POST
             Path: /waitlist/confirm
 
   WaitlistResendFunction:
@@ -272,6 +290,12 @@ Resources:
             - Effect: Allow
               Action: ses:SendEmail
               Resource: !Sub 'arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${WaitlistSenderEmail}'
+              Condition:
+                StringEquals:
+                  ses:FromAddress: !Ref WaitlistSenderEmail
+            - Effect: Allow
+              Action: ses:SendEmail
+              Resource: !Sub 'arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:configuration-set/${SesConfigurationSetName}'
       Events:
         Resend:
           Type: HttpApi
@@ -303,7 +327,7 @@ Resources:
           Type: HttpApi
           Properties:
             ApiId: !Ref LandingApi
-            Method: GET
+            Method: POST
             Path: /waitlist/unsubscribe
 
   ContactSubmitFunction:
@@ -326,6 +350,12 @@ Resources:
             - Effect: Allow
               Action: ses:SendEmail
               Resource: !Sub 'arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${ContactSenderEmail}'
+              Condition:
+                StringEquals:
+                  ses:FromAddress: !Ref ContactSenderEmail
+            - Effect: Allow
+              Action: ses:SendEmail
+              Resource: !Sub 'arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:configuration-set/${SesConfigurationSetName}'
             - Effect: Allow
               Action: dynamodb:PutItem
               Resource: !If
@@ -363,6 +393,9 @@ Outputs:
   WaitlistTableName:
     Description: Retained waiting-list DynamoDB table.
     Value: !Ref WaitlistTable
+  SesConfigurationSet:
+    Description: Existing SES configuration set used by all landing email purposes.
+    Value: !Ref SesConfigurationSetName
   ContactTableName:
     Condition: StoreContactSubmissionsCondition
     Description: Retained contact-submission DynamoDB table.

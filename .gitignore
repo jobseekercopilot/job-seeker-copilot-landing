@@ -2,6 +2,11 @@
 /dist
 /.angular
 /coverage
+.aws-sam/
+
+# Python Lambda test/build caches
+__pycache__/
+*.py[cod]
 
 # Local environment files (keep the documented example)
 .env

@@ -17,15 +17,20 @@
       </div>
       <div>
         <strong>Information</strong>
+        <a routerLink="/faq">Frequently Asked Questions</a>
+        <a routerLink="/about">The Journey So Far</a>
         <a routerLink="/privacy">Privacy</a>
         <a routerLink="/terms">Terms</a>
         <a routerLink="/accessibility">Accessibility Statement</a>
         <a routerLink="/contact">Contact</a>
+        @if (config.analyticsEnabled) {
+          <button type="button" class="analytics-choice" (click)="analyticsConsent.openPreferences()">Analytics choices</button>
+        }
       </div>
     </nav>
   </div>
   <div class="container footer-bottom">
     <p>© {{ year }} {{ config.copyrightNotice }}.</p>
-    <p>Independent job-search planning and application support.</p>
+    <p>General enquiries: <a [href]="'mailto:' + contact.generalEnquiries">{{ contact.generalEnquiries }}</a></p>
   </div>
 </footer>

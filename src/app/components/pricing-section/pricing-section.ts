@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { EARLY_ACCESS_OFFER_CONFIG, formatOfferTokenAmount } from '../../config/early-access-offer';
 
 interface CreditPack {
   name: string;
@@ -17,6 +18,8 @@ interface CreditPack {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PricingSectionComponent {
+  protected readonly offer = inject(EARLY_ACCESS_OFFER_CONFIG);
+  protected readonly formattedBonusTokens = formatOfferTokenAmount(this.offer.bonusTokens);
   protected readonly packs: CreditPack[] = [
     {
       name: 'Free',
