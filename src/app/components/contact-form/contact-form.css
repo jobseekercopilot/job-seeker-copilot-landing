@@ -12,6 +12,7 @@
 .field {
   display: grid;
   gap: 7px;
+  min-width: 0;
 }
 
 label {
@@ -76,8 +77,12 @@ textarea[aria-invalid="true"] {
 }
 
 button:disabled {
-  cursor: wait;
+  cursor: not-allowed;
   opacity: 0.72;
+}
+
+form[aria-busy="true"] button:disabled {
+  cursor: wait;
 }
 
 .form-status {
@@ -106,6 +111,11 @@ button:disabled {
   color: var(--colour-danger);
 }
 
+.form-status a {
+  color: inherit;
+  font-weight: 800;
+}
+
 @media (max-width: 600px) {
   .field-grid {
     grid-template-columns: 1fr;
@@ -114,6 +124,10 @@ button:disabled {
   .contact-actions {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .contact-actions button {
+    width: 100%;
   }
 }
 .honeypot {

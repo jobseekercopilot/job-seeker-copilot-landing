@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
-import { validateLiveWaitlistConfig } from './runtime-config-validation.mjs';
+import { validateLiveSubmissionConfig } from './runtime-config-validation.mjs';
 
 const outputPath = resolve(process.env.RUNTIME_CONFIG_OUTPUT_PATH || 'public/config/app-config.json');
 
@@ -29,7 +29,7 @@ const config = {
   copyrightNotice: text('COPYRIGHT_NOTICE', 'Job Seeker Copilot'),
 };
 
-validateLiveWaitlistConfig(config);
+validateLiveSubmissionConfig(config);
 
 await mkdir(dirname(outputPath), { recursive: true });
 await writeFile(outputPath, `${JSON.stringify(config, null, 2)}\n`, 'utf8');
