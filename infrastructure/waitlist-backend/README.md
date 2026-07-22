@@ -204,6 +204,11 @@ reuse it across environments.
 
 ## Validate and create a reviewable change set
 
+For the complete operator sequence, incident decision tree and no-delete
+rollback path, use the
+[landing operations and troubleshooting runbook](../../docs/launch/operations-and-troubleshooting-runbook.md)
+and its [release checklist](../../docs/launch/release-operations-checklist.md).
+
 ```bash
 python3 -m unittest discover -s infrastructure/waitlist-backend/tests -v
 sam validate --lint --region eu-west-2 --template-file infrastructure/waitlist-backend/template.yaml
