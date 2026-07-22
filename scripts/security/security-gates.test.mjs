@@ -53,11 +53,11 @@ describe('release security gates', () => {
     assert.doesNotMatch(workflow, /pull_request_target|write-all|contents: write/);
     assert.match(workflow, /fetch-depth: 0/);
     for (const action of [
-      'actions/checkout@11d5960a326750d5838078e36cf38b85af677262',
-      'actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020',
-      'actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065',
-      'aws-actions/setup-sam@f84ec7d548307efafe33230528756de3c5841a17',
-      'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02',
+      'actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803',
+      'actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38',
+      'actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1',
+      'aws-actions/setup-sam@89ddb14d60e682855e3fea4be85b3c56485de310',
+      'actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4',
     ]) {
       assert.match(workflow, new RegExp(action));
     }
