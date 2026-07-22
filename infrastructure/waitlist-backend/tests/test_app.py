@@ -286,6 +286,49 @@ class ResendTests(unittest.TestCase):
         self.assertEqual(body(result)["code"], "WAITLIST_RESEND_ACCEPTED")
         self.assertIn("If that address", body(result)["message"])
 
+    def test_resend_is_neutral_and_sends_nothing_for_confirmed_or_suppressed_records(self):
+        table = Mock()
+        table.get_item.side_effect = [
+            {"Item": {"email": "person@example.com", "status": status}}
+            for status in ("CONFIRMED", "UNSUBSCRIBED", "BOUNCED", "COMPLAINED")
+        ]
+        with patch.object(resend, "subscriber_table", return_value=table), \
+             patch.object(resend, "rotate_pending_token") as rotate, \
+             patch.object(resend, "send_confirmation_email") as send:
+            results = [resend.handler(event({"email": "person@example.com"}), Context()) for _ in range(4)]
+        self.assertTrue(all(result["statusCode"] == 202 for result in results))
+        self.assertTrue(all(body(result)["code"] == "WAITLIST_RESEND_ACCEPTED" for result in results))
+        self.assertEqual(len({body(result)["message"] for result in results}), 1)
+        rotate.assert_not_called()
+        send.assert_not_called()
+
+    def test_concurrent_resend_loser_returns_the_neutral_contract(self):
+        conflict = Exception("private transaction detail")
+        conflict.response = {"Error": {"Code": "TransactionCanceledException"}}
+        table = Mock()
+        table.get_item.return_value = {"Item": {"email": "person@example.com", "status": "PENDING"}}
+        with patch.object(resend, "subscriber_table", return_value=table), \
+             patch.object(resend, "rotate_pending_token", side_effect=conflict), \
+             patch.object(resend, "send_confirmation_email") as send:
+            result = resend.handler(event({"email": "person@example.com"}), Context())
+        self.assertEqual(result["statusCode"], 202)
+        self.assertEqual(body(result)["code"], "WAITLIST_RESEND_ACCEPTED")
+        send.assert_not_called()
+
+    def test_resend_ses_failure_keeps_new_token_recoverable_and_response_neutral(self):
+        table = Mock()
+        table.get_item.return_value = {"Item": {"email": "person@example.com", "status": "PENDING"}}
+        with patch.object(resend, "subscriber_table", return_value=table), \
+             patch.object(resend, "rotate_pending_token", return_value=("raw-token", "new-hash", "issued")), \
+             patch.object(resend, "send_confirmation_email", side_effect=RuntimeError("private SES detail")), \
+             patch.object(resend, "mark_confirmation_failure") as failed, \
+             patch.object(resend, "mark_confirmation_sent") as sent:
+            result = resend.handler(event({"email": "person@example.com"}), Context())
+        self.assertEqual(result["statusCode"], 202)
+        self.assertEqual(body(result)["code"], "WAITLIST_RESEND_ACCEPTED")
+        failed.assert_called_once_with("person@example.com", "new-hash")
+        sent.assert_not_called()
+
 
 @patch.dict(os.environ, BASE_ENV, clear=True)
 class ConfirmationTests(unittest.TestCase):
@@ -305,9 +348,33 @@ class ConfirmationTests(unittest.TestCase):
         self.assertEqual(body(result)["code"], "WAITLIST_CONFIRMED")
         actions = ddb.transact_write_items.call_args.kwargs["TransactItems"]
         self.assertEqual(len(actions), 2)
-        self.assertIn("currentConfirmationTokenHash=:hash", actions[0]["Update"]["ConditionExpression"])
+        subscriber_update = actions[0]["Update"]
+        self.assertIn("#status=:pending", subscriber_update["ConditionExpression"])
+        self.assertIn("currentConfirmationTokenHash=:hash", subscriber_update["ConditionExpression"])
+        self.assertIn("confirmationExpiresAt>=:now", subscriber_update["ConditionExpression"])
+        for field in (
+            "currentConfirmationTokenHash", "confirmationExpiresAt", "pendingExpiresAt",
+            "lastConfirmationAttemptAtEpoch", "confirmationSendWindowStartedAtEpoch",
+            "confirmationSendCount", "confirmationSentAt", "lastConfirmationDeliveryErrorAt",
+        ):
+            self.assertIn(field, subscriber_update["UpdateExpression"])
         self.assertIn("REMOVE email", actions[1]["Update"]["UpdateExpression"])
         self.assertFalse(hasattr(tokens, "scan") and tokens.scan.called)
+
+    def test_malformed_and_unknown_tokens_are_rejected_before_any_update(self):
+        tokens = Mock()
+        tokens.get_item.return_value = {}
+        ddb = Mock()
+        with patch.object(confirm, "token_table", return_value=tokens), \
+             patch.object(confirm, "dynamodb_client", return_value=ddb):
+            malformed = confirm.handler(event({"token": "contains.email@example.com"}), Context())
+            too_long = confirm.handler(event({"token": "a" * 129}), Context())
+            unknown = confirm.handler(event({"token": self.RAW}), Context())
+        self.assertEqual([body(result)["code"] for result in (malformed, too_long, unknown)], [
+            "CONFIRMATION_TOKEN_INVALID", "CONFIRMATION_TOKEN_INVALID", "CONFIRMATION_TOKEN_INVALID",
+        ])
+        self.assertEqual(tokens.get_item.call_count, 1)
+        ddb.transact_write_items.assert_not_called()
 
     def test_expired_confirmation_is_rejected_without_update(self):
         tokens = Mock()
@@ -331,6 +398,23 @@ class ConfirmationTests(unittest.TestCase):
             repeated = confirm.handler(event({"token": self.RAW}), Context())
         self.assertEqual(body(invalid)["code"], "CONFIRMATION_TOKEN_INVALID")
         self.assertEqual(body(repeated)["code"], "WAITLIST_ALREADY_CONFIRMED")
+
+    def test_concurrent_confirmation_loser_resolves_idempotently_without_reusing_the_token(self):
+        active = {"tokenHash": self.HASH, "email": "person@example.com", "status": "ACTIVE", "expiresAt": 3_000}
+        used = {"tokenHash": self.HASH, "status": "USED", "expiresAt": 3_000}
+        tokens = Mock()
+        tokens.get_item.side_effect = [{"Item": active}, {"Item": used}]
+        conflict = Exception("private transaction detail")
+        conflict.response = {"Error": {"Code": "TransactionCanceledException"}}
+        ddb = Mock()
+        ddb.transact_write_items.side_effect = conflict
+        with patch.object(confirm, "token_table", return_value=tokens), \
+             patch.object(confirm, "dynamodb_client", return_value=ddb), \
+             patch.object(confirm, "now_epoch", return_value=2_000):
+            result = confirm.handler(event({"token": self.RAW}), Context())
+        self.assertEqual(result["statusCode"], 200)
+        self.assertEqual(body(result)["code"], "WAITLIST_ALREADY_CONFIRMED")
+        self.assertEqual(ddb.transact_write_items.call_count, 1)
 
 
 @patch.dict(os.environ, BASE_ENV, clear=True)

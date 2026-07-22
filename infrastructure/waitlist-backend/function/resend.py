@@ -36,7 +36,12 @@ def handler(event, context):
         record = subscriber_table().get_item(Key={"email": email}, ConsistentRead=True).get("Item")
         if not record or str(record.get("status", "")).upper() != "PENDING":
             return _neutral(event, context, "not-eligible")
-        raw_token, hashed, result = rotate_pending_token(record)
+        try:
+            raw_token, hashed, result = rotate_pending_token(record)
+        except Exception as exc:
+            if aws_error_code(exc) in {"TransactionCanceledException", "ConditionalCheckFailedException"}:
+                return _neutral(event, context, "concurrent-update")
+            raise
         if result != "issued":
             return _neutral(event, context, result)
         metric("ResendIssued")
@@ -67,8 +72,8 @@ def handler(event, context):
     except RequestError as exc:
         log_result(context, OPERATION, exc.status_code, exc.code)
         return response(event, exc.status_code, exc.code, exc.message)
-    except Exception:
-        LOGGER.exception("Waitlist resend failed")
+    except Exception as exc:
+        LOGGER.error("Waitlist resend failed: %s", aws_error_code(exc) or "unknown")
         return response(event, 503, "CONFIRMATION_TEMPORARILY_UNAVAILABLE", "We could not process the request. Please try again later.")
 
 
