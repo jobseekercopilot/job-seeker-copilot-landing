@@ -69,6 +69,7 @@ button:disabled {
 }
 
 .privacy-note,
+.recovery-note,
 .sender-note,
 .message {
   font-size: 0.78rem;
@@ -78,6 +79,17 @@ button:disabled {
 
 .privacy-note {
   color: var(--colour-text-muted);
+}
+
+.recovery-note {
+  color: var(--colour-text-soft);
+  font-size: 0.76rem;
+  margin: 8px 0 0;
+}
+
+.recovery-note a,
+.message a {
+  font-weight: 700;
 }
 
 .sender-note {

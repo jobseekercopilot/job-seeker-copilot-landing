@@ -1,7 +1,8 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
+import { validateLiveWaitlistConfig } from './runtime-config-validation.mjs';
 
-const outputPath = resolve('public/config/app-config.json');
+const outputPath = resolve(process.env.RUNTIME_CONFIG_OUTPUT_PATH || 'public/config/app-config.json');
 
 const config = {
   environmentName: oneOf(process.env.PUBLIC_ENVIRONMENT_NAME, ['development', 'test', 'production'], 'production'),
@@ -27,6 +28,8 @@ const config = {
   contactMessageMaxLength: positiveInteger('CONTACT_MESSAGE_MAX_LENGTH', 3000),
   copyrightNotice: text('COPYRIGHT_NOTICE', 'Job Seeker Copilot'),
 };
+
+validateLiveWaitlistConfig(config);
 
 await mkdir(dirname(outputPath), { recursive: true });
 await writeFile(outputPath, `${JSON.stringify(config, null, 2)}\n`, 'utf8');

@@ -1,4 +1,4 @@
-<form class="signup-form" [class.signup-form-footer]="context() === 'footer'" (submit)="submit($event)" novalidate>
+<form class="signup-form" [class.signup-form-footer]="context() === 'footer'" (submit)="submit($event)" [attr.aria-busy]="submitting()" novalidate>
   <div class="honeypot" aria-hidden="true">
     <label [for]="'waitlist-website-' + context()">Leave this field empty</label>
     <input [id]="'waitlist-website-' + context()" type="text" tabindex="-1" autocomplete="off" [formControl]="website">
@@ -14,6 +14,7 @@
         maxlength="254"
         required
         [formControl]="email"
+        (input)="clearStatus()"
         [attr.aria-invalid]="email.invalid && email.touched"
         [attr.aria-describedby]="'waitlist-message-' + context()">
     </div>
@@ -22,27 +23,24 @@
     </button>
   </div>
 
-  <div class="form-messages" [id]="'waitlist-message-' + context()" role="status" aria-live="polite" aria-atomic="true">
+  <div class="form-messages" [id]="'waitlist-message-' + context()" [attr.role]="announcementRole()" aria-live="polite" aria-atomic="true">
     @if (email.touched && email.hasError('required')) {
       <p class="message message-error">Enter your email address to join the list.</p>
     } @else if (email.touched && (email.hasError('email') || email.hasError('maxlength'))) {
       <p class="message message-error">Enter a valid email address.</p>
-    } @else if (state() === 'pending-confirmation') {
+    } @else if (submitting()) {
+      <p class="message message-info">Submitting your request securely…</p>
+    } @else if (isRequestAccepted()) {
       @if (offer.offerEnabled) {
-        <p class="message message-success">Check your inbox to confirm your email address. Joining is not complete until you use the confirmation link. Once confirmed, you may be eligible for priority early access and the promotional {{ formattedBonusTokens }}-token offer, subject to the early-access terms.</p>
+        <p class="message message-success">Request received. If this address needs confirmation, check its inbox for an email from {{ contact.productUpdates }}. If it is already confirmed, no further action is needed. Once confirmed, you may be eligible for priority early access and the promotional {{ formattedBonusTokens }}-token offer, subject to the early-access terms.</p>
       } @else {
-        <p class="message message-success">Check your inbox to confirm your email address. Joining is not complete until you use the confirmation link.</p>
+        <p class="message message-success">Request received. If this address needs confirmation, check its inbox for an email from {{ contact.productUpdates }}. If it is already confirmed, no further action is needed.</p>
       }
-    } @else if (state() === 'already-confirmed') {
-      <p class="message message-info">This address does not need another confirmation email.</p>
-    } @else if (state() === 'confirmation-required') {
-      <p class="message message-info">This address still needs confirmation. Check your inbox or use the resend option on the confirmation page.</p>
-    } @else if (state() === 'resubscription-required') {
-      <p class="message message-info">This address was previously unsubscribed. A fresh re-subscription flow is required and is not yet available.</p>
+      <p class="recovery-note">Nothing arrived? <a routerLink="/waitlist/resend">Request a new confirmation email</a>.</p>
     } @else if (state() === 'validation-error') {
       <p class="message message-error">Enter a valid email address.</p>
     } @else if (state() === 'email-delivery-error') {
-      <p class="message message-error">Your request is pending, but the confirmation email could not be sent. Please try again later.</p>
+      <p class="message message-error">We couldn’t send a confirmation email just now. Please try again later or <a routerLink="/waitlist/resend">request a new one</a>.</p>
     } @else if (state() === 'rate-limited') {
       <p class="message message-error">Too many requests were made. Please wait before trying again.</p>
     } @else if (state() === 'error') {

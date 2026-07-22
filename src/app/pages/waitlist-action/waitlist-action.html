@@ -1,6 +1,6 @@
 <app-header />
 <main id="main-content" class="action-main" tabindex="-1">
-  <section class="action-card" aria-labelledby="action-title" aria-live="polite">
+  <section class="action-card" aria-labelledby="action-title" [attr.role]="announcementRole()" aria-live="polite" aria-atomic="true" [attr.aria-busy]="state() === 'working' || resending()">
     <img src="/brand/jobseeker-copilot-logo.svg" width="52" height="52" alt="">
     @if (state() === 'working') {
       <span class="eyebrow">Please wait</span>
@@ -26,14 +26,18 @@
       <span class="eyebrow success">Request received</span>
       <h1 id="action-title">Check your inbox if confirmation is pending.</h1>
       <p>If that address has a pending subscription, a new confirmation email will be sent from {{ contact.productUpdates }}. Requesting a link does not confirm the address or credit bonus tokens.</p>
+    } @else if (state() === 'resend-ready') {
+      <span class="eyebrow">Confirmation help</span>
+      <h1 id="action-title">Request a new confirmation email.</h1>
+      <p>Enter the same address you used before. The response stays private whether or not that address has a pending request.</p>
     } @else if (state() === 'expired') {
       <span class="eyebrow warning">Link expired</span>
       <h1 id="action-title">This link is no longer active.</h1>
       <p>Confirmation links expire to protect your email address.</p>
     } @else if (state() === 'backend-disabled') {
-      <span class="eyebrow warning">Development mode</span>
-      <h1 id="action-title">The waiting list is not connected.</h1>
-      <p>No subscription has been changed. Live confirmation will be enabled when the backend is deployed.</p>
+      <span class="eyebrow warning">Temporarily unavailable</span>
+      <h1 id="action-title">The waiting-list service is unavailable.</h1>
+      <p>No subscription has been changed. Please try again later.</p>
     } @else if (state() === 'invalid') {
       <span class="eyebrow warning">Invalid link</span>
       <h1 id="action-title">We couldn’t recognise this link.</h1>
@@ -42,22 +46,26 @@
       <span class="eyebrow warning">Please wait</span>
       <h1 id="action-title">Too many requests were made.</h1>
       <p>Please wait before requesting another confirmation email.</p>
+    } @else if (state() === 'validation-error') {
+      <span class="eyebrow warning">Check the address</span>
+      <h1 id="action-title">Enter a valid email address.</h1>
+      <p>Correct the address below and try again.</p>
     } @else {
       <span class="eyebrow warning">Temporary problem</span>
       <h1 id="action-title">We couldn’t update your subscription.</h1>
       <p>Please try the link again shortly. If the problem continues, email <a [href]="'mailto:' + contact.support">{{ contact.support }}</a>.</p>
     }
-    @if (action === 'confirm' && (state() === 'expired' || state() === 'invalid' || state() === 'error' || state() === 'rate-limited')) {
-      <form class="resend-form" (submit)="$event.preventDefault(); resend()" novalidate>
+    @if (showResendForm()) {
+      <form class="resend-form" (submit)="$event.preventDefault(); resend()" [attr.aria-busy]="resending()" novalidate>
         <label for="confirmation-resend-email">Email address</label>
-        <input id="confirmation-resend-email" type="email" autocomplete="email" maxlength="254" required [formControl]="resendEmail" [attr.aria-invalid]="resendEmail.invalid && resendEmail.touched">
+        <input id="confirmation-resend-email" type="email" inputmode="email" autocomplete="email" maxlength="254" required [formControl]="resendEmail" (input)="clearResendStatus()" [attr.aria-invalid]="resendEmail.invalid && resendEmail.touched" aria-describedby="confirmation-resend-help">
         @if (resendEmail.touched && resendEmail.invalid) {
-          <p class="field-error">Enter a valid email address.</p>
+          <p class="field-error" role="alert">Enter a valid email address.</p>
         }
         <button class="button button-primary" type="submit" [disabled]="resending()">
           {{ resending() ? 'Requesting…' : 'Request a new confirmation email' }}
         </button>
-        <p class="resend-note">If that address has a pending subscription, a new confirmation email will be sent.</p>
+        <p id="confirmation-resend-help" class="resend-note">If that address has a pending subscription, a new confirmation email will be sent.</p>
       </form>
     }
     <a class="button button-secondary" routerLink="/">Return to Job Seeker Copilot</a>

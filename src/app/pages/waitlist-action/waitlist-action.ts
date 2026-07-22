@@ -1,6 +1,6 @@
 import { Location } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
-import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { FooterComponent } from '../../components/footer/footer';
@@ -8,10 +8,12 @@ import { HeaderComponent } from '../../components/header/header';
 import { BUSINESS_CONTACT_DETAILS } from '../../config/business-contact-details';
 import { EARLY_ACCESS_OFFER_CONFIG, formatOfferTokenAmount } from '../../config/early-access-offer';
 import { EmailSubscriptionService } from '../../services/email-subscription.service';
+import { normaliseWaitlistEmail, waitlistEmailValidator } from '../../services/waitlist-email';
 
-type ActionKind = 'confirm' | 'unsubscribe';
+type ActionKind = 'confirm' | 'resend' | 'unsubscribe';
 type ActionState = 'working' | 'confirmed' | 'already-confirmed' | 'unsubscribed' |
-  'already-unsubscribed' | 'invalid' | 'expired' | 'backend-disabled' | 'error' | 'resent' | 'rate-limited';
+  'already-unsubscribed' | 'invalid' | 'expired' | 'backend-disabled' | 'error' |
+  'resend-ready' | 'resent' | 'rate-limited' | 'validation-error';
 
 @Component({
   selector: 'app-waitlist-action',
@@ -32,13 +34,17 @@ export class WaitlistActionPage implements OnInit {
   protected readonly resending = signal(false);
   protected readonly resendEmail = new FormControl('', {
     nonNullable: true,
-    validators: [Validators.required, Validators.email, Validators.maxLength(254)],
+    validators: [waitlistEmailValidator],
   });
   private token = '';
 
   ngOnInit(): void {
+    if (this.action === 'resend') {
+      this.state.set('resend-ready');
+      return;
+    }
     this.token = this.route.snapshot.queryParamMap.get('token')?.trim() ?? '';
-    if (this.action === 'confirm') this.location.replaceState('/waitlist/confirm');
+    this.location.replaceState(`/waitlist/${this.action}`);
     if (!this.token) {
       this.state.set('invalid');
       return;
@@ -54,13 +60,21 @@ export class WaitlistActionPage implements OnInit {
   }
 
   protected resend(): void {
-    if (this.resending() || this.resendEmail.invalid) {
+    if (this.resending()) return;
+    const normalisedEmail = normaliseWaitlistEmail(this.resendEmail.value);
+    this.resendEmail.setValue(normalisedEmail, { emitEvent: false });
+    this.resendEmail.updateValueAndValidity({ emitEvent: false });
+    if (this.resendEmail.invalid) {
       this.resendEmail.markAsTouched();
       return;
     }
     this.resending.set(true);
-    this.service.resend(this.resendEmail.value).pipe(
-      finalize(() => this.resending.set(false)),
+    this.resendEmail.disable({ emitEvent: false });
+    this.service.resend(normalisedEmail).pipe(
+      finalize(() => {
+        this.resending.set(false);
+        this.resendEmail.enable({ emitEvent: false });
+      }),
     ).subscribe({
       next: result => {
         this.state.set(result.status);
@@ -68,5 +82,25 @@ export class WaitlistActionPage implements OnInit {
       },
       error: () => this.state.set('error'),
     });
+  }
+
+  protected clearResendStatus(): void {
+    if (!this.resending() && (this.state() === 'validation-error' || this.state() === 'error')) {
+      this.state.set('resend-ready');
+    }
+  }
+
+  protected showResendForm(): boolean {
+    if (this.action === 'resend') {
+      return ['resend-ready', 'validation-error', 'error', 'rate-limited'].includes(this.state());
+    }
+    return this.action === 'confirm' &&
+      ['expired', 'invalid', 'error', 'rate-limited', 'validation-error'].includes(this.state());
+  }
+
+  protected announcementRole(): 'alert' | 'status' {
+    return ['invalid', 'expired', 'backend-disabled', 'error', 'rate-limited', 'validation-error'].includes(this.state())
+      ? 'alert'
+      : 'status';
   }
 }

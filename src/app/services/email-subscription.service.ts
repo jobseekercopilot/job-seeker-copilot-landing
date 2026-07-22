@@ -2,6 +2,7 @@ import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http'
 import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, map, of, throwError } from 'rxjs';
 import { PUBLIC_APP_CONFIG } from '../config/public-app-config';
+import { isValidWaitlistEmail, normaliseWaitlistEmail } from './waitlist-email';
 
 interface ApiResponse {
   success: boolean;
@@ -17,6 +18,7 @@ export type WaitlistActionResult =
   | { status: 'resent' }
   | { status: 'invalid' }
   | { status: 'expired' }
+  | { status: 'validation-error' }
   | { status: 'rate-limited' }
   | { status: 'backend-disabled' };
 
@@ -38,17 +40,23 @@ export class EmailSubscriptionService {
   }
 
   resend(email: string): Observable<WaitlistActionResult> {
-    const normalisedEmail = email.trim().toLowerCase();
-    if (!this.isValidEmail(normalisedEmail)) throw new Error('A valid email address is required.');
+    const normalisedEmail = normaliseWaitlistEmail(email);
+    if (!isValidWaitlistEmail(normalisedEmail)) throw new Error('A valid email address is required.');
     if (!this.isEnabled(this.config.waitlistResendApiUrl)) return of({ status: 'backend-disabled' });
     return this.http.post<ApiResponse>(this.config.waitlistResendApiUrl, { email: normalisedEmail }).pipe(
       map(response => {
         if (response.success && response.code === 'WAITLIST_RESEND_ACCEPTED') return { status: 'resent' as const };
         throw new Error('The resend API returned an unexpected result.');
       }),
-      catchError(error => error instanceof HttpErrorResponse && error.status === 429
-        ? of({ status: 'rate-limited' as const })
-        : throwError(() => error)),
+      catchError(error => {
+        if (error instanceof HttpErrorResponse && error.status === 400 && error.error?.code === 'INVALID_EMAIL') {
+          return of({ status: 'validation-error' as const });
+        }
+        if (error instanceof HttpErrorResponse && error.status === 429) {
+          return of({ status: 'rate-limited' as const });
+        }
+        return throwError(() => error);
+      }),
     );
   }
 
@@ -73,9 +81,5 @@ export class EmailSubscriptionService {
 
   private isEnabled(endpoint: string): boolean {
     return this.config.enableLiveSubmissions && endpoint.trim().length > 0;
-  }
-
-  private isValidEmail(email: string): boolean {
-    return email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   }
 }

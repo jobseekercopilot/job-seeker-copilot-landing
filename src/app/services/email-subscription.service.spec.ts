@@ -55,4 +55,50 @@ describe('EmailSubscriptionService', () => {
     request.flush({ success: true, code: 'WAITLIST_RESEND_ACCEPTED', message: 'If pending, it will be sent.' }, { status: 202, statusText: 'Accepted' });
     expect(status).toBe('resent');
   });
+
+  it('maps resend validation and throttling without rendering backend messages', () => {
+    const service = TestBed.inject(EmailSubscriptionService);
+    const http = TestBed.inject(HttpTestingController);
+    const statuses: string[] = [];
+
+    service.resend('person@example.com').subscribe(result => statuses.push(result.status));
+    http.expectOne('/api/waitlist/resend').flush(
+      { success: false, code: 'INVALID_EMAIL', message: 'private validation detail' },
+      { status: 400, statusText: 'Bad Request' },
+    );
+    service.resend('person@example.com').subscribe(result => statuses.push(result.status));
+    http.expectOne('/api/waitlist/resend').flush(
+      { success: false, code: 'TOO_MANY_REQUESTS', message: 'private throttling detail' },
+      { status: 429, statusText: 'Too Many Requests' },
+    );
+
+    expect(statuses).toEqual(['validation-error', 'rate-limited']);
+  });
+
+  it('rejects an invalid resend address before HTTP', () => {
+    const service = TestBed.inject(EmailSubscriptionService);
+
+    expect(() => service.resend('person..two@example.com'))
+      .toThrowError('A valid email address is required.');
+    TestBed.inject(HttpTestingController).expectNone(() => true);
+  });
+
+  it('surfaces confirmation and resend network failures to controlled page handling', () => {
+    const service = TestBed.inject(EmailSubscriptionService);
+    const http = TestBed.inject(HttpTestingController);
+    const errors: unknown[] = [];
+
+    service.confirm('secure-token').subscribe({ error: value => errors.push(value) });
+    http.expectOne('/api/waitlist/confirm').flush(
+      { success: false, code: 'PRIVATE_CONFIRMATION_DETAIL', message: 'do not render' },
+      { status: 503, statusText: 'Unavailable' },
+    );
+    service.resend('person@example.com').subscribe({ error: value => errors.push(value) });
+    http.expectOne('/api/waitlist/resend').flush(
+      { success: false, code: 'PRIVATE_RESEND_DETAIL', message: 'do not render' },
+      { status: 503, statusText: 'Unavailable' },
+    );
+
+    expect(errors).toHaveLength(2);
+  });
 });

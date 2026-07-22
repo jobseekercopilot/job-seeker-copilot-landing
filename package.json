@@ -8,8 +8,9 @@
     "config:generate": "node scripts/generate-runtime-config.mjs",
     "build": "ng build && node scripts/verify-prerender.mjs",
     "watch": "ng build --watch --configuration development",
-    "test": "npm run test:frontend && npm run test:backend",
+    "test": "npm run test:frontend && npm run test:runtime-config && npm run test:backend",
     "test:frontend": "ng test --watch=false",
+    "test:runtime-config": "node scripts/runtime-config-validation.test.mjs",
     "test:backend": "python3 -m unittest discover -s infrastructure/waitlist-backend/tests -v",
     "test:a11y": "node scripts/accessibility-check.mjs",
     "lint": "ng lint"
