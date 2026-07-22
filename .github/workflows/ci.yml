@@ -113,6 +113,7 @@ jobs:
           security_server_pid=$!
           trap 'kill "${security_server_pid}"' EXIT
           BASE_URL=http://127.0.0.1:4201 npm run test:a11y
+          BASE_URL=http://127.0.0.1:4201 npm run test:analytics-browser
 
       - name: Create redacted evidence summary
         shell: bash

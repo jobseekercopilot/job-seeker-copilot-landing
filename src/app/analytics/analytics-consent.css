@@ -1,0 +1,76 @@
+:host {
+  display: contents;
+}
+
+.consent-panel {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #b7d1f8;
+  border-radius: 16px;
+  bottom: 18px;
+  box-shadow: var(--shadow-float);
+  display: grid;
+  gap: 24px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  left: max(18px, calc((100vw - var(--page-width)) / 2));
+  max-width: min(760px, calc(100vw - 36px));
+  padding: 20px;
+  position: fixed;
+  z-index: 100;
+}
+
+.consent-heading {
+  font-size: 1.05rem;
+  margin-bottom: 7px;
+}
+
+.consent-copy p {
+  color: var(--colour-text-soft);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  margin: 0 0 6px;
+}
+
+.consent-copy a {
+  color: var(--colour-primary);
+  font-size: 0.8rem;
+  font-weight: 750;
+}
+
+.consent-copy .current-choice {
+  color: var(--colour-text);
+  margin-top: 7px;
+}
+
+.consent-actions {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.consent-actions button {
+  background: var(--colour-primary-soft);
+  border: 1px solid var(--colour-border-strong);
+  border-radius: var(--radius-control);
+  color: var(--colour-text);
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 750;
+  min-height: 44px;
+  padding: 8px 12px;
+}
+
+.consent-actions button:hover {
+  background: #dbeafe;
+}
+
+.consent-actions .close-choice {
+  background: #ffffff;
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 720px) {
+  .consent-panel {
+    grid-template-columns: 1fr;
+  }
+}

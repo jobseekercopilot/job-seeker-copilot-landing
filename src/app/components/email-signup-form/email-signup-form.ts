@@ -2,6 +2,8 @@ import { ChangeDetectionStrategy, Component, inject, input, signal } from '@angu
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
+import { AnalyticsService } from '../../analytics/analytics.service';
+import { AnalyticsViewDirective } from '../../analytics/analytics-view.directive';
 import { BUSINESS_CONTACT_DETAILS } from '../../config/business-contact-details';
 import { EARLY_ACCESS_OFFER_CONFIG, formatOfferTokenAmount } from '../../config/early-access-offer';
 import { PUBLIC_APP_CONFIG } from '../../config/public-app-config';
@@ -14,13 +16,14 @@ type FormState = 'idle' | 'pending-confirmation' | 'already-confirmed' | 'confir
 
 @Component({
   selector: 'app-email-signup-form',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, AnalyticsViewDirective],
   templateUrl: './email-signup-form.html',
   styleUrl: './email-signup-form.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EmailSignupFormComponent {
   private readonly waitlistService = inject(WaitlistService);
+  private readonly analytics = inject(AnalyticsService);
   protected readonly contact = BUSINESS_CONTACT_DETAILS;
   protected readonly config = inject(PUBLIC_APP_CONFIG);
   protected readonly offer = inject(EARLY_ACCESS_OFFER_CONFIG);
@@ -53,6 +56,7 @@ export class EmailSignupFormComponent {
       return;
     }
 
+    this.analytics.track('waitlist_attempt', this.context());
     this.submitting.set(true);
     this.state.set('idle');
     this.email.disable({ emitEvent: false });

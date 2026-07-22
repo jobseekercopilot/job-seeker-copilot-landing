@@ -50,6 +50,10 @@ Parameters:
     Type: String
     Default: 'false'
     AllowedValues: ['true', 'false']
+  EnableAnalyticsCollection:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
   ContactSenderEmail:
     Type: String
     Default: hello@jobseekercopilot.com
@@ -345,6 +349,13 @@ Resources:
     Properties:
       LogGroupName: /aws/lambda/JobSeekerCopilotContact
       RetentionInDays: 30
+  AnalyticsFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: /aws/lambda/JobSeekerCopilotLandingAnalytics
+      RetentionInDays: 30
 
   WaitlistExecutionRole:
     Type: AWS::IAM::Role
@@ -524,6 +535,20 @@ Resources:
                 Action: [logs:CreateLogStream, logs:PutLogEvents]
                 Resource: !GetAtt ContactFunctionLogGroup.Arn
 
+  AnalyticsExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: Writes bounded aggregate landing analytics logs and metrics; no data-store or email access.
+      AssumeRolePolicyDocument: *LambdaTrust
+      Policies:
+        - PolicyName: WriteAnalyticsLogsOnly
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !GetAtt AnalyticsFunctionLogGroup.Arn
+
   WaitlistFunction:
     Type: AWS::Serverless::Function
     DependsOn: [WaitlistFunctionLogGroup, WaitlistEmailIdentity]
@@ -673,6 +698,31 @@ Resources:
         ContactOptions:
           Type: HttpApi
           Properties: {ApiId: !Ref WaitlistApi, Method: OPTIONS, Path: /contact, PayloadFormatVersion: '2.0'}
+
+  AnalyticsFunction:
+    Type: AWS::Serverless::Function
+    DependsOn: AnalyticsFunctionLogGroup
+    Properties:
+      FunctionName: JobSeekerCopilotLandingAnalytics
+      Description: Accepts only opt-in, bounded, non-personal landing analytics events.
+      CodeUri: function/
+      Handler: analytics.handler
+      Role: !GetAtt AnalyticsExecutionRole.Arn
+      Environment:
+        Variables:
+          ENABLE_ANALYTICS_COLLECTION: !Ref EnableAnalyticsCollection
+      Events:
+        Analytics:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref WaitlistApi
+            Method: POST
+            Path: /analytics
+            PayloadFormatVersion: '2.0'
+            RouteSettings: {ThrottlingBurstLimit: 10, ThrottlingRateLimit: 5}
+        AnalyticsOptions:
+          Type: HttpApi
+          Properties: {ApiId: !Ref WaitlistApi, Method: OPTIONS, Path: /analytics, PayloadFormatVersion: '2.0'}
 
   WaitlistPendingTtlConfiguration:
     Type: Custom::WaitlistPendingTtl
@@ -1174,6 +1224,12 @@ Resources:
       <<: *LambdaErrorAlarm
       Dimensions:
         - {Name: FunctionName, Value: !Ref ContactFunction}
+  AnalyticsLambdaErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      <<: *LambdaErrorAlarm
+      Dimensions:
+        - {Name: FunctionName, Value: !Ref AnalyticsFunction}
 
   LaunchMonitoringDashboard:
     Type: AWS::CloudWatch::Dashboard
@@ -1195,7 +1251,7 @@ Resources:
                 "${WaitlistDynamoThrottlingAlarm.Arn}","${TokenDynamoThrottlingAlarm.Arn}","${ContactDynamoThrottlingAlarm.Arn}",
                 "${WaitlistDynamoSystemErrorAlarm.Arn}","${TokenDynamoSystemErrorAlarm.Arn}","${ContactDynamoSystemErrorAlarm.Arn}",
                 "${WaitlistLambdaErrorAlarm.Arn}","${ConfirmationLambdaErrorAlarm.Arn}","${ResendLambdaErrorAlarm.Arn}",
-                "${SesEventsLambdaErrorAlarm.Arn}","${TtlConfigurationLambdaErrorAlarm.Arn}","${ContactLambdaErrorAlarm.Arn}",
+                "${SesEventsLambdaErrorAlarm.Arn}","${TtlConfigurationLambdaErrorAlarm.Arn}","${ContactLambdaErrorAlarm.Arn}","${AnalyticsLambdaErrorAlarm.Arn}",
                 "${ConfirmationSendFailureAlarm.Arn}","${SesBounceAlarm.Arn}","${SesComplaintAlarm.Arn}","${SesDeliveryFailureAlarm.Arn}",
                 "${InvalidTokenVolumeAlarm.Arn}","${ResendVolumeAlarm.Arn}",
                 "${ContactValidationVolumeAlarm.Arn}","${ContactThrottleVolumeAlarm.Arn}","${ContactDuplicateVolumeAlarm.Arn}",
@@ -1219,12 +1275,14 @@ Resources:
                 [".",".",".","${ConfirmationFunction}"],
                 [".",".",".","${ResendFunction}"],
                 [".",".",".","${SesEventsFunction}"],
-                [".",".",".","${ContactFunction}"]
+                [".",".",".","${ContactFunction}"],
+                [".",".",".","${AnalyticsFunction}"]
               ]}
             },
             {
               "type":"metric","x":0,"y":14,"width":12,"height":7,
               "properties":{"title":"Waitlist and SES count-only signals","region":"${AWS::Region}","period":300,"stat":"Sum","metrics":[
+                ["JobSeekerCopilot/Waitlist","WaitlistAcceptedRequests","Environment","${EnvironmentName}"],[".","WaitlistConfirmationSent",".","."],[".","WaitlistConfirmed",".","."],
                 ["JobSeekerCopilot/Waitlist","ConfirmationSendFailures"],
                 [".","WaitlistThrottleResponses"],[".","InvalidConfirmationTokens"],[".","ResendIssued"],
                 [".","SesDeliveries"],[".","SesDeliveryFailures"],[".","SesBounces"],[".","SesComplaints"]
@@ -1233,6 +1291,7 @@ Resources:
             {
               "type":"metric","x":12,"y":14,"width":12,"height":7,
               "properties":{"title":"Contact count-only signals","region":"${AWS::Region}","period":300,"stat":"Sum","metrics":[
+                ["JobSeekerCopilot/Contact","ContactAcceptedRequests","Environment","${EnvironmentName}"],
                 ["JobSeekerCopilot/Contact","ContactValidationRejections"],[".","ContactThrottleResponses"],
                 [".","ContactDuplicateSuppressions"],[".","ContactDedupeFailures"],[".","ContactDedupeReleaseFailures"],
                 [".","ContactSesFailures"],[".","ContactSesDeliveries"],[".","ContactSesDeliveryFailures"],
@@ -1240,7 +1299,16 @@ Resources:
               ]}
             },
             {
-              "type":"metric","x":0,"y":21,"width":24,"height":6,
+              "type":"metric","x":0,"y":21,"width":24,"height":7,
+              "properties":{"title":"Opt-in web analytics funnel (production traffic only)","region":"${AWS::Region}","period":300,"stat":"Sum","metrics":[
+                ["JobSeekerCopilot/Analytics","Visits","Environment","${EnvironmentName}","TrafficClass","production"],
+                [".","PageViews",".",".",".","."],
+                [".","WaitlistFormViews",".",".",".","."],[".","WaitlistAttempts",".",".",".","."],
+                [".","ContactFormViews",".",".",".","."],[".","ContactAttempts",".",".",".","."]
+              ]}
+            },
+            {
+              "type":"metric","x":0,"y":28,"width":24,"height":6,
               "properties":{"title":"DynamoDB table throttles","region":"${AWS::Region}","period":300,"stat":"Sum","metrics":[
                 ["AWS/DynamoDB","ReadThrottleEvents","TableName","${WaitlistTableName}"],[".","WriteThrottleEvents",".","."],
                 [".","ReadThrottleEvents",".","${TokenTable}"],[".","WriteThrottleEvents",".","."],
@@ -1261,10 +1329,13 @@ Outputs:
     Value: !Sub https://${WaitlistApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/waitlist/resend
   ContactEndpoint:
     Value: !Sub https://${WaitlistApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/contact
+  AnalyticsEndpoint:
+    Value: !Sub https://${WaitlistApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/analytics
   SubscribeLambdaName: {Value: !Ref WaitlistFunction}
   ConfirmationLambdaName: {Value: !Ref ConfirmationFunction}
   ResendLambdaName: {Value: !Ref ResendFunction}
   ContactLambdaName: {Value: !Ref ContactFunction}
+  AnalyticsLambdaName: {Value: !Ref AnalyticsFunction}
   SesEventsLambdaName: {Value: !Ref SesEventsFunction}
   TokenTableName: {Value: !Ref TokenTable}
   ContactDedupeTableName: {Value: !Ref ContactDedupeTable}

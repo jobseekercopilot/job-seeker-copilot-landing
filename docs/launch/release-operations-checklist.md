@@ -21,7 +21,8 @@ RELEASE-02 acceptance evidence.
 - [ ] Correct AWS account, `eu-west-2`, stack and Amplify app verified.
 - [ ] Clean checkout at the reviewed commit; no direct work on `develop` or
       `main`.
-- [ ] Public frontend and backend contact switches are `false`.
+- [ ] Public frontend/backend submission and frontend/backend analytics switches
+      are `false`.
 - [ ] Stack is stable; Lambda updates succeeded; all alarms are OK and have
       actions.
 - [ ] SES production access, sending, domain identity/DKIM, configuration-set
@@ -54,7 +55,9 @@ RELEASE-02 acceptance evidence.
 - [ ] Approved change set executes to `UPDATE_COMPLETE`.
 - [ ] Stack/Lambda status, routes, alarms, dashboard and 30-day log retention
       pass control-plane verification.
-- [ ] Both public submission switches remain false.
+- [ ] The reviewed monitoring stack has 31 alarms, the analytics Lambda role is
+      log-only and the analytics log group retains 30 days.
+- [ ] All submission and analytics switches remain false.
 
 ## Development E2E
 
@@ -75,7 +78,7 @@ RELEASE-02 acceptance evidence.
 - [ ] Exact `main` commit passes the post-merge Full release gate.
 - [ ] Amplify `main` job succeeds for that exact commit.
 - [ ] Public runtime config contains only approved public URLs/labels and the
-      safe false submission and search-indexing switches; artifact,
+      safe false submission, analytics and search-indexing switches; artifact,
       SEO-output and CSP/security-header checks pass.
 - [ ] Custom domain mappings move only after the successful `main` deployment is
       verified; apex redirect and SPA routes pass.
@@ -90,8 +93,14 @@ RELEASE-02 acceptance evidence.
       company delivery with visitor-directed Reply-To.
 - [ ] Expected count-only metrics appear; no unexpected alarm or SES outcome
       occurs.
+- [ ] With `analytics_test=smoke`, refusal makes no analytics request; acceptance
+      emits only the bounded visit/page/form events and true backend outcomes.
+- [ ] Smoke events are separate from production traffic and contain no visitor
+      identifier, raw referrer, full URL/query, address, message or token.
 - [ ] Desktop/mobile, keyboard and assistive-technology spot checks pass.
 - [ ] Both switches are returned to false until the explicit launch decision.
+- [ ] The analytics owner records the intentional final frontend/backend
+      analytics state; disabling it leaves both journeys working.
 - [ ] Approved public pages expose the sole `www` canonical while action/error
       routes remain noindex and absent from the sitemap.
 
@@ -121,6 +130,8 @@ RELEASE-02 acceptance evidence.
 - [ ] Backend last-known-good template/parameters and reviewed change-set path
       are ready.
 - [ ] Operator can disable the frontend and backend contact paths independently.
+- [ ] Operator can disable frontend then backend analytics independently without
+      deleting logs or changing operational monitoring.
 - [ ] Rollback contains no stack/table deletion, direct Lambda drift, insecure
       CORS/recipient restoration or data scan/export.
 - [ ] `UPDATE_ROLLBACK_FAILED`, misrouting, privacy and AWS-service escalation
@@ -134,4 +145,4 @@ RELEASE-02 acceptance evidence.
 - [ ] Any failure created a focused issue, disabled affected submissions and
       kept the epic open.
 - [ ] Only after every production criterion passes: record the launch decision,
-      intentional final switch states and monitoring owner.
+      intentional final submission/analytics switch states and monitoring owner.

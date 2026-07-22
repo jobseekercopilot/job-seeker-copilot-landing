@@ -5,6 +5,7 @@ from common import (
     aws_error_code,
     aws_error_scope,
     enforce_origin,
+    environment_dimensions,
     is_options,
     log_result,
     metric,
@@ -48,7 +49,7 @@ def handler(event, context):
                 if current:
                     return _existing(event, context, current)
             raise
-        return _send(event, context, email, raw_token, hashed)
+        return _send(event, context, email, raw_token, hashed, new_record=True)
     except RequestError as exc:
         log_result(context, OPERATION, exc.status_code, exc.code)
         return response(event, exc.status_code, exc.code, exc.message)
@@ -72,11 +73,11 @@ def _existing(event, context, record):
             raise
         if result != "issued":
             return _accepted(event, context, f"pending-{result}")
-        return _send(event, context, str(record["email"]), raw_token, hashed)
+        return _send(event, context, str(record["email"]), raw_token, hashed, new_record=False)
     return _accepted(event, context, f"existing-{status.lower() or 'unknown'}")
 
 
-def _send(event, context, email, raw_token, hashed):
+def _send(event, context, email, raw_token, hashed, *, new_record):
     try:
         send_confirmation_email(email, raw_token)
     except Exception as exc:
@@ -104,6 +105,9 @@ def _send(event, context, email, raw_token, hashed):
             aws_error_scope(exc),
         )
         metric("ConfirmationStateUpdateFailures")
+    if new_record:
+        metric("WaitlistAcceptedRequests", dimensions=environment_dimensions())
+        metric("WaitlistConfirmationSent", dimensions=environment_dimensions())
     return _accepted(event, context, "pending-confirmation")
 
 

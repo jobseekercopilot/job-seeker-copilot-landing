@@ -1,0 +1,19 @@
+@if (analytics.consent.shouldShow()) {
+  <aside class="consent-panel" aria-labelledby="analytics-consent-heading">
+    <div class="consent-copy">
+      <h2 id="analytics-consent-heading" class="consent-heading" tabindex="-1">Optional, privacy-focused analytics</h2>
+      <p>May we send aggregate page and form-use events to our own AWS account? We do not send names, email addresses, message text, confirmation links, full IP addresses or advertising identifiers.</p>
+      <a routerLink="/privacy">Read the analytics privacy details</a>
+      @if (analytics.consent.choice() !== 'unset') {
+        <p class="current-choice">Current choice: <strong>{{ analytics.consent.choice() === 'accepted' ? 'allow' : 'refuse' }}</strong>.</p>
+      }
+    </div>
+    <div class="consent-actions" aria-label="Analytics choices">
+      <button type="button" (click)="analytics.consent.accept()">Allow analytics</button>
+      <button type="button" (click)="analytics.consent.refuse()">Refuse analytics</button>
+      @if (analytics.consent.choice() !== 'unset') {
+        <button type="button" class="close-choice" (click)="analytics.consent.closePreferences()">Keep current choice</button>
+      }
+    </div>
+  </aside>
+}

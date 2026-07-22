@@ -32,6 +32,9 @@ for (const required of [
   'Evidence preservation and close-out',
   'UsePreviousValue',
   'enableLiveSubmissions=false',
+  'analyticsEnabled=false',
+  'EnableAnalyticsCollection',
+  'Optional analytics controlled window',
 ]) {
   assert.match(runbook, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
 }

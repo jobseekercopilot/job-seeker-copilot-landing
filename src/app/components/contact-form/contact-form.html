@@ -1,4 +1,4 @@
-<form class="contact-form" [formGroup]="form" (submit)="submit($event)" (input)="clearStatus()" [attr.aria-busy]="submitting()" aria-describedby="contact-privacy-note" novalidate>
+<form class="contact-form" [formGroup]="form" (submit)="submit($event)" (input)="clearStatus()" [attr.aria-busy]="submitting()" [appAnalyticsView]="'contact_form_view'" [analyticsContext]="'contact'" aria-describedby="contact-privacy-note" novalidate>
   <div class="honeypot" aria-hidden="true">
     <label for="contact-website">Leave this field empty</label>
     <input id="contact-website" type="text" tabindex="-1" autocomplete="off" formControlName="website">

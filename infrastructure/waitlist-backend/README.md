@@ -90,6 +90,7 @@ All JSON API calls use exact-origin CORS and return typed, public-safe responses
 | `POST` | `/waitlist/confirm` | Consume `{ "token": "..." }` once |
 | `POST` | `/waitlist/resend` | Accept `{ "email": "..." }` with neutral response |
 | `POST` | `/contact` | Validate and deliver one company enquiry when independently enabled |
+| `POST` | `/analytics` | Accept only opted-in, bounded aggregate events when independently enabled |
 | `OPTIONS` | each route | Exact-origin preflight |
 
 Development allows only `https://develop.d3gd9ezfa3aujn.amplifyapp.com` and
@@ -191,6 +192,7 @@ Lambda environment variables are generated from SAM parameters; no endpoint or A
 - `USED_TOKEN_RETENTION_SECONDS`
 - `CONSENT_VERSION`
 - `ENABLE_CONTACT_SUBMISSIONS`
+- `ENABLE_ANALYTICS_COLLECTION`
 - `CONTACT_SENDER_EMAIL`
 - `CONTACT_RECIPIENT_EMAIL`
 - `CONTACT_MESSAGE_MAX_LENGTH`
@@ -233,6 +235,7 @@ sam deploy \
     ProductionOrigin=https://www.jobseekercopilot.com \
     PublicSiteUrl=https://www.jobseekercopilot.com \
     EnableContactSubmissions=false \
+    EnableAnalyticsCollection=false \
     ContactSenderEmail=hello@jobseekercopilot.com \
     ContactRecipientEmail=<approved-private-company-inbox> \
     ContactDedupePepper=<strong-random-secret> \
@@ -249,6 +252,8 @@ After a safe deployment, use stack outputs for the Angular hosted runtime config
 
 ```text
 ENABLE_LIVE_SUBMISSIONS=true
+ENABLE_ANALYTICS=false
+ANALYTICS_ENDPOINT_URL=<AnalyticsEndpoint>
 WAITLIST_API_URL=<SubscribeEndpoint>
 WAITLIST_CONFIRMATION_API_URL=<ConfirmationEndpoint>
 WAITLIST_RESEND_API_URL=<ResendEndpoint>
@@ -259,6 +264,12 @@ Keep both Angular live submissions and `EnableContactSubmissions` disabled until
 permitted-recipient delivery, Reply-To, CORS and monitoring tests are complete.
 Publishing the contact URL while both switches remain false is safe: POST
 returns the controlled unavailable response and sends no email.
+
+Analytics is a separate opt-in path. Keep both `ENABLE_ANALYTICS` and
+`EnableAnalyticsCollection` false during MONITORING-01. Its collector role can
+write only to its 30-day log group and has no DynamoDB or SES access. Activation,
+event, privacy, UTM and founder-reporting rules are in
+[the analytics and reporting guide](../../docs/launch/privacy-focused-analytics-and-reporting.md).
 
 ## Monitoring and later communications
 

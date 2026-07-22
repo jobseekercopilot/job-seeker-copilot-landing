@@ -26,3 +26,28 @@ export function validateSearchIndexingConfig(value) {
     throw new Error('Search indexing requires production and the exact canonical public website URL.');
   }
 }
+
+export function validateAnalyticsConfig(value) {
+  if (!value.analyticsEnabled) return;
+  if (value.environmentName !== 'production' || value.publicWebsiteUrl !== 'https://www.jobseekercopilot.com') {
+    throw new Error('Analytics requires production and the exact canonical public website URL.');
+  }
+  let endpoint;
+  try {
+    endpoint = new URL(value.analyticsEndpointUrl);
+  } catch {
+    throw new Error('ANALYTICS_ENDPOINT_URL must be a valid absolute URL when analytics is enabled.');
+  }
+  if (endpoint.protocol !== 'https:' || !endpoint.pathname.endsWith('/analytics') || endpoint.search || endpoint.hash) {
+    throw new Error('ANALYTICS_ENDPOINT_URL must be a query-free HTTPS analytics endpoint.');
+  }
+  let waitlistEndpoint;
+  try {
+    waitlistEndpoint = new URL(value.waitlistApiUrl);
+  } catch {
+    throw new Error('Analytics requires the approved first-party waitlist API origin.');
+  }
+  if (endpoint.origin !== waitlistEndpoint.origin) {
+    throw new Error('Analytics requires the approved first-party waitlist API origin.');
+  }
+}

@@ -2,6 +2,8 @@ import { ChangeDetectionStrategy, Component, ElementRef, inject, signal } from '
 import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors, ValidatorFn } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
+import { AnalyticsService } from '../../analytics/analytics.service';
+import { AnalyticsViewDirective } from '../../analytics/analytics-view.directive';
 import { BUSINESS_CONTACT_DETAILS } from '../../config/business-contact-details';
 import { PUBLIC_APP_CONFIG } from '../../config/public-app-config';
 import { normaliseWaitlistEmail, waitlistEmailValidator } from '../../services/waitlist-email';
@@ -24,13 +26,14 @@ function trimmedLength(minimum: number, maximum: number, singleLine = false): Va
 
 @Component({
   selector: 'app-contact-form',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, AnalyticsViewDirective],
   templateUrl: './contact-form.html',
   styleUrl: './contact-form.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ContactFormComponent {
   private readonly contactService = inject(ContactService);
+  private readonly analytics = inject(AnalyticsService);
   private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
   protected readonly contact = BUSINESS_CONTACT_DETAILS;
   protected readonly config = inject(PUBLIC_APP_CONFIG);
@@ -77,6 +80,7 @@ export class ContactFormComponent {
       return;
     }
 
+    this.analytics.track('contact_attempt', 'contact');
     const request = this.form.getRawValue();
     this.submitting.set(true);
     this.state.set('idle');
