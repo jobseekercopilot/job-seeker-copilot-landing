@@ -728,6 +728,38 @@ class TableSafeguardTests(unittest.TestCase):
         self.assertEqual(send.call_args.args[2], "FAILED")
         self.assertNotIn("private table detail", send.call_args.args[3])
 
+    def test_custom_resource_response_url_allows_only_https_aws_hosts(self):
+        context = Mock()
+        context.get_remaining_time_in_millis.return_value = 10_000
+        event_base = {
+            "StackId": "stack", "RequestId": "request", "LogicalResourceId": "safeguards",
+        }
+        response = Mock()
+        response.__enter__ = Mock(return_value=response)
+        response.__exit__ = Mock(return_value=False)
+        trusted = {
+            **event_base,
+            "ResponseURL": "https://cloudformation-custom-resource-response-eu-west-2.s3.amazonaws.com/path?signature=redacted",
+        }
+        with patch.object(ttl_configurator.urllib.request, "urlopen", return_value=response) as urlopen:
+            ttl_configurator._send_response(trusted, context, "SUCCESS", "Configured.")
+        self.assertEqual(urlopen.call_count, 1)
+        request = urlopen.call_args.args[0]
+        self.assertTrue(request.full_url.startswith("https://"))
+
+        for untrusted in (
+            "http://s3.amazonaws.com/path",
+            "https://s3.amazonaws.com.attacker.test/path",
+            "https://user@s3.amazonaws.com/path",
+            "https://s3.amazonaws.com:444/path",
+        ):
+            with patch.object(ttl_configurator.urllib.request, "urlopen") as urlopen, \
+                 self.assertRaisesRegex(RuntimeError, "response URL is invalid"):
+                ttl_configurator._send_response(
+                    {**event_base, "ResponseURL": untrusted}, context, "SUCCESS", "Configured."
+                )
+            urlopen.assert_not_called()
+
     def test_template_retains_and_protects_tables_with_exact_safeguard_iam(self):
         template = TEMPLATE.read_text(encoding="utf-8")
         token_section = template.split("  TokenTable:", 1)[1].split("  WaitlistEmailConfigurationSet:", 1)[0]

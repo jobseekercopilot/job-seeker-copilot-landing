@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import urllib.request
+from urllib.parse import urlsplit
 
 LOGGER = logging.getLogger()
 
@@ -81,9 +82,31 @@ def _send_response(event, context, status, reason):
             "DeletionProtectionEnabled": True,
         },
     }).encode("utf-8")
+    response_url = _trusted_response_url(event.get("ResponseURL"))
     request = urllib.request.Request(
-        event["ResponseURL"], data=body, method="PUT",
+        response_url, data=body, method="PUT",
         headers={"content-type": "", "content-length": str(len(body))},
     )
-    with urllib.request.urlopen(request, timeout=max(1, context.get_remaining_time_in_millis() // 1000 - 1)):
+    # The target is validated as an HTTPS AWS hostname immediately above.
+    with urllib.request.urlopen(  # nosec B310
+        request, timeout=max(1, context.get_remaining_time_in_millis() // 1000 - 1)
+    ):
         pass
+
+
+def _trusted_response_url(value):
+    if not isinstance(value, str):
+        raise RuntimeError("CloudFormation response URL is invalid.")
+    parsed = urlsplit(value)
+    hostname = (parsed.hostname or "").lower()
+    trusted_hostname = hostname == "amazonaws.com" or hostname.endswith(".amazonaws.com")
+    if (
+        parsed.scheme != "https"
+        or not trusted_hostname
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.port not in {None, 443}
+        or not parsed.path
+    ):
+        raise RuntimeError("CloudFormation response URL is invalid.")
+    return value
