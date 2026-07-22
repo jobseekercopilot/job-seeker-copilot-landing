@@ -3,6 +3,7 @@ import logging
 from common import aws_error_code, log_result, metric, normalise_email, subscriber_table, utc_iso
 
 LOGGER = logging.getLogger()
+WAITLIST_MESSAGE_PURPOSE = "waitlist-confirmation"
 
 STATUS_EVENTS = {
     "Email Bounced": ("BOUNCED", "SesBounces"),
@@ -14,6 +15,9 @@ def handler(event, context):
     detail_type = str(event.get("detail-type", ""))
     detail = event.get("detail") or {}
     mail = detail.get("mail") or {}
+    if _message_purpose(mail) != WAITLIST_MESSAGE_PURPOSE:
+        log_result(context, "ses-event", 200, "ignored-non-waitlist-purpose")
+        return {"processed": 0}
     recipients = mail.get("destination") or []
     processed = 0
     for value in recipients[:10]:
@@ -37,6 +41,18 @@ def handler(event, context):
             raise
     log_result(context, "ses-event", 200, f"processed-{processed}")
     return {"processed": processed}
+
+
+def _message_purpose(mail):
+    tags = mail.get("tags") or {}
+    if not isinstance(tags, dict):
+        return ""
+    values = tags.get("message-purpose") or []
+    if isinstance(values, str):
+        values = [values]
+    if not isinstance(values, list) or len(values) != 1:
+        return ""
+    return values[0] if isinstance(values[0], str) else ""
 
 
 def _suppress(email, status):
