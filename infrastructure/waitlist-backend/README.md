@@ -4,12 +4,12 @@ This isolated AWS SAM stack updates the existing `job-seeker-copilot-waitlist` s
 
 ## Safety boundary
 
-`JobSeekerCopilotWaitlist` is an existing external table passed in as a parameter. It is deliberately **not** declared as a CloudFormation table resource, so this stack cannot replace or delete it. A narrowly scoped custom resource only enables the `pendingExpiresAt` TTL attribute and does nothing during stack deletion.
+`JobSeekerCopilotWaitlist` is an existing external table passed in as a parameter. It is deliberately **not** declared as a CloudFormation table resource, so this stack cannot replace or delete it. A narrowly scoped, enable-only custom resource verifies the `pendingExpiresAt` TTL attribute and enables point-in-time recovery (PITR) and deletion protection. It never disables a safeguard and does nothing during stack deletion.
 
 The new `JobSeekerCopilotWaitlistTokens` table is managed by this stack with:
 
 - `DeletionPolicy: Retain` and `UpdateReplacePolicy: Retain`;
-- on-demand capacity, server-side encryption and point-in-time recovery;
+- on-demand capacity, server-side encryption, point-in-time recovery and deletion protection;
 - a String partition key named `tokenHash`;
 - DynamoDB TTL on `deleteAfter`.
 
@@ -47,6 +47,22 @@ registration response is deliberately the same for new, pending, confirmed,
 unsubscribed, bounced and complained records; internal state is not disclosed.
 
 DynamoDB TTL deletion is asynchronous and can occur several days after expiry.
+
+Both tables are encrypted at rest. The external subscriber table uses
+DynamoDB's default AWS-owned key; the retained token table declares SSE in
+CloudFormation. PITR is enabled on both tables and provides a rolling recovery
+window reported by DynamoDB. A PITR restore always creates a new table: never
+overwrite, delete, or cut traffic to the protected source table as part of a
+restore test.
+
+Deletion protection is enabled on both tables. The token table additionally
+has `DeletionPolicy: Retain` and `UpdateReplacePolicy: Retain`; the subscriber
+table is not owned by the stack at all. A stack delete therefore leaves both
+tables and their backups in place. Rollback cannot disable TTL, PITR, or
+deletion protection because the custom resource's update path is enable-only
+and its delete path is a no-op. See
+`../../docs/launch/waitlist-data-lifecycle.md` for the lifecycle, backup/restore,
+and no-delete runbooks.
 
 Resend rotation conditionally replaces the subscriber's current token hash,
 deletes the superseded token and creates the new hashed token in one
@@ -163,7 +179,7 @@ sam deploy \
   --no-execute-changeset
 ```
 
-Inspect the change set before execution. Stop if it proposes replacement/deletion of the waitlist table, wildcard IAM/CORS, token exposure, or a subscriber-list route.
+Inspect the change set before execution. Stop if it proposes replacement/deletion of either DynamoDB table, disables a safeguard, adds wildcard IAM/CORS, exposes a token, or adds a subscriber-list route.
 
 After a safe deployment, use stack outputs for the Angular hosted runtime configuration:
 
