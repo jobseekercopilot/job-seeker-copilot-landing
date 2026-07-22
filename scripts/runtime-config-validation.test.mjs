@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { validateLiveSubmissionConfig } from './runtime-config-validation.mjs';
+import { validateLiveSubmissionConfig, validateSearchIndexingConfig } from './runtime-config-validation.mjs';
 
 const valid = {
   environmentName: 'production',
@@ -60,5 +60,29 @@ describe('live submission runtime configuration', () => {
       waitlistResendApiUrl: '/waitlist/resend',
       contactApiUrl: '/contact',
     }));
+  });
+});
+
+describe('search indexing runtime configuration', () => {
+  it('allows disabled search indexing in every environment', () => {
+    assert.doesNotThrow(() => validateSearchIndexingConfig({ searchIndexingEnabled: false }));
+  });
+
+  it('accepts only the exact production canonical URL when enabled', () => {
+    assert.doesNotThrow(() => validateSearchIndexingConfig({
+      searchIndexingEnabled: true,
+      environmentName: 'production',
+      publicWebsiteUrl: 'https://www.jobseekercopilot.com',
+    }));
+    assert.throws(() => validateSearchIndexingConfig({
+      searchIndexingEnabled: true,
+      environmentName: 'development',
+      publicWebsiteUrl: 'https://www.jobseekercopilot.com',
+    }), /exact canonical public website URL/);
+    assert.throws(() => validateSearchIndexingConfig({
+      searchIndexingEnabled: true,
+      environmentName: 'production',
+      publicWebsiteUrl: 'https://jobseekercopilot.com',
+    }), /exact canonical public website URL/);
   });
 });

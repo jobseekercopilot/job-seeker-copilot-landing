@@ -19,3 +19,10 @@ export function validateLiveSubmissionConfig(value) {
     }
   }
 }
+
+export function validateSearchIndexingConfig(value) {
+  if (!value.searchIndexingEnabled) return;
+  if (value.environmentName !== 'production' || value.publicWebsiteUrl !== 'https://www.jobseekercopilot.com') {
+    throw new Error('Search indexing requires production and the exact canonical public website URL.');
+  }
+}

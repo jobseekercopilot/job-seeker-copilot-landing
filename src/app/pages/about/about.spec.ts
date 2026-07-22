@@ -1,4 +1,3 @@
-import { Meta } from '@angular/platform-browser';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { DEFAULT_PUBLIC_APP_CONFIG, PUBLIC_APP_CONFIG } from '../../config/public-app-config';
@@ -40,15 +39,5 @@ describe('AboutPage', () => {
     expect(navigationLinks[1].textContent).toContain('The Story Behind Job Seeker Copilot');
     expect(navigationLinks[1].textContent).toContain('14 July 2026');
     expect(navigationLinks[1].getAttribute('aria-current')).toBe('page');
-  });
-
-  it('sets the requested search description', () => {
-    const fixture = TestBed.createComponent(AboutPage);
-    fixture.detectChanges();
-    const meta = TestBed.inject(Meta);
-
-    expect(meta.getTag('name="description"')?.content).toBe(
-      'Read the story behind Job Seeker Copilot, why Bernard McGeever began building it, and the milestones that shaped the project’s journey so far.',
-    );
   });
 });

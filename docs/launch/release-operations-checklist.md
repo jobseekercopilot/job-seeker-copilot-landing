@@ -28,6 +28,8 @@ RELEASE-02 acceptance evidence.
       destination and quota are healthy.
 - [ ] External subscriber table ownership and no-delete boundary reconfirmed.
 - [ ] Current AWS budget alerts and launch staffing/escalation cover confirmed.
+- [ ] SEO-01 and MONITORING-01 are merged; search indexing remains explicitly
+      disabled on every branch.
 
 ## Code and security gate
 
@@ -73,7 +75,8 @@ RELEASE-02 acceptance evidence.
 - [ ] Exact `main` commit passes the post-merge Full release gate.
 - [ ] Amplify `main` job succeeds for that exact commit.
 - [ ] Public runtime config contains only approved public URLs/labels and the
-      safe false switch; artifact and CSP/security-header checks pass.
+      safe false submission and search-indexing switches; artifact,
+      SEO-output and CSP/security-header checks pass.
 - [ ] Custom domain mappings move only after the successful `main` deployment is
       verified; apex redirect and SPA routes pass.
 
@@ -89,6 +92,28 @@ RELEASE-02 acceptance evidence.
       occurs.
 - [ ] Desktop/mobile, keyboard and assistive-technology spot checks pass.
 - [ ] Both switches are returned to false until the explicit launch decision.
+- [ ] Approved public pages expose the sole `www` canonical while action/error
+      routes remain noindex and absent from the sitemap.
+
+## Post-smoke Search Console and indexing approval
+
+- [ ] Both production journey smoke tests passed and Bernard's explicit
+      indexing approval is recorded against the exact `main` commit.
+- [ ] Search Console accountable owner, backup, MFA/recovery and least-privilege
+      access review are complete through the private ownership register.
+- [ ] Any domain-property DNS verification change has separate approval and
+      changes no unrelated DNS record; the verification value is absent from
+      GitHub evidence.
+- [ ] `ENABLE_SEARCH_INDEXING=true` is set on `main` only with the exact
+      `PUBLIC_WEBSITE_URL`; the reviewed rebuild succeeds for the release
+      commit.
+- [ ] Public routes render index/follow; action/error routes remain noindex;
+      robots and the approved-URL-only `www` sitemap validate.
+- [ ] The canonical sitemap is submitted once and key public URLs pass live
+      inspection without inspecting any real token/query URL.
+- [ ] Search coverage, sitemap health, security/manual actions and field Core
+      Web Vitals ownership are active; the disable-and-rebuild rollback is
+      ready.
 
 ## Rollback readiness
 

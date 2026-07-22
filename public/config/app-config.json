@@ -1,6 +1,7 @@
 {
   "environmentName": "development",
   "enableLiveSubmissions": false,
+  "searchIndexingEnabled": false,
   "waitlistApiUrl": "",
   "waitlistConfirmationApiUrl": "",
   "waitlistResendApiUrl": "",

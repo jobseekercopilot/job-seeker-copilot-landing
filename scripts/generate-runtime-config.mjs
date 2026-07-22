@@ -1,12 +1,14 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
-import { validateLiveSubmissionConfig } from './runtime-config-validation.mjs';
+import { validateLiveSubmissionConfig, validateSearchIndexingConfig } from './runtime-config-validation.mjs';
+import { resolveSearchIndexingEnabled } from './search-indexing-policy.mjs';
 
 const outputPath = resolve(process.env.RUNTIME_CONFIG_OUTPUT_PATH || 'public/config/app-config.json');
 
 const config = {
   environmentName: oneOf(process.env.PUBLIC_ENVIRONMENT_NAME, ['development', 'test', 'production'], 'production'),
   enableLiveSubmissions: process.env.ENABLE_LIVE_SUBMISSIONS === 'true',
+  searchIndexingEnabled: resolveSearchIndexingEnabled(),
   waitlistApiUrl: text('WAITLIST_API_URL'),
   waitlistConfirmationApiUrl: text('WAITLIST_CONFIRMATION_API_URL'),
   waitlistResendApiUrl: text('WAITLIST_RESEND_API_URL'),
@@ -30,6 +32,7 @@ const config = {
 };
 
 validateLiveSubmissionConfig(config);
+validateSearchIndexingConfig(config);
 
 await mkdir(dirname(outputPath), { recursive: true });
 await writeFile(outputPath, `${JSON.stringify(config, null, 2)}\n`, 'utf8');

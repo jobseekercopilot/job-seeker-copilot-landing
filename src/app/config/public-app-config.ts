@@ -5,6 +5,7 @@ export type PublicEnvironmentName = 'development' | 'test' | 'production';
 export interface PublicAppConfig {
   environmentName: PublicEnvironmentName;
   enableLiveSubmissions: boolean;
+  searchIndexingEnabled: boolean;
   waitlistApiUrl: string;
   waitlistConfirmationApiUrl: string;
   waitlistResendApiUrl: string;
@@ -30,6 +31,7 @@ export interface PublicAppConfig {
 export const DEFAULT_PUBLIC_APP_CONFIG: PublicAppConfig = {
   environmentName: 'development',
   enableLiveSubmissions: false,
+  searchIndexingEnabled: false,
   waitlistApiUrl: '',
   waitlistConfirmationApiUrl: '',
   waitlistResendApiUrl: '',
@@ -61,11 +63,14 @@ export function setPublicAppConfig(value: unknown): void {
   }
 
   const environmentName = value['environmentName'];
+  const publicWebsiteUrl = asString(value['publicWebsiteUrl'], DEFAULT_PUBLIC_APP_CONFIG.publicWebsiteUrl);
   loadedConfig = {
     environmentName: isEnvironmentName(environmentName)
       ? environmentName
       : DEFAULT_PUBLIC_APP_CONFIG.environmentName,
     enableLiveSubmissions: value['enableLiveSubmissions'] === true,
+    searchIndexingEnabled: value['searchIndexingEnabled'] === true &&
+      environmentName === 'production' && publicWebsiteUrl === 'https://www.jobseekercopilot.com',
     waitlistApiUrl: asString(value['waitlistApiUrl'], DEFAULT_PUBLIC_APP_CONFIG.waitlistApiUrl),
     waitlistConfirmationApiUrl: asString(value['waitlistConfirmationApiUrl'], DEFAULT_PUBLIC_APP_CONFIG.waitlistConfirmationApiUrl),
     waitlistResendApiUrl: asString(value['waitlistResendApiUrl'], DEFAULT_PUBLIC_APP_CONFIG.waitlistResendApiUrl),
@@ -75,7 +80,7 @@ export function setPublicAppConfig(value: unknown): void {
     registrationUrl: asString(value['registrationUrl'], DEFAULT_PUBLIC_APP_CONFIG.registrationUrl),
     signInUrl: asString(value['signInUrl'], DEFAULT_PUBLIC_APP_CONFIG.signInUrl),
     pricingUrl: asString(value['pricingUrl'], DEFAULT_PUBLIC_APP_CONFIG.pricingUrl),
-    publicWebsiteUrl: asString(value['publicWebsiteUrl'], DEFAULT_PUBLIC_APP_CONFIG.publicWebsiteUrl),
+    publicWebsiteUrl,
     privacyPolicyUrl: asString(value['privacyPolicyUrl'], DEFAULT_PUBLIC_APP_CONFIG.privacyPolicyUrl),
     termsUrl: asString(value['termsUrl'], DEFAULT_PUBLIC_APP_CONFIG.termsUrl),
     supportUrl: asString(value['supportUrl'], DEFAULT_PUBLIC_APP_CONFIG.supportUrl),
