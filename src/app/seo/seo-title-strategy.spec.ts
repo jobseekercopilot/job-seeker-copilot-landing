@@ -41,6 +41,7 @@ describe('SeoTitleStrategy', () => {
     expect(homeSchema['@graph'].map((item: { '@type': string }) => item['@type'])).toEqual(['Organization', 'WebSite']);
 
     strategy.updateTitle(snapshot(SEO_ROUTES.faq));
+    expect(document.querySelector<HTMLLinkElement>('link[rel="canonical"]')?.href).toBe('https://www.jobseekercopilot.com/faq/');
     const faqSchema = JSON.parse(document.querySelector<HTMLScriptElement>('#seo-structured-data')?.textContent ?? '{}');
     expect(faqSchema['@type']).toBe('FAQPage');
     expect(faqSchema.mainEntity).toHaveLength(9);
@@ -48,7 +49,7 @@ describe('SeoTitleStrategy', () => {
     strategy.updateTitle(snapshot(SEO_ROUTES.comparison));
     const articleSchema = JSON.parse(document.querySelector<HTMLScriptElement>('#seo-structured-data')?.textContent ?? '{}');
     expect(articleSchema['@type']).toBe('BlogPosting');
-    expect(articleSchema.mainEntityOfPage).toBe('https://www.jobseekercopilot.com/the-journey-so-far/job-search-platform-comparison');
+    expect(articleSchema.mainEntityOfPage).toBe('https://www.jobseekercopilot.com/the-journey-so-far/job-search-platform-comparison/');
   });
 
   it('keeps every route noindex until the explicit launch gate is enabled', () => {
