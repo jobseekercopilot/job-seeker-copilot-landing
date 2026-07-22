@@ -28,7 +28,7 @@ Confirmation performs one transaction which:
 
 1. conditionally changes the current PENDING subscriber to `CONFIRMED`;
 2. sets `confirmedAt` and `updatedAt`;
-3. removes the pending TTL and active-token fields;
+3. removes the pending TTL, active-token fields and resend/send-control metadata;
 4. changes the token record from `ACTIVE` to a short-lived `USED` tombstone and removes its email.
 
 The old token is deleted when a resend rotates it. Confirmed records have no `pendingExpiresAt`, so pending cleanup cannot delete them. Default retention is:
@@ -47,6 +47,14 @@ registration response is deliberately the same for new, pending, confirmed,
 unsubscribed, bounced and complained records; internal state is not disclosed.
 
 DynamoDB TTL deletion is asynchronous and can occur several days after expiry.
+
+Resend rotation conditionally replaces the subscriber's current token hash,
+deletes the superseded token and creates the new hashed token in one
+transaction. A concurrent loser returns the same neutral response. Configured
+per-record cooldown and rolling-window limits apply before any write or SES
+send. If SES rejects a rotated-token delivery, the record remains PENDING and
+recoverable; the failed-attempt cooldown is cleared without restoring or
+exposing the superseded token.
 
 ## API routes
 

@@ -60,7 +60,9 @@ def handler(event, context):
                 "Key": {"email": av_string(email)},
                 "UpdateExpression": (
                     "SET #status=:confirmed, confirmedAt=:updated, updatedAt=:updated "
-                    "REMOVE currentConfirmationTokenHash, confirmationExpiresAt, pendingExpiresAt, lastConfirmationDeliveryErrorAt"
+                    "REMOVE currentConfirmationTokenHash, confirmationExpiresAt, pendingExpiresAt, "
+                    "lastConfirmationDeliveryErrorAt, lastConfirmationAttemptAtEpoch, "
+                    "confirmationSendWindowStartedAtEpoch, confirmationSendCount, confirmationSentAt"
                 ),
                 "ConditionExpression": "#status=:pending AND currentConfirmationTokenHash=:hash AND confirmationExpiresAt>=:now",
                 "ExpressionAttributeNames": {"#status": "status"},
@@ -90,13 +92,20 @@ def handler(event, context):
     except Exception as exc:
         if aws_error_code(exc) in {"TransactionCanceledException", "ConditionalCheckFailedException"}:
             return _resolve_race(event, context, locals().get("hashed", ""))
-        LOGGER.exception("Waitlist confirmation failed")
+        LOGGER.error("Waitlist confirmation failed: %s", aws_error_code(exc) or "unknown")
         log_result(context, OPERATION, 503, "service-unavailable")
         return response(event, 503, "CONFIRMATION_TEMPORARILY_UNAVAILABLE", "We could not confirm this email. Please try again later.")
 
 
 def _resolve_race(event, context, hashed):
-    record = token_table().get_item(Key={"tokenHash": hashed}, ConsistentRead=True).get("Item") if hashed else None
+    try:
+        record = token_table().get_item(Key={"tokenHash": hashed}, ConsistentRead=True).get("Item") if hashed else None
+    except Exception as exc:
+        LOGGER.error("Could not resolve confirmation race: %s", aws_error_code(exc) or "unknown")
+        return response(
+            event, 503, "CONFIRMATION_TEMPORARILY_UNAVAILABLE",
+            "We could not confirm this email. Please try again later.",
+        )
     if record and str(record.get("status", "")) == "USED":
         return response(event, 200, "WAITLIST_ALREADY_CONFIRMED", "This confirmation link has already been used.", success=True)
     if record and int(record.get("expiresAt", 0)) < now_epoch():
