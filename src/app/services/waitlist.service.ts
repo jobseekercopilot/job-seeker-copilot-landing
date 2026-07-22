@@ -37,6 +37,7 @@ export class WaitlistService {
     return this.http.post<WaitlistApiResponse>(this.config.waitlistApiUrl, { email: normalisedEmail }).pipe(
       map(response => {
         if (response.success !== true) throw new Error('The waitlist API did not accept the request.');
+        if (response.code === 'WAITLIST_REQUEST_ACCEPTED') return { status: 'pending-confirmation' as const };
         if (response.code === 'WAITLIST_PENDING_CONFIRMATION') return { status: 'pending-confirmation' as const };
         if (response.code === 'WAITLIST_ALREADY_CONFIRMED') return { status: 'already-confirmed' as const };
         if (response.code === 'WAITLIST_CONFIRMATION_REQUIRED') return { status: 'confirmation-required' as const };

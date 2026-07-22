@@ -141,7 +141,10 @@ def mark_confirmation_failure(email: str, hashed: str) -> None:
     now = now_epoch()
     subscriber_table().update_item(
         Key={"email": email},
-        UpdateExpression="SET lastConfirmationDeliveryErrorAt=:failed, updatedAt=:failed",
+        UpdateExpression=(
+            "SET lastConfirmationDeliveryErrorAt=:failed, updatedAt=:failed "
+            "REMOVE lastConfirmationAttemptAtEpoch"
+        ),
         ConditionExpression="#status=:pending AND currentConfirmationTokenHash=:hash",
         ExpressionAttributeNames={"#status": "status"},
         ExpressionAttributeValues={":failed": utc_iso(now), ":pending": "PENDING", ":hash": hashed},

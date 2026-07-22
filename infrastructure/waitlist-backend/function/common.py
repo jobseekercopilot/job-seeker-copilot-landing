@@ -169,7 +169,7 @@ def origin_allowed(origin: str) -> bool:
     if environment not in {"development", "production"}:
         return False
     settings = ("PRODUCTION_ORIGIN",) if environment == "production" else (
-        "DEVELOPMENT_ORIGIN", "FEATURE_ORIGIN",
+        "DEVELOPMENT_ORIGIN", "ADDITIONAL_DEVELOPMENT_ORIGIN",
     )
     allowed_origins = {
         os.getenv(setting, "").strip().rstrip("/")

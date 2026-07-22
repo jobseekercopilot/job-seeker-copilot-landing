@@ -20,17 +20,17 @@ Parameters:
     Type: String
     Default: https://develop.d3gd9ezfa3aujn.amplifyapp.com
     AllowedPattern: '^https://[A-Za-z0-9.-]+$'
-  FeatureOrigin:
+  AdditionalDevelopmentOrigin:
     Type: String
-    Default: https://feature-waitlist-double-opt-in.d3gd9ezfa3aujn.amplifyapp.com
+    Default: https://www.jobseekercopilot.com
     AllowedPattern: '^https://[A-Za-z0-9.-]+$'
   ProductionOrigin:
     Type: String
-    Default: https://jobseekercopilot.com
+    Default: https://www.jobseekercopilot.com
     AllowedPattern: '^https://[A-Za-z0-9.-]+$'
   PublicSiteUrl:
     Type: String
-    Default: https://develop.d3gd9ezfa3aujn.amplifyapp.com
+    Default: https://www.jobseekercopilot.com
     AllowedPattern: '^https://[A-Za-z0-9.-]+$'
   SesDomainIdentity:
     Type: String
@@ -96,7 +96,7 @@ Globals:
       Variables:
         ENVIRONMENT_NAME: !Ref EnvironmentName
         DEVELOPMENT_ORIGIN: !Ref DevelopmentOrigin
-        FEATURE_ORIGIN: !Ref FeatureOrigin
+        ADDITIONAL_DEVELOPMENT_ORIGIN: !Ref AdditionalDevelopmentOrigin
         PRODUCTION_ORIGIN: !Ref ProductionOrigin
         WAITLIST_TABLE_NAME: !Ref WaitlistTableName
         TOKEN_TABLE_NAME: !Ref TokenTable
@@ -251,11 +251,13 @@ Resources:
             Version: '2012-10-17'
             Statement:
               - Effect: Allow
-                Action: [dynamodb:GetItem, dynamodb:PutItem, dynamodb:UpdateItem]
+                Action: [dynamodb:GetItem, dynamodb:UpdateItem]
                 Resource: !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${WaitlistTableName}
               - Effect: Allow
-                Action: [dynamodb:PutItem, dynamodb:DeleteItem]
-                Resource: !GetAtt TokenTable.Arn
+                Action: dynamodb:TransactWriteItems
+                Resource:
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${WaitlistTableName}
+                  - !GetAtt TokenTable.Arn
         - &SendEmailPolicy
           PolicyName: SendWaitlistConfirmationOnly
           PolicyDocument:
@@ -289,11 +291,13 @@ Resources:
             Version: '2012-10-17'
             Statement:
               - Effect: Allow
-                Action: dynamodb:UpdateItem
-                Resource: !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${WaitlistTableName}
-              - Effect: Allow
-                Action: [dynamodb:GetItem, dynamodb:UpdateItem]
+                Action: dynamodb:GetItem
                 Resource: !GetAtt TokenTable.Arn
+              - Effect: Allow
+                Action: dynamodb:TransactWriteItems
+                Resource:
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${WaitlistTableName}
+                  - !GetAtt TokenTable.Arn
         - PolicyName: WriteConfirmationLogs
           PolicyDocument:
             Version: '2012-10-17'
@@ -316,8 +320,10 @@ Resources:
                 Action: [dynamodb:GetItem, dynamodb:UpdateItem]
                 Resource: !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${WaitlistTableName}
               - Effect: Allow
-                Action: [dynamodb:PutItem, dynamodb:DeleteItem]
-                Resource: !GetAtt TokenTable.Arn
+                Action: dynamodb:TransactWriteItems
+                Resource:
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${WaitlistTableName}
+                  - !GetAtt TokenTable.Arn
         - *SendEmailPolicy
         - PolicyName: WriteResendLogs
           PolicyDocument:

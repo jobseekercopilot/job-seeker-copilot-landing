@@ -26,6 +26,19 @@ describe('WaitlistService', () => {
     expect(status).toBe('pending-confirmation');
   });
 
+  it('maps the neutral registration contract used by the hardened backend', () => {
+    configure({ enableLiveSubmissions: true, waitlistApiUrl: '/api/waitlist' });
+    let status = '';
+    TestBed.inject(WaitlistService).join('person@example.com').subscribe(result => status = result.status);
+
+    TestBed.inject(HttpTestingController).expectOne('/api/waitlist').flush({
+      success: true,
+      code: 'WAITLIST_REQUEST_ACCEPTED',
+      message: 'Request received.',
+    }, { status: 202, statusText: 'Accepted' });
+    expect(status).toBe('pending-confirmation');
+  });
+
   it('maps an existing pending record without claiming confirmation', () => {
     configure({ enableLiveSubmissions: true, waitlistApiUrl: '/api/waitlist' });
     let status = '';
