@@ -57,7 +57,7 @@ describe('release security gates', () => {
       'actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38',
       'actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1',
       'aws-actions/setup-sam@89ddb14d60e682855e3fea4be85b3c56485de310',
-      'actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4',
+      'actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f',
     ]) {
       assert.match(workflow, new RegExp(action));
     }
