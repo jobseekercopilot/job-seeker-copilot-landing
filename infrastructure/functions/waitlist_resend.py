@@ -65,7 +65,13 @@ def handler(event, context):
         )
         try:
             send_email(
-                required("WAITLIST_SENDER_EMAIL"), item["email"], subject, text_body, html_body, required("REPLY_TO_EMAIL")
+                required("WAITLIST_SENDER_EMAIL"),
+                item["email"],
+                subject,
+                text_body,
+                html_body,
+                required("REPLY_TO_EMAIL"),
+                message_purpose="waitlist-confirmation",
             )
         except Exception:
             try:

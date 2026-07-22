@@ -62,7 +62,15 @@ def handler(event, context):
                     ),
                     required("PUBLIC_SUPPORT_EMAIL"),
                 )
-                send_email(required("WAITLIST_SENDER_EMAIL"), item["email"], subject, text_body, html_body, required("REPLY_TO_EMAIL"))
+                send_email(
+                    required("WAITLIST_SENDER_EMAIL"),
+                    item["email"],
+                    subject,
+                    text_body,
+                    html_body,
+                    required("REPLY_TO_EMAIL"),
+                    message_purpose="waitlist-confirmed",
+                )
             except Exception:
                 logger.error("Confirmation acknowledgement email failed")
         result = response(event, 200, True, "WAITLIST_CONFIRMED", "Your email has been confirmed.")

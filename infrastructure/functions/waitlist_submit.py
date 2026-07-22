@@ -121,4 +121,12 @@ def handler(event, context):
 
 def _send_confirmation(sender, recipient, site_url, token, support_email, reply_to):
     subject, text_body, html_body = waitlist_confirmation(site_url, token, support_email)
-    send_email(sender, recipient, subject, text_body, html_body, reply_to)
+    send_email(
+        sender,
+        recipient,
+        subject,
+        text_body,
+        html_body,
+        reply_to,
+        message_purpose="waitlist-confirmation",
+    )
