@@ -114,11 +114,12 @@ async function confirm(page) {
   currentStage = 'confirm_wait_for_expected_state';
   await heading.waitFor({ state: 'visible', timeout: 20_000 });
   const bodyText = await page.locator('body').innerText();
+  const expectedRole = expectedHeading === 'This link is no longer active.' ? 'alert' : 'status';
   return {
     expectedHeadingVisible: await heading.isVisible(),
     tokenRemovedFromUrl: !page.url().includes(secretToken),
     tokenNotRendered: !bodyText.includes(secretToken),
-    statusAnnounced: await page.locator('.action-card').getAttribute('role') === 'status',
+    announcementRoleCorrect: await page.locator('.action-card').getAttribute('role') === expectedRole,
   };
 }
 
