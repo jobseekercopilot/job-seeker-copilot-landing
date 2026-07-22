@@ -571,6 +571,9 @@ Resources:
       CodeUri: function/
       Handler: ses_events.handler
       Role: !GetAtt SesEventsExecutionRole.Arn
+      Environment:
+        Variables:
+          SES_CONFIGURATION_SET: !Ref WaitlistEmailConfigurationSet
       Events:
         SesEvents:
           Type: EventBridgeRule
