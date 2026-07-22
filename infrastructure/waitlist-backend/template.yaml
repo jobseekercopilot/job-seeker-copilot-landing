@@ -57,6 +57,26 @@ Parameters:
     Type: String
     NoEcho: true
     Description: Approved private company inbox. Never expose this parameter in browser configuration or stack outputs.
+  ContactDedupeTableName:
+    Type: String
+    Default: JobSeekerCopilotContactDedupe
+    AllowedPattern: '^[A-Za-z0-9_.-]{3,255}$'
+  ContactDedupePepper:
+    Type: String
+    NoEcho: true
+    MinLength: 32
+    MaxLength: 256
+    Description: Random secret used only to derive non-reversible contact duplicate fingerprints.
+  ContactDedupeTtlSeconds:
+    Type: Number
+    Default: 900
+    MinValue: 60
+    MaxValue: 86400
+  ContactMinimumFormCompletionMs:
+    Type: Number
+    Default: 1200
+    MinValue: 250
+    MaxValue: 10000
   ContactMessageMaxLength:
     Type: Number
     Default: 3000
@@ -164,6 +184,30 @@ Resources:
           Value: JobSeekerCopilot
         - Key: DataClassification
           Value: personal-operational
+
+  ContactDedupeTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      TableName: !Ref ContactDedupeTableName
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: fingerprint
+          AttributeType: S
+      KeySchema:
+        - AttributeName: fingerprint
+          KeyType: HASH
+      SSESpecification:
+        SSEEnabled: true
+      TimeToLiveSpecification:
+        AttributeName: expiresAt
+        Enabled: true
+      Tags:
+        - Key: Application
+          Value: JobSeekerCopilot
+        - Key: DataClassification
+          Value: pseudonymous-transient
 
   WaitlistEmailConfigurationSet:
     Type: AWS::SES::ConfigurationSet
@@ -408,9 +452,16 @@ Resources:
   ContactExecutionRole:
     Type: AWS::IAM::Role
     Properties:
-      Description: Sends validated contact enquiries only to the configured company inbox.
+      Description: Deduplicates and sends validated contact enquiries only to the configured company inbox.
       AssumeRolePolicyDocument: *LambdaTrust
       Policies:
+        - PolicyName: ReserveContactFingerprint
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [dynamodb:PutItem, dynamodb:DeleteItem]
+                Resource: !GetAtt ContactDedupeTable.Arn
         - PolicyName: SendContactEnquiryOnly
           PolicyDocument:
             Version: '2012-10-17'
@@ -564,6 +615,10 @@ Resources:
           CONTACT_SENDER_EMAIL: !Ref ContactSenderEmail
           CONTACT_RECIPIENT_EMAIL: !Ref ContactRecipientEmail
           CONTACT_MESSAGE_MAX_LENGTH: !Ref ContactMessageMaxLength
+          CONTACT_DEDUPE_TABLE_NAME: !Ref ContactDedupeTable
+          CONTACT_DEDUPE_PEPPER: !Ref ContactDedupePepper
+          CONTACT_DEDUPE_TTL_SECONDS: !Ref ContactDedupeTtlSeconds
+          CONTACT_MINIMUM_FORM_COMPLETION_MS: !Ref ContactMinimumFormCompletionMs
       Events:
         Contact:
           Type: HttpApi
@@ -585,6 +640,17 @@ Resources:
       AttributeName: pendingExpiresAt
       PointInTimeRecoveryEnabled: true
       DeletionProtectionEnabled: true
+
+  ContactApiThrottleMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: WaitlistApi
+    Properties:
+      LogGroupName: !Ref WaitlistApiAccessLogGroup
+      FilterPattern: '{ $.routeKey = "POST /contact" && $.status = 429 }'
+      MetricTransformations:
+        - MetricNamespace: JobSeekerCopilot/Contact
+          MetricName: ContactThrottleResponses
+          MetricValue: '1'
 
   ConfirmationSendFailureAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -619,6 +685,41 @@ Resources:
       <<: *SingleCustomFailureAlarm
       MetricName: ResendIssued
       Threshold: 20
+  ContactValidationVolumeAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties: &ContactAbuseAlarm
+      Namespace: JobSeekerCopilot/Contact
+      MetricName: ContactValidationRejections
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 10
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+  ContactThrottleVolumeAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      <<: *ContactAbuseAlarm
+      MetricName: ContactThrottleResponses
+      Threshold: 5
+  ContactDuplicateVolumeAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      <<: *ContactAbuseAlarm
+      MetricName: ContactDuplicateSuppressions
+      Threshold: 5
+  ContactSesFailureAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      <<: *ContactAbuseAlarm
+      MetricName: ContactSesFailures
+      Threshold: 1
+  ContactDedupeFailureAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      <<: *ContactAbuseAlarm
+      MetricName: ContactDedupeFailures
+      Threshold: 1
   ApiServerErrorAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
@@ -677,6 +778,12 @@ Resources:
       <<: *LambdaErrorAlarm
       Dimensions:
         - {Name: FunctionName, Value: !Ref SesEventsFunction}
+  ContactLambdaErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      <<: *LambdaErrorAlarm
+      Dimensions:
+        - {Name: FunctionName, Value: !Ref ContactFunction}
 
 Outputs:
   ApiBaseUrl:
@@ -695,6 +802,7 @@ Outputs:
   ContactLambdaName: {Value: !Ref ContactFunction}
   SesEventsLambdaName: {Value: !Ref SesEventsFunction}
   TokenTableName: {Value: !Ref TokenTable}
+  ContactDedupeTableName: {Value: !Ref ContactDedupeTable}
   WaitlistTableProtection:
     Description: The existing table is an external parameter, not a stack resource, so this stack cannot replace or delete it.
     Value: !Sub '${WaitlistTableName} is external; pendingExpiresAt TTL, PITR, and deletion protection enabled'

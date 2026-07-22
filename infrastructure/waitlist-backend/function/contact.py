@@ -1,17 +1,25 @@
+import hashlib
+import hmac
+import json
 import logging
 import math
 import os
 import re
+import time
 from html import escape
 from typing import Any
 
 from common import (
     RequestError,
     aws_error_code,
+    dynamodb_resource,
     enforce_origin,
+    env_int,
     is_options,
     log_result,
+    metric,
     normalise_email,
+    now_epoch,
     parse_json,
     preflight,
     response,
@@ -21,6 +29,7 @@ from common import (
 
 LOGGER = logging.getLogger()
 OPERATION = "contact-submit"
+METRIC_NAMESPACE = "JobSeekerCopilot/Contact"
 EXPECTED_FIELDS = {"name", "email", "subject", "message", "source", "website", "formStartedAt"}
 CONTROL_CHARACTERS = re.compile(r"[\x00-\x1f\x7f]")
 MESSAGE_CONTROL_CHARACTERS = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
@@ -37,29 +46,41 @@ def handler(event, context):
         if set(payload) != EXPECTED_FIELDS:
             raise RequestError(400, "INVALID_REQUEST", "The contact request is invalid.")
 
+        _validate_automation(payload)
         name = _single_line(payload.get("name"), 1, 120)
         email = normalise_email(payload.get("email"))
         subject = _single_line(payload.get("subject"), 1, 160)
         message = _message(payload.get("message"), 10, _message_maximum())
         if not email:
             raise RequestError(400, "INVALID_EMAIL", "Enter a valid email address.")
-        if payload.get("source") != "landing-page" or payload.get("website") != "":
-            raise RequestError(400, "INVALID_REQUEST", "The contact request is invalid.")
-        started = payload.get("formStartedAt")
-        if (not isinstance(started, (int, float)) or isinstance(started, bool)
-                or not math.isfinite(started) or started <= 0):
+        if payload.get("source") != "landing-page":
             raise RequestError(400, "INVALID_REQUEST", "The contact request is invalid.")
 
-        _send_contact_email(name, email, subject, message, context)
+        request_id = str(getattr(context, "aws_request_id", "unknown"))
+        fingerprint = _contact_fingerprint(name, email, subject, message)
+        if not _reserve_fingerprint(fingerprint, request_id):
+            log_result(context, OPERATION, 202, "duplicate-suppressed")
+            return response(
+                event, 202, "CONTACT_ACCEPTED", "Your message has been sent.", success=True
+            )
+
+        try:
+            _send_contact_email(name, email, subject, message, context)
+        except Exception:
+            _contact_metric("ContactSesFailures")
+            _release_fingerprint(fingerprint, request_id)
+            raise
         log_result(context, OPERATION, 202, "accepted")
         return response(
             event, 202, "CONTACT_ACCEPTED", "Your message has been sent.", success=True
         )
     except RequestError as exc:
+        if exc.status_code in {400, 415}:
+            _contact_metric("ContactValidationRejections")
         log_result(context, OPERATION, exc.status_code, exc.code)
         return response(event, exc.status_code, exc.code, exc.message)
     except Exception as exc:
-        LOGGER.error("Contact delivery failed: %s", aws_error_code(exc) or "unknown")
+        LOGGER.error("Contact processing failed: %s", aws_error_code(exc) or "unknown")
         log_result(context, OPERATION, 503, "delivery-failed")
         return response(
             event,
@@ -67,6 +88,77 @@ def handler(event, context):
             "CONTACT_TEMPORARILY_UNAVAILABLE",
             "Your message could not be sent. Please try again later.",
         )
+
+
+def _contact_metric(name: str) -> None:
+    metric(name, namespace=METRIC_NAMESPACE)
+
+
+def _validate_automation(payload: dict[str, Any]) -> None:
+    if payload.get("website") != "":
+        _contact_metric("ContactHoneypotRejections")
+        raise RequestError(400, "INVALID_REQUEST", "The contact request is invalid.")
+
+    started = payload.get("formStartedAt")
+    if (not isinstance(started, (int, float)) or isinstance(started, bool)
+            or not math.isfinite(started) or started <= 0):
+        raise RequestError(400, "INVALID_REQUEST", "The contact request is invalid.")
+
+    now_ms = int(time.time() * 1000)
+    minimum_ms = env_int("CONTACT_MINIMUM_FORM_COMPLETION_MS", 1_200)
+    if started > now_ms or now_ms - started < minimum_ms:
+        _contact_metric("ContactTooFastRejections")
+        raise RequestError(400, "INVALID_REQUEST", "The contact request is invalid.")
+
+
+def _contact_fingerprint(name: str, email: str, subject: str, message: str) -> str:
+    pepper = os.getenv("CONTACT_DEDUPE_PEPPER", "")
+    if len(pepper.encode("utf-8")) < 32:
+        raise RuntimeError("Invalid contact deduplication configuration")
+    canonical = json.dumps(
+        [name, email, subject, message], ensure_ascii=False, separators=(",", ":")
+    )
+    return hmac.new(
+        pepper.encode("utf-8"), canonical.encode("utf-8"), hashlib.sha256
+    ).hexdigest()
+
+
+def dedupe_table():
+    table_name = os.getenv("CONTACT_DEDUPE_TABLE_NAME", "").strip()
+    if not table_name:
+        raise RuntimeError("Invalid contact deduplication configuration")
+    return dynamodb_resource().Table(table_name)
+
+
+def _reserve_fingerprint(fingerprint: str, owner: str) -> bool:
+    now = now_epoch()
+    expires_at = now + env_int("CONTACT_DEDUPE_TTL_SECONDS", 900)
+    try:
+        dedupe_table().put_item(
+            Item={"fingerprint": fingerprint, "expiresAt": expires_at, "owner": owner},
+            ConditionExpression="attribute_not_exists(fingerprint) OR expiresAt < :now",
+            ExpressionAttributeValues={":now": now},
+        )
+        return True
+    except Exception as exc:
+        if aws_error_code(exc) == "ConditionalCheckFailedException":
+            _contact_metric("ContactDuplicateSuppressions")
+            return False
+        _contact_metric("ContactDedupeFailures")
+        raise
+
+
+def _release_fingerprint(fingerprint: str, owner: str) -> None:
+    try:
+        dedupe_table().delete_item(
+            Key={"fingerprint": fingerprint},
+            ConditionExpression="#owner = :owner",
+            ExpressionAttributeNames={"#owner": "owner"},
+            ExpressionAttributeValues={":owner": owner},
+        )
+    except Exception:
+        _contact_metric("ContactDedupeReleaseFailures")
+        LOGGER.error("Contact deduplication reservation release failed")
 
 
 def _single_line(value: Any, minimum: int, maximum: int) -> str:
