@@ -6,15 +6,16 @@ The public figures are defined once in `src/app/content/labour-market-content.ts
 
 | Measure | Value | Measurement period | Official source |
 | --- | ---: | --- | --- |
-| UK unemployment rate, people aged 16 and over | 4.9% | February to April 2026 | ONS, Employment in the UK: June 2026 |
-| UK employment rate, people aged 16 to 64 | 75.0% | February to April 2026 | ONS, Employment in the UK: June 2026 |
-| Estimated UK job vacancies | 707,000 | March to May 2026 | ONS, Vacancies and jobs in the UK: June 2026 |
-| Estimated unemployed people per vacancy | 2.5 | February to April 2026 | ONS, Vacancies and jobs in the UK: June 2026 |
+| UK unemployment rate, people aged 16 and over | 4.9% | March to May 2026 | ONS, Employment in the UK: July 2026 |
+| Estimated unemployed people aged 16 and over | 1.760 million | March to May 2026 | ONS, Employment in the UK: July 2026 |
+| Estimated UK job vacancies | 712,000 | April to June 2026 | ONS, Vacancies and jobs in the UK: July 2026 |
+| Estimated unemployed people per vacancy | 2.5 | March to May 2026 | ONS, Vacancies and jobs in the UK: July 2026 |
 
-- ONS publication date: 18 June 2026
-- Date last checked: 13 July 2026
+- ONS publication date: 21 July 2026
+- Date last checked: 24 July 2026
 - Last review responsibility: project owner, supported by the pre-launch content review
-- Next scheduled ONS release shown on the June bulletin: 21 July 2026
+- Next scheduled ONS release shown on the July bulletin: 18 August 2026
+- Detailed claim-by-claim ledger: `docs/research/uk-job-market-statistics-2026-07.md`
 
 ## Official pages to check
 
@@ -22,7 +23,7 @@ The public figures are defined once in `src/app/content/labour-market-content.ts
 - [Vacancies and jobs in the UK](https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/employmentandemployeetypes/bulletins/jobsandvacanciesintheuk/latest)
 - [Labour market overview, UK](https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/employmentandemployeetypes/bulletins/uklabourmarket/latest)
 
-The website deliberately links to versioned `/june2026` releases so an unchanged figure cannot silently point at a newer bulletin.
+The website deliberately links to versioned `/july2026` releases so an unchanged figure cannot silently point at a newer bulletin.
 
 ## How to perform the next review
 
@@ -37,4 +38,4 @@ The website deliberately links to versioned `/june2026` releases so an unchanged
 9. Run the frontend tests, production build, link checks and responsive/accessibility review.
 10. Record the reviewer in the release checklist without publishing private personal details.
 
-If deployment is on or after 21 July 2026, check for the July release and replace the June values if it has been published. Statistics are manually reviewed; the page must not scrape ONS during normal loading.
+If deployment is on or after 18 August 2026, check for the August release and replace the July values if it has been published. Statistics are manually reviewed; the page must not scrape ONS during normal loading.

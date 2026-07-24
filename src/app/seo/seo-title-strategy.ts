@@ -95,10 +95,12 @@ export class SeoTitleStrategy extends TitleStrategy {
     };
     for (const [name, content] of Object.entries(nameTags)) this.meta.updateTag({ name, content });
 
-    if (seo.socialType === 'article') {
-      this.meta.updateTag({ property: 'article:published_time', content: seo.schema === 'comparison' ? '2026-07-16' : '2026-07-14' });
+    if (seo.socialType === 'article' && seo.article) {
+      this.meta.updateTag({ property: 'article:published_time', content: seo.article.publishedDate });
+      this.meta.updateTag({ property: 'article:modified_time', content: seo.article.modifiedDate });
     } else {
       this.meta.removeTag("property='article:published_time'");
+      this.meta.removeTag("property='article:modified_time'");
     }
   }
 
@@ -164,13 +166,13 @@ function schemaFor(kind: SeoSchemaKind, seo: SeoRouteData, canonicalUrl: string)
   return {
     '@context': 'https://schema.org',
     '@type': 'BlogPosting',
-    headline: 'How Job Seeker Copilot Compares with Today’s Job Search Platforms',
+    headline: seo.article?.headline ?? seo.title,
     description: seo.description,
-    datePublished: '2026-07-16',
-    dateModified: '2026-07-16',
+    datePublished: seo.article?.publishedDate,
+    dateModified: seo.article?.modifiedDate,
     mainEntityOfPage: canonicalUrl,
     inLanguage: 'en-GB',
-    author: { '@type': 'Person', name: 'Bernard McGeever' },
+    author: { '@type': 'Person', name: seo.article?.author },
     publisher: { '@id': `${CANONICAL_ORIGIN}/#organization`, '@type': 'Organization', name: 'Job Seeker Copilot' },
     image: SOCIAL_IMAGE_URL,
   };
@@ -179,9 +181,17 @@ function schemaFor(kind: SeoSchemaKind, seo: SeoRouteData, canonicalUrl: string)
 function isSeoRouteData(value: unknown): value is SeoRouteData {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const candidate = value as Partial<SeoRouteData>;
-  return typeof candidate.path === 'string' &&
+  const commonFieldsAreValid = typeof candidate.path === 'string' &&
     typeof candidate.title === 'string' &&
     typeof candidate.description === 'string' &&
     typeof candidate.indexable === 'boolean' &&
     (candidate.socialType === 'website' || candidate.socialType === 'article');
+  if (!commonFieldsAreValid) return false;
+  if (candidate.socialType !== 'article') return true;
+  const article = candidate.article;
+  return !!article &&
+    typeof article.headline === 'string' &&
+    typeof article.publishedDate === 'string' &&
+    typeof article.modifiedDate === 'string' &&
+    typeof article.author === 'string';
 }

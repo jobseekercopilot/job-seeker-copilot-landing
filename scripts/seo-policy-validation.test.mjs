@@ -44,7 +44,7 @@ test('SEO files are deterministic, canonical and gated for disabled and approved
     const enabledSitemap = await readFile(join(enabled, 'sitemap.xml'), 'utf8');
     assert.equal(disabledSitemap, enabledSitemap);
     const urls = [...enabledSitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match => match[1]);
-    assert.equal(urls.length, 8);
+    assert.equal(urls.length, 9);
     assert.equal(new Set(urls).size, urls.length);
     assert.ok(urls.every(url => url.startsWith(`${CANONICAL_PUBLIC_ORIGIN}/`)));
     assert.ok(urls.every(url => new URL(url).pathname === '/' || new URL(url).pathname.endsWith('/')));
@@ -57,7 +57,7 @@ test('SEO files are deterministic, canonical and gated for disabled and approved
 test('route metadata is complete and unique for approved public pages', async () => {
   const routes = JSON.parse(await readFile('src/app/seo/seo-routes.json', 'utf8'));
   const publicRoutes = Object.values(routes).filter(route => route.indexable);
-  assert.equal(publicRoutes.length, 8);
+  assert.equal(publicRoutes.length, 9);
   assert.equal(new Set(publicRoutes.map(route => route.path)).size, publicRoutes.length);
   assert.equal(new Set(publicRoutes.map(route => route.title)).size, publicRoutes.length);
   assert.equal(new Set(publicRoutes.map(route => route.description)).size, publicRoutes.length);

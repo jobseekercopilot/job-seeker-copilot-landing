@@ -7,7 +7,14 @@ export function canonicalPublicUrl(path: string): string {
   return `${CANONICAL_ORIGIN}${canonicalPath}`;
 }
 
-export type SeoSchemaKind = 'home' | 'faq' | 'comparison';
+export type SeoSchemaKind = 'home' | 'faq' | 'article';
+
+export interface SeoArticleData {
+  headline: string;
+  publishedDate: string;
+  modifiedDate: string;
+  author: string;
+}
 
 export interface SeoRouteData {
   path: string;
@@ -16,4 +23,5 @@ export interface SeoRouteData {
   indexable: boolean;
   socialType: 'website' | 'article';
   schema?: SeoSchemaKind;
+  article?: SeoArticleData;
 }

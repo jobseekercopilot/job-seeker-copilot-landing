@@ -12,7 +12,13 @@
     "title": "The Story Behind Job Seeker Copilot | The Journey So Far",
     "description": "Read why Bernard McGeever began building Job Seeker Copilot and the milestones that shaped the project’s journey so far.",
     "indexable": true,
-    "socialType": "article"
+    "socialType": "article",
+    "article": {
+      "headline": "The Story Behind Job Seeker Copilot",
+      "publishedDate": "2026-07-14",
+      "modifiedDate": "2026-07-14",
+      "author": "Bernard McGeever"
+    }
   },
   "faq": {
     "path": "/faq",
@@ -28,7 +34,27 @@
     "description": "An official-source comparison of Job Seeker Copilot with UK job boards and specialist job-search platforms across discovery, documents and tracking.",
     "indexable": true,
     "socialType": "article",
-    "schema": "comparison"
+    "schema": "article",
+    "article": {
+      "headline": "How Job Seeker Copilot Compares with Today’s Job Search Platforms",
+      "publishedDate": "2026-07-16",
+      "modifiedDate": "2026-07-16",
+      "author": "Bernard McGeever"
+    }
+  },
+  "statistics": {
+    "path": "/the-journey-so-far/uk-job-search-statistics",
+    "title": "The UK Job Search Has Changed: What the Statistics Tell Us",
+    "description": "A source-led look at UK unemployment, vacancies, youth unemployment, graduate competition and the work of organising a modern job search.",
+    "indexable": true,
+    "socialType": "article",
+    "schema": "article",
+    "article": {
+      "headline": "The UK Job Search Has Changed: What the Statistics Tell Us",
+      "publishedDate": "2026-07-24",
+      "modifiedDate": "2026-07-24",
+      "author": "Bernard McGeever"
+    }
   },
   "privacy": {
     "path": "/privacy",
