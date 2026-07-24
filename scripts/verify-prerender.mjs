@@ -8,6 +8,10 @@ const article = await readFile(
   join(output, 'the-journey-so-far', 'job-search-platform-comparison', 'index.html'),
   'utf8',
 );
+const statisticsArticle = await readFile(
+  join(output, 'the-journey-so-far', 'uk-job-search-statistics', 'index.html'),
+  'utf8',
+);
 const faq = await readFile(join(output, 'faq', 'index.html'), 'utf8');
 const contact = await readFile(join(output, 'contact', 'index.html'), 'utf8');
 const confirmation = await readFile(join(output, 'waitlist', 'confirm', 'index.html'), 'utf8');
@@ -21,6 +25,13 @@ const requirements = [
   [article, 'rel="canonical" href="https://www.jobseekercopilot.com/the-journey-so-far/job-search-platform-comparison"', 'canonical URL'],
   [article, '"@type":"BlogPosting"', 'BlogPosting structured data'],
   [article, 'Independent comparison.', 'comparison disclaimer'],
+  [statisticsArticle, 'The UK Job Search Has Changed: What the Statistics Tell Us', 'statistics article title'],
+  [statisticsArticle, 'Data last reviewed:', 'statistics article review date'],
+  [statisticsArticle, 'Methodology and limitations', 'statistics article methodology'],
+  [statisticsArticle, 'Sources and further reading', 'statistics article bibliography'],
+  [statisticsArticle, 'datePublished":"2026-07-24', 'statistics article structured publication date'],
+  [statisticsArticle, 'rel="canonical" href="https://www.jobseekercopilot.com/the-journey-so-far/uk-job-search-statistics"', 'statistics article canonical URL'],
+  [statisticsArticle, '"@type":"BlogPosting"', 'statistics article BlogPosting structured data'],
   [faq, 'Frequently Asked Questions', 'FAQ title'],
   [faq, 'Job Seeker Copilot currently has three direct job-data integrations', 'FAQ job-source answer'],
   [faq, 'Reed', 'Reed integration'],
@@ -34,7 +45,7 @@ for (const [html, expected, label] of requirements) {
   if (!html.includes(expected)) throw new Error(`Prerendered HTML is missing ${label}.`);
 }
 
-for (const html of [home, article, faq, contact, confirmation]) {
+for (const html of [home, article, statisticsArticle, faq, contact, confirmation]) {
   const inlineScripts = [...html.matchAll(/<script\b(?![^>]*\bsrc\s*=)[^>]*>([\s\S]*?)<\/script>/gi)];
   if (!html.includes('http-equiv="Content-Security-Policy"') ||
       !html.includes("script-src 'self'") ||

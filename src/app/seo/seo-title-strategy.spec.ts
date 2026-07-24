@@ -48,7 +48,19 @@ describe('SeoTitleStrategy', () => {
     strategy.updateTitle(snapshot(SEO_ROUTES.comparison));
     const articleSchema = JSON.parse(document.querySelector<HTMLScriptElement>('#seo-structured-data')?.textContent ?? '{}');
     expect(articleSchema['@type']).toBe('BlogPosting');
+    expect(articleSchema.headline).toBe('How Job Seeker Copilot Compares with Today’s Job Search Platforms');
+    expect(articleSchema.datePublished).toBe('2026-07-16');
     expect(articleSchema.mainEntityOfPage).toBe('https://www.jobseekercopilot.com/the-journey-so-far/job-search-platform-comparison');
+
+    strategy.updateTitle(snapshot(SEO_ROUTES.statistics));
+    const statisticsSchema = JSON.parse(document.querySelector<HTMLScriptElement>('#seo-structured-data')?.textContent ?? '{}');
+    expect(statisticsSchema['@type']).toBe('BlogPosting');
+    expect(statisticsSchema.headline).toBe('The UK Job Search Has Changed: What the Statistics Tell Us');
+    expect(statisticsSchema.datePublished).toBe('2026-07-24');
+    expect(statisticsSchema.dateModified).toBe('2026-07-24');
+    expect(statisticsSchema.mainEntityOfPage).toBe('https://www.jobseekercopilot.com/the-journey-so-far/uk-job-search-statistics');
+    expect(TestBed.inject(Meta).getTag('property="article:published_time"')?.content).toBe('2026-07-24');
+    expect(TestBed.inject(Meta).getTag('property="article:modified_time"')?.content).toBe('2026-07-24');
   });
 
   it('keeps every route noindex until the explicit launch gate is enabled', () => {

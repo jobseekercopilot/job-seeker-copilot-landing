@@ -35,6 +35,7 @@ const PUBLIC_ANALYTICS_PATHS = new Set([
   '/about',
   '/faq',
   '/the-journey-so-far/job-search-platform-comparison',
+  '/the-journey-so-far/uk-job-search-statistics',
   '/privacy',
   '/terms',
   '/contact',

@@ -27,6 +27,12 @@ export const routes: Routes = [
     data: { seo: SEO_ROUTES.comparison },
   },
   {
+    path: 'the-journey-so-far/uk-job-search-statistics',
+    loadComponent: () => import('./pages/job-market-statistics/job-market-statistics').then(module => module.JobMarketStatisticsPage),
+    title: SEO_ROUTES.statistics.title,
+    data: { seo: SEO_ROUTES.statistics },
+  },
+  {
     path: 'privacy',
     loadComponent: () => import('./pages/legal/legal-page').then(module => module.LegalPage),
     data: { page: 'privacy', seo: SEO_ROUTES.privacy },

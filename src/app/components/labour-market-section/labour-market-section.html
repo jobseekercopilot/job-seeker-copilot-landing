@@ -3,9 +3,12 @@
     <div class="section-copy">
       <span class="eyebrow">UK labour market</span>
       <h2 id="labour-market-heading" class="section-heading">The challenge facing UK job seekers.</h2>
-      <p class="section-intro">Finding work can involve searching across several websites, preparing different application documents and tracking multiple opportunities. Job Seeker Copilot is designed to bring those activities together in one organised workspace.</p>
+      <p class="section-intro">The UK job market is changing. Official statistics show that vacancies are below their pre-pandemic level and that there are more unemployed people for each vacancy than a year ago. Many job seekers must also manage applications, documents and follow-ups across several services.</p>
       <p class="context-note">These figures provide national context only. They do not measure Job Seeker Copilot’s effectiveness, imply government endorsement or predict an individual job-search outcome.</p>
-      <a class="reporting-faq-link" routerLink="/faq" fragment="work-search-reporting">Learn how Job Seeker Copilot aims to support work-search reporting.</a>
+      <p class="related-links">
+        <a routerLink="/the-journey-so-far/uk-job-search-statistics">Read the full Statistics article.</a>
+        <a routerLink="/faq" fragment="work-search-reporting">Learn how Job Seeker Copilot aims to support work-search reporting.</a>
+      </p>
     </div>
 
     <div class="statistics-grid" aria-label="Selected UK labour-market statistics">
@@ -14,13 +17,21 @@
           <p class="statistic-value">{{ statistic.value }}</p>
           <h3>{{ statistic.label }}</h3>
           <p class="statistic-description">{{ statistic.description }}</p>
+          <p class="statistic-comparison">{{ statistic.comparison }}</p>
           <p class="statistic-period"><strong>Measurement period:</strong> {{ statistic.period }}</p>
+          <p class="statistic-release">
+            <strong>Data released:</strong> {{ statistic.releaseDate }}
+            @if (statistic.isProvisional) {
+              <span class="provisional-label">Provisional early estimate</span>
+            }
+          </p>
           <p class="statistic-source">
             Source:
             <a [href]="statistic.sourceUrl" target="_blank" rel="noopener noreferrer">
-              {{ statistic.sourceName }}<span class="sr-only"> — {{ statistic.sourceTitle }} (opens in a new tab)</span>
+              {{ statistic.sourceOrganisation }}<span class="sr-only"> — {{ statistic.sourceTitle }} (opens in a new tab)</span>
             </a>
           </p>
+          <p class="statistic-classification">{{ statistic.sourceType }}</p>
         </article>
       }
     </div>
@@ -28,13 +39,13 @@
     <div class="source-panel">
       <div>
         <strong>Source: Office for National Statistics</strong>
-        <p>Last updated from the ONS UK labour-market releases published {{ content.publicationDate }}. Figures last checked {{ content.lastReviewed }}.</p>
-        <p class="quality-note">The employment and unemployment estimates are Labour Force Survey statistics classified by the ONS as official statistics in development, so short-term changes should be interpreted with care.</p>
+        <p>Updated from the ONS UK labour-market releases published {{ content.publicationDate }}. Figures last checked {{ content.lastReviewed }}; next scheduled review {{ content.nextReviewDate }}.</p>
+        <p class="quality-note">Labour Force Survey estimates are official statistics in development, not accredited official statistics. ONS revised LFS data back to January to March 2020 in this release and advises caution with short-term movements.</p>
       </div>
       <nav aria-label="Official labour-market sources">
         @for (source of content.sources; track source.title) {
           <a [href]="source.url" target="_blank" rel="noopener noreferrer">
-            {{ source.title }} <span aria-hidden="true">↗</span><span class="sr-only"> (opens in a new tab)</span>
+            {{ source.title }} <span aria-hidden="true">↗</span><span class="sr-only"> — {{ source.type }} (opens in a new tab)</span>
           </a>
         }
       </nav>
