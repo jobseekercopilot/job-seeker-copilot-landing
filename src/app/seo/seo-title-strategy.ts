@@ -10,6 +10,7 @@ import {
   SOCIAL_IMAGE_URL,
   SeoRouteData,
   SeoSchemaKind,
+  canonicalPublicUrl,
 } from './seo-route-data';
 
 const INDEX_ROBOTS = 'index, follow, max-image-preview:large';
@@ -32,7 +33,7 @@ export class SeoTitleStrategy extends TitleStrategy {
       return;
     }
 
-    const canonicalUrl = `${CANONICAL_ORIGIN}${seo.path}`;
+    const canonicalUrl = canonicalPublicUrl(seo.path);
     this.title.setTitle(seo.title);
     this.meta.updateTag({ name: 'description', content: seo.description });
     this.meta.updateTag({

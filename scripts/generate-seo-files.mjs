@@ -7,7 +7,7 @@ const routeSource = JSON.parse(await readFile('src/app/seo/seo-routes.json', 'ut
 const indexingEnabled = resolveSearchIndexingEnabled();
 const urls = Object.values(routeSource)
   .filter(route => route.indexable === true)
-  .map(route => new URL(route.path, CANONICAL_PUBLIC_ORIGIN).toString());
+  .map(route => canonicalPublicUrl(route.path));
 
 validateUrls(urls);
 await mkdir(outputDirectory, { recursive: true });
@@ -28,6 +28,11 @@ function validateUrls(values) {
       throw new Error('Sitemap contains a private, action, API or error route.');
     }
   }
+}
+
+function canonicalPublicUrl(path) {
+  const canonicalPath = path === '/' ? '/' : `${path.replace(/\/+$/, '')}/`;
+  return `${CANONICAL_PUBLIC_ORIGIN}${canonicalPath}`;
 }
 
 function sitemap(values) {
