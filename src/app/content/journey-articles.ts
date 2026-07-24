@@ -9,7 +9,7 @@ export interface JourneyArticle {
 export const JOURNEY_ARTICLES: readonly JourneyArticle[] = [
   {
     label: 'Statistics',
-    title: 'The UK Job Search Has Changed: What the Statistics Tell Us',
+    title: 'The UK Job Market in 2026: What the Statistics Show',
     path: '/the-journey-so-far/uk-job-search-statistics',
     publishedDate: '24 July 2026',
     dateTime: '2026-07-24',
