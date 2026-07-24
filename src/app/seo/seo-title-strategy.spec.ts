@@ -56,7 +56,7 @@ describe('SeoTitleStrategy', () => {
     strategy.updateTitle(snapshot(SEO_ROUTES.statistics));
     const statisticsSchema = JSON.parse(document.querySelector<HTMLScriptElement>('#seo-structured-data')?.textContent ?? '{}');
     expect(statisticsSchema['@type']).toBe('BlogPosting');
-    expect(statisticsSchema.headline).toBe('The UK Job Search Has Changed: What the Statistics Tell Us');
+    expect(statisticsSchema.headline).toBe('The UK Job Market in 2026: What the Statistics Show');
     expect(statisticsSchema.datePublished).toBe('2026-07-24');
     expect(statisticsSchema.dateModified).toBe('2026-07-24');
     expect(statisticsSchema.mainEntityOfPage).toBe('https://www.jobseekercopilot.com/the-journey-so-far/uk-job-search-statistics/');
