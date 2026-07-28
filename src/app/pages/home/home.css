@@ -61,6 +61,45 @@
   max-width: 620px;
 }
 
+.application-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.application-actions .button {
+  min-height: 50px;
+}
+
+.sign-in-link {
+  border-radius: var(--radius-control);
+  color: var(--colour-primary);
+  font-weight: 800;
+  padding: 11px 8px;
+  text-underline-offset: 4px;
+}
+
+.beta-access-note {
+  color: var(--colour-text-soft);
+  font-size: 0.88rem;
+  margin-bottom: 22px;
+}
+
+.beta-access-note a {
+  font-weight: 800;
+  text-underline-offset: 4px;
+}
+
+.application-actions-on-dark {
+  margin-block: 24px 0;
+}
+
+.application-actions-on-dark .sign-in-link {
+  color: #ffffff;
+}
+
 .hero-reassurance {
   color: var(--colour-text-muted);
   display: flex;
@@ -281,7 +320,7 @@
 .contextual-faq-link {
   color: #536071;
   font-size: 0.86rem;
-  margin: -5px 0 21px;
+  margin: 4px 0 21px;
 }
 
 .contextual-faq-link a,
@@ -357,5 +396,15 @@
 
   .features {
     padding-top: 76px;
+  }
+
+  .application-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .application-actions .button,
+  .application-actions .sign-in-link {
+    width: 100%;
   }
 }

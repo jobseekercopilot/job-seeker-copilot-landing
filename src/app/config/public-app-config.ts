@@ -29,6 +29,8 @@ export interface PublicAppConfig {
   copyrightNotice: string;
 }
 
+const PRODUCTION_APPLICATION_ORIGIN = 'https://app.jobseekercopilot.com';
+
 export const DEFAULT_PUBLIC_APP_CONFIG: PublicAppConfig = {
   environmentName: 'development',
   enableLiveSubmissions: false,
@@ -68,10 +70,11 @@ export function setPublicAppConfig(value: unknown): void {
   const publicWebsiteUrl = asString(value['publicWebsiteUrl'], DEFAULT_PUBLIC_APP_CONFIG.publicWebsiteUrl);
   const analyticsEndpointUrl = asString(value['analyticsEndpointUrl'], DEFAULT_PUBLIC_APP_CONFIG.analyticsEndpointUrl);
   const waitlistApiUrl = asString(value['waitlistApiUrl'], DEFAULT_PUBLIC_APP_CONFIG.waitlistApiUrl);
+  const resolvedEnvironmentName = isEnvironmentName(environmentName)
+    ? environmentName
+    : DEFAULT_PUBLIC_APP_CONFIG.environmentName;
   loadedConfig = {
-    environmentName: isEnvironmentName(environmentName)
-      ? environmentName
-      : DEFAULT_PUBLIC_APP_CONFIG.environmentName,
+    environmentName: resolvedEnvironmentName,
     enableLiveSubmissions: value['enableLiveSubmissions'] === true,
     searchIndexingEnabled: value['searchIndexingEnabled'] === true &&
       environmentName === 'production' && publicWebsiteUrl === 'https://www.jobseekercopilot.com',
@@ -84,9 +87,9 @@ export function setPublicAppConfig(value: unknown): void {
     waitlistResendApiUrl: asString(value['waitlistResendApiUrl'], DEFAULT_PUBLIC_APP_CONFIG.waitlistResendApiUrl),
     waitlistUnsubscribeApiUrl: asString(value['waitlistUnsubscribeApiUrl'], DEFAULT_PUBLIC_APP_CONFIG.waitlistUnsubscribeApiUrl),
     contactApiUrl: asString(value['contactApiUrl'], DEFAULT_PUBLIC_APP_CONFIG.contactApiUrl),
-    mainApplicationUrl: asString(value['mainApplicationUrl'], DEFAULT_PUBLIC_APP_CONFIG.mainApplicationUrl),
-    registrationUrl: asString(value['registrationUrl'], DEFAULT_PUBLIC_APP_CONFIG.registrationUrl),
-    signInUrl: asString(value['signInUrl'], DEFAULT_PUBLIC_APP_CONFIG.signInUrl),
+    mainApplicationUrl: asApplicationUrl(value['mainApplicationUrl'], resolvedEnvironmentName),
+    registrationUrl: asApplicationUrl(value['registrationUrl'], resolvedEnvironmentName, '/register'),
+    signInUrl: asApplicationUrl(value['signInUrl'], resolvedEnvironmentName, '/sign-in'),
     pricingUrl: asString(value['pricingUrl'], DEFAULT_PUBLIC_APP_CONFIG.pricingUrl),
     publicWebsiteUrl,
     privacyPolicyUrl: asString(value['privacyPolicyUrl'], DEFAULT_PUBLIC_APP_CONFIG.privacyPolicyUrl),
@@ -130,6 +133,32 @@ function asPositiveNumber(value: unknown, fallback: number): number {
 
 function asString(value: unknown, fallback: string): string {
   return typeof value === 'string' ? value.trim() : fallback;
+}
+
+function asApplicationUrl(
+  value: unknown,
+  environmentName: PublicEnvironmentName,
+  requiredPath?: string,
+): string {
+  const candidate = asString(value, '');
+  if (!candidate) return '';
+
+  try {
+    const url = new URL(candidate);
+    const isLocalDevelopmentUrl = environmentName !== 'production' &&
+      (url.hostname === 'localhost' || url.hostname === '127.0.0.1') &&
+      (url.protocol === 'http:' || url.protocol === 'https:');
+    const isApprovedHostedUrl = url.protocol === 'https:' &&
+      url.origin === PRODUCTION_APPLICATION_ORIGIN;
+    const hasSafeShape = !url.username && !url.password && !url.search && !url.hash;
+    const hasExpectedPath = requiredPath ? url.pathname === requiredPath : url.pathname === '/';
+
+    return (isLocalDevelopmentUrl || isApprovedHostedUrl) && hasSafeShape && hasExpectedPath
+      ? url.toString()
+      : '';
+  } catch {
+    return '';
+  }
 }
 
 function isQueryFreeHttpsAnalyticsEndpoint(value: string, waitlistApiUrl: string): boolean {

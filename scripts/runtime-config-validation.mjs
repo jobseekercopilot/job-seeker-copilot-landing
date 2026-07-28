@@ -20,6 +20,39 @@ export function validateLiveSubmissionConfig(value) {
   }
 }
 
+export function validateApplicationAccessConfig(value) {
+  const routes = [
+    ['MAIN_APPLICATION_URL', value.mainApplicationUrl, '/'],
+    ['REGISTRATION_URL', value.registrationUrl, '/register'],
+    ['SIGN_IN_URL', value.signInUrl, '/sign-in'],
+  ];
+  const configuredCount = routes.filter(([, endpoint]) => Boolean(endpoint)).length;
+  if (configuredCount === 0) return;
+  if (configuredCount !== routes.length) {
+    throw new Error('Application access requires MAIN_APPLICATION_URL, REGISTRATION_URL and SIGN_IN_URL together.');
+  }
+
+  for (const [name, endpoint, requiredPath] of routes) {
+    let parsed;
+    try {
+      parsed = new URL(endpoint);
+    } catch {
+      throw new Error(`${name} must be a valid absolute URL when application access is configured.`);
+    }
+    const isProductionApplication = parsed.protocol === 'https:' &&
+      parsed.origin === 'https://app.jobseekercopilot.com';
+    const isLocalDevelopment = value.environmentName !== 'production' &&
+      (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') &&
+      (parsed.protocol === 'http:' || parsed.protocol === 'https:');
+    if (!isProductionApplication && !isLocalDevelopment) {
+      throw new Error(`${name} must use the approved application origin or an explicit local development origin.`);
+    }
+    if (parsed.username || parsed.password || parsed.search || parsed.hash || parsed.pathname !== requiredPath) {
+      throw new Error(`${name} must be a credential-free, query-free application route with path ${requiredPath}.`);
+    }
+  }
+}
+
 export function validateSearchIndexingConfig(value) {
   if (!value.searchIndexingEnabled) return;
   if (value.environmentName !== 'production' || value.publicWebsiteUrl !== 'https://www.jobseekercopilot.com') {

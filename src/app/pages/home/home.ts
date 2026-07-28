@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { PUBLIC_APP_CONFIG } from '../../config/public-app-config';
 import { AccessibilitySectionComponent } from '../../components/accessibility-section/accessibility-section';
 import { CompetitorComparisonSectionComponent } from '../../components/competitor-comparison-section/competitor-comparison-section';
 import { EmailSignupFormComponent } from '../../components/email-signup-form/email-signup-form';
@@ -35,6 +36,13 @@ import { WaitlistOfferComponent } from '../../components/waitlist-offer/waitlist
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HomePage {
+  protected readonly appConfig = inject(PUBLIC_APP_CONFIG);
+  protected readonly applicationAccessAvailable = Boolean(
+    this.appConfig.mainApplicationUrl &&
+    this.appConfig.registrationUrl &&
+    this.appConfig.signInUrl,
+  );
+
   protected readonly features: LandingFeature[] = [
     {
       id: 'multi-source-search',

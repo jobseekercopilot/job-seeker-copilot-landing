@@ -89,3 +89,55 @@ describe('public analytics configuration', () => {
     expect(TestBed.inject(PUBLIC_APP_CONFIG).analyticsEnabled).toBe(false);
   });
 });
+
+describe('public application entrance configuration', () => {
+  afterEach(() => {
+    TestBed.resetTestingModule();
+    setPublicAppConfig(DEFAULT_PUBLIC_APP_CONFIG);
+  });
+
+  it('accepts only the approved hosted application routes in production', () => {
+    setPublicAppConfig({
+      ...DEFAULT_PUBLIC_APP_CONFIG,
+      environmentName: 'production',
+      mainApplicationUrl: 'https://app.jobseekercopilot.com',
+      registrationUrl: 'https://app.jobseekercopilot.com/register',
+      signInUrl: 'https://app.jobseekercopilot.com/sign-in',
+    });
+
+    const config = TestBed.inject(PUBLIC_APP_CONFIG);
+    expect(config.mainApplicationUrl).toBe('https://app.jobseekercopilot.com/');
+    expect(config.registrationUrl).toBe('https://app.jobseekercopilot.com/register');
+    expect(config.signInUrl).toBe('https://app.jobseekercopilot.com/sign-in');
+  });
+
+  it('fails closed for an unexpected production origin or token-bearing URL', () => {
+    setPublicAppConfig({
+      ...DEFAULT_PUBLIC_APP_CONFIG,
+      environmentName: 'production',
+      mainApplicationUrl: 'https://example.test',
+      registrationUrl: 'https://app.jobseekercopilot.com/register?token=secret',
+      signInUrl: 'https://app.jobseekercopilot.com/sign-in#fragment',
+    });
+
+    const config = TestBed.inject(PUBLIC_APP_CONFIG);
+    expect(config.mainApplicationUrl).toBe('');
+    expect(config.registrationUrl).toBe('');
+    expect(config.signInUrl).toBe('');
+  });
+
+  it('allows explicit localhost routes outside production', () => {
+    setPublicAppConfig({
+      ...DEFAULT_PUBLIC_APP_CONFIG,
+      environmentName: 'development',
+      mainApplicationUrl: 'http://localhost:4200',
+      registrationUrl: 'http://localhost:4200/register',
+      signInUrl: 'http://localhost:4200/sign-in',
+    });
+
+    const config = TestBed.inject(PUBLIC_APP_CONFIG);
+    expect(config.mainApplicationUrl).toBe('http://localhost:4200/');
+    expect(config.registrationUrl).toBe('http://localhost:4200/register');
+    expect(config.signInUrl).toBe('http://localhost:4200/sign-in');
+  });
+});

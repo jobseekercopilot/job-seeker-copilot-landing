@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   validateAnalyticsConfig,
+  validateApplicationAccessConfig,
   validateLiveSubmissionConfig,
   validateSearchIndexingConfig,
 } from './runtime-config-validation.mjs';
@@ -63,6 +64,61 @@ describe('live submission runtime configuration', () => {
       waitlistConfirmationApiUrl: '/waitlist/confirm',
       waitlistResendApiUrl: '/waitlist/resend',
       contactApiUrl: '/contact',
+    }));
+  });
+});
+
+describe('application access runtime configuration', () => {
+  const applicationRoutes = {
+    environmentName: 'production',
+    mainApplicationUrl: 'https://app.jobseekercopilot.com',
+    registrationUrl: 'https://app.jobseekercopilot.com/register',
+    signInUrl: 'https://app.jobseekercopilot.com/sign-in',
+  };
+
+  it('allows access to stay safely disabled', () => {
+    assert.doesNotThrow(() => validateApplicationAccessConfig({
+      environmentName: 'production',
+      mainApplicationUrl: '',
+      registrationUrl: '',
+      signInUrl: '',
+    }));
+  });
+
+  it('accepts the complete approved hosted route set', () => {
+    assert.doesNotThrow(() => validateApplicationAccessConfig(applicationRoutes));
+  });
+
+  it('rejects an incomplete route set', () => {
+    assert.throws(
+      () => validateApplicationAccessConfig({ ...applicationRoutes, signInUrl: '' }),
+      /requires MAIN_APPLICATION_URL, REGISTRATION_URL and SIGN_IN_URL together/,
+    );
+  });
+
+  it('rejects another host and token-bearing routes', () => {
+    assert.throws(
+      () => validateApplicationAccessConfig({
+        ...applicationRoutes,
+        mainApplicationUrl: 'https://example.test',
+      }),
+      /approved application origin/,
+    );
+    assert.throws(
+      () => validateApplicationAccessConfig({
+        ...applicationRoutes,
+        registrationUrl: 'https://app.jobseekercopilot.com/register?token=secret',
+      }),
+      /credential-free, query-free application route/,
+    );
+  });
+
+  it('accepts explicit localhost routes outside production', () => {
+    assert.doesNotThrow(() => validateApplicationAccessConfig({
+      environmentName: 'development',
+      mainApplicationUrl: 'http://localhost:4200',
+      registrationUrl: 'http://localhost:4200/register',
+      signInUrl: 'http://localhost:4200/sign-in',
     }));
   });
 });

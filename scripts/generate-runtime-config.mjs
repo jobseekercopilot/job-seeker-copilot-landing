@@ -3,6 +3,7 @@ import { dirname, resolve } from 'node:path';
 import { resolveAnalyticsEnabled } from './analytics-policy.mjs';
 import {
   validateAnalyticsConfig,
+  validateApplicationAccessConfig,
   validateLiveSubmissionConfig,
   validateSearchIndexingConfig,
 } from './runtime-config-validation.mjs';
@@ -38,6 +39,7 @@ const config = {
 };
 
 validateLiveSubmissionConfig(config);
+validateApplicationAccessConfig(config);
 validateSearchIndexingConfig(config);
 validateAnalyticsConfig(config);
 

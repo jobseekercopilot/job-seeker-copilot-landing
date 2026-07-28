@@ -2,18 +2,18 @@ import { provideHttpClient } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { DEFAULT_EARLY_ACCESS_OFFER_CONFIG, EARLY_ACCESS_OFFER_CONFIG } from '../../config/early-access-offer';
-import { DEFAULT_PUBLIC_APP_CONFIG, PUBLIC_APP_CONFIG } from '../../config/public-app-config';
+import { DEFAULT_PUBLIC_APP_CONFIG, PUBLIC_APP_CONFIG, PublicAppConfig } from '../../config/public-app-config';
 import { HomePage } from './home';
 
 describe('HomePage', () => {
-  async function createHomeFixture() {
+  async function createHomeFixture(config: PublicAppConfig = DEFAULT_PUBLIC_APP_CONFIG) {
     await TestBed.configureTestingModule({
       imports: [HomePage],
       providers: [
         provideHttpClient(),
         provideRouter([]),
         { provide: EARLY_ACCESS_OFFER_CONFIG, useValue: DEFAULT_EARLY_ACCESS_OFFER_CONFIG },
-        { provide: PUBLIC_APP_CONFIG, useValue: DEFAULT_PUBLIC_APP_CONFIG },
+        { provide: PUBLIC_APP_CONFIG, useValue: config },
       ],
     }).compileComponents();
 
@@ -21,6 +21,8 @@ describe('HomePage', () => {
     fixture.detectChanges();
     return fixture;
   }
+
+  afterEach(() => TestBed.resetTestingModule());
 
   it('uses the same offer data in the opening and final waitlist sections', async () => {
     const fixture = await createHomeFixture();
@@ -64,5 +66,40 @@ describe('HomePage', () => {
     expect(hrefs).toContain('/faq#work-search-reporting');
     expect(root.querySelector('footer a[href="/faq"]')?.textContent).toContain('Frequently Asked Questions');
     expect(root.querySelector('footer a[href="/about"]')?.textContent).toContain('The Journey So Far');
+  });
+
+  it('makes the hosted private-beta application the primary journey when configured', async () => {
+    const fixture = await createHomeFixture({
+      ...DEFAULT_PUBLIC_APP_CONFIG,
+      mainApplicationUrl: 'https://app.jobseekercopilot.com/',
+      registrationUrl: 'https://app.jobseekercopilot.com/register',
+      signInUrl: 'https://app.jobseekercopilot.com/sign-in',
+    });
+    const root = fixture.nativeElement as HTMLElement;
+    const hero = root.querySelector('.hero') as HTMLElement;
+
+    expect(hero.textContent).toContain('Private beta · Application access');
+    expect(hero.querySelector<HTMLAnchorElement>('a[href="https://app.jobseekercopilot.com/"]')?.textContent)
+      .toContain('Open Job Seeker Copilot');
+    expect(hero.querySelector<HTMLAnchorElement>('a[href="https://app.jobseekercopilot.com/register"]')?.textContent)
+      .toContain('Create account');
+    expect(hero.querySelector<HTMLAnchorElement>('a[href="https://app.jobseekercopilot.com/sign-in"]')?.textContent)
+      .toContain('Sign in');
+    expect(hero.querySelector('app-email-signup-form')).toBeNull();
+    expect(root.querySelector('#waitlist app-email-signup-form')).toBeTruthy();
+    expect(root.textContent).toContain('Access is currently by invitation');
+  });
+
+  it('keeps the waitlist primary when the hosted route set is incomplete', async () => {
+    const fixture = await createHomeFixture({
+      ...DEFAULT_PUBLIC_APP_CONFIG,
+      mainApplicationUrl: 'https://app.jobseekercopilot.com/',
+    });
+    const root = fixture.nativeElement as HTMLElement;
+    const hero = root.querySelector('.hero') as HTMLElement;
+
+    expect(hero.textContent).toContain('Private beta · Request access');
+    expect(hero.querySelector('app-email-signup-form')).toBeTruthy();
+    expect(hero.querySelector('a[href^="https://app.jobseekercopilot.com"]')).toBeNull();
   });
 });

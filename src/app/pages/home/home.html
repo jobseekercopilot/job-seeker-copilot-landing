@@ -4,12 +4,26 @@
   <section class="hero" aria-labelledby="hero-heading">
     <div class="hero-grid container">
       <div class="hero-copy">
-        <span class="status-pill"><i aria-hidden="true"></i>Coming soon · Waitlist open</span>
+        <span class="status-pill">
+          <i aria-hidden="true"></i>
+          Private beta · {{ applicationAccessAvailable ? 'Application access' : 'Request access' }}
+        </span>
         <h1 id="hero-heading">Your whole job search, <span>working together.</span></h1>
         <p class="hero-lead">Find roles across supported job sites, generate a tailored CV and cover letter together for each opportunity, keep the latest versions organised and track what happens next.</p>
+        @if (applicationAccessAvailable) {
+          <div class="application-actions" aria-label="Private beta application access">
+            <a class="button button-primary" [href]="appConfig.mainApplicationUrl">Open Job Seeker Copilot</a>
+            <a class="button button-secondary" [href]="appConfig.registrationUrl">Create account</a>
+            <a class="sign-in-link" [href]="appConfig.signInUrl">Sign in</a>
+          </div>
+          <p class="beta-access-note">
+            Access is currently by invitation. <a routerLink="/" fragment="waitlist">Request beta access.</a>
+          </p>
+        } @else {
+          <app-waitlist-offer context="hero" />
+          <app-email-signup-form context="hero" />
+        }
         <p class="contextual-faq-link">Have questions about how it works? <a routerLink="/faq">Read the FAQs.</a></p>
-        <app-waitlist-offer context="hero" />
-        <app-email-signup-form context="hero" />
         <div class="hero-reassurance" aria-label="Product highlights">
           <span><i aria-hidden="true">✓</i>One calm workspace</span>
           <span><i aria-hidden="true">✓</i>Job-specific documents</span>
@@ -75,9 +89,20 @@
   <section id="waitlist" class="final-cta" aria-labelledby="waitlist-heading">
     <div class="container final-cta-inner">
       <div>
-        <span class="cta-kicker">Waitlist open</span>
-        <h2 id="waitlist-heading">Ready for a more organised job search?</h2>
-        <p>Register your interest now. Invitations and product account creation happen separately.</p>
+        <span class="cta-kicker">{{ applicationAccessAvailable ? 'Private beta' : 'Waitlist open' }}</span>
+        <h2 id="waitlist-heading">
+          {{ applicationAccessAvailable ? 'Open your job-search workspace.' : 'Ready for a more organised job search?' }}
+        </h2>
+        <p>{{ applicationAccessAvailable
+          ? 'Already invited? Open the application, create your account or sign in.'
+          : 'Register your interest now. Invitations and product account creation happen separately.' }}</p>
+        @if (applicationAccessAvailable) {
+          <div class="application-actions application-actions-on-dark" aria-label="Private beta application access">
+            <a class="button button-primary" [href]="appConfig.mainApplicationUrl">Open Job Seeker Copilot</a>
+            <a class="button button-secondary" [href]="appConfig.registrationUrl">Create account</a>
+            <a class="sign-in-link" [href]="appConfig.signInUrl">Sign in</a>
+          </div>
+        }
         <app-waitlist-offer context="final" />
         <p class="final-faq-link">Not ready to join yet? <a routerLink="/faq">Read the FAQs.</a></p>
       </div>
