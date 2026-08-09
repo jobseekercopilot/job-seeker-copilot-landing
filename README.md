@@ -1,5 +1,11 @@
 # Job Seeker Copilot landing page
 
+## Role in Job Seeker Copilot
+
+This is the public marketing/waitlist/contact site, separate from the authenticated Angular/Express application and local microservice Compose stack. It is called by public visitors and uses its own AWS-backed deployment boundaries; it does not own claimant profiles, jobs, applications, documents, or payments.
+
+See the central [product overview](https://docs.jobseekercopilot.com/product/overview/), [service catalogue](https://docs.jobseekercopilot.com/services/catalogue/), and [implementation status](https://docs.jobseekercopilot.com/reference/implementation-status/).
+
 Standalone public landing page for Job Seeker Copilot. This Angular application is intentionally separate from `../job-seeker-copilot-client`: it has its own dependencies, build and runtime configuration. The Angular frontend and its AWS SAM/Python backend remain together in this repository. It copies approved brand assets and screenshots, but has no runtime dependency on the main client.
 
 The public site and waiting-list AWS resources are deployed, but they are not yet verified for launch. The [22 July 2026 current-state audit](./docs/launch/current-state-audit-2026-07-22.md) records the deployed architecture, validation baseline and P0/P1 blockers. Do not treat the public hostname as launch-ready until the linked epic is complete.
