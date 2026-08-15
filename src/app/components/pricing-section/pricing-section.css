@@ -15,6 +15,10 @@
   margin-bottom: 0;
 }
 
+.pricing-heading .section-intro {
+  margin-top: 18px;
+}
+
 .free-credit-note {
   align-items: center;
   background: var(--colour-teal-soft);
@@ -67,6 +71,20 @@
   min-width: 0;
   padding: clamp(22px, 2.4vw, 30px);
   transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.pricing-card-featured {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px #2563eb, var(--shadow-card);
+}
+
+.featured-label {
+  color: #1d4ed8;
+  font-size: 0.67rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  margin-bottom: 12px;
+  text-transform: uppercase;
 }
 
 .pricing-card:hover {
@@ -127,44 +145,26 @@
   width: 100%;
 }
 
-.early-access-credit-note {
-  align-items: center;
+.credit-rules {
   background: #f7fbff;
   border: 1px solid #b7d1f8;
   border-radius: var(--radius-card);
   display: grid;
   gap: 24px;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   margin-top: 24px;
   padding: clamp(22px, 4vw, 32px);
 }
 
-.promotion-label {
-  color: #174ea6;
-  display: block;
-  font-size: 0.68rem;
-  font-weight: 850;
-  letter-spacing: 0.09em;
-  margin-bottom: 7px;
-  text-transform: uppercase;
-}
-
-.early-access-credit-note h3 {
+.credit-rules h3 {
   font-size: clamp(1.15rem, 2.4vw, 1.45rem);
   margin-bottom: 7px;
 }
 
-.early-access-credit-note p {
+.credit-rules p {
   color: var(--colour-text-soft);
   font-size: 0.83rem;
-  margin: 0 0 5px;
-}
-
-.early-access-credit-note small {
-  color: var(--colour-text-muted);
-  display: block;
-  font-size: 0.7rem;
-  line-height: 1.5;
+  margin: 0;
 }
 
 .pricing-note {
@@ -195,7 +195,7 @@
     grid-template-columns: 1fr;
   }
 
-  .early-access-credit-note {
+  .credit-rules {
     align-items: start;
     grid-template-columns: 1fr;
   }

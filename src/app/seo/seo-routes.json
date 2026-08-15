@@ -17,7 +17,7 @@
   "faq": {
     "path": "/faq",
     "title": "Frequently Asked Questions | Job Seeker Copilot",
-    "description": "Answers about Job Seeker Copilot, supported job sources, tailored application documents, private beta access and planned work-search reporting.",
+    "description": "Answers about Job Seeker Copilot, supported job sources, tailored application documents, public beta availability and planned work-search reporting.",
     "indexable": true,
     "socialType": "website",
     "schema": "faq"
@@ -47,7 +47,7 @@
   "contact": {
     "path": "/contact",
     "title": "Contact | Job Seeker Copilot",
-    "description": "Contact Job Seeker Copilot through the company enquiry channel for product, accessibility, privacy or early-access questions.",
+    "description": "Contact Job Seeker Copilot through the public enquiry channel for product, accessibility, privacy or early-access questions.",
     "indexable": true,
     "socialType": "website"
   },

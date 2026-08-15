@@ -4,7 +4,6 @@ import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { Observable, of, Subject, throwError } from 'rxjs';
 import { AnalyticsService } from '../../analytics/analytics.service';
-import { DEFAULT_EARLY_ACCESS_OFFER_CONFIG, EARLY_ACCESS_OFFER_CONFIG } from '../../config/early-access-offer';
 import { DEFAULT_PUBLIC_APP_CONFIG, PUBLIC_APP_CONFIG } from '../../config/public-app-config';
 import { WaitlistResult, WaitlistService } from '../../services/waitlist.service';
 import { EmailSignupFormComponent } from './email-signup-form';
@@ -36,7 +35,6 @@ describe('EmailSignupFormComponent', () => {
       imports: [EmailSignupFormComponent],
       providers: [
         provideRouter([]),
-        { provide: EARLY_ACCESS_OFFER_CONFIG, useValue: DEFAULT_EARLY_ACCESS_OFFER_CONFIG },
         { provide: PUBLIC_APP_CONFIG, useValue: DEFAULT_PUBLIC_APP_CONFIG },
         { provide: WaitlistService, useClass: WaitlistServiceStub },
         { provide: AnalyticsService, useClass: AnalyticsServiceStub },

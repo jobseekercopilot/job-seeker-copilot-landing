@@ -5,7 +5,7 @@
       <img src="/brand/jobseeker-copilot-logo.svg" width="38" height="38" alt="">
       <span>Job Seeker Copilot</span>
     </a>
-    <a class="back-link" routerLink="/">Back to the waiting list</a>
+    <a class="back-link" routerLink="/">Back to the homepage</a>
   </div>
 </header>
 
@@ -65,8 +65,13 @@
 
       <section aria-labelledby="building-responsibly">
       <h2 id="building-responsibly">Building it responsibly</h2>
-      <p>The waiting list exists because I want to validate that people genuinely need this before investing heavily in it. I do not believe in building products that nobody wants, or in deciding what people need without listening to them.</p>
-      <p>Launching with a waiting list gives early users a chance to influence the product before registrations open. I expect Job Seeker Copilot to evolve significantly as I listen to people using it, learn where the difficult parts really are and understand what would make the biggest practical difference.</p>
+      @if (config.publicBetaEnabled) {
+        <p>The public beta exists because I want to learn from people using the product before investing heavily in assumptions. I do not believe in building products that nobody wants, or in deciding what people need without listening to them.</p>
+        <p>Opening a public beta gives early users a chance to influence the product while it is still evolving. I expect Job Seeker Copilot to change significantly as I learn where the difficult parts really are and understand what would make the biggest practical difference.</p>
+      } @else {
+        <p>The waiting list exists because I want to validate that people genuinely need this before investing heavily in it. I do not believe in building products that nobody wants, or in deciding what people need without listening to them.</p>
+        <p>Launching with a waiting list gives early users a chance to influence the product before registrations open. I expect Job Seeker Copilot to evolve significantly as I listen to people using it, learn where the difficult parts really are and understand what would make the biggest practical difference.</p>
+      }
       </section>
 
       <section aria-labelledby="a-tool-not-the-purpose">

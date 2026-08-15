@@ -1,19 +1,17 @@
 import { provideHttpClient } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { DEFAULT_EARLY_ACCESS_OFFER_CONFIG, EARLY_ACCESS_OFFER_CONFIG } from '../../config/early-access-offer';
 import { DEFAULT_PUBLIC_APP_CONFIG, PUBLIC_APP_CONFIG } from '../../config/public-app-config';
 import { HomePage } from './home';
 
 describe('HomePage', () => {
-  async function createHomeFixture() {
+  async function createHomeFixture(publicConfig = DEFAULT_PUBLIC_APP_CONFIG) {
     await TestBed.configureTestingModule({
       imports: [HomePage],
       providers: [
         provideHttpClient(),
         provideRouter([]),
-        { provide: EARLY_ACCESS_OFFER_CONFIG, useValue: DEFAULT_EARLY_ACCESS_OFFER_CONFIG },
-        { provide: PUBLIC_APP_CONFIG, useValue: DEFAULT_PUBLIC_APP_CONFIG },
+        { provide: PUBLIC_APP_CONFIG, useValue: publicConfig },
       ],
     }).compileComponents();
 
@@ -22,15 +20,28 @@ describe('HomePage', () => {
     return fixture;
   }
 
-  it('uses the same offer data in the opening and final waitlist sections', async () => {
+  it('keeps account links fail closed and shows the waitlist before beta activation', async () => {
     const fixture = await createHomeFixture();
-    const summaries = Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('.offer-summary'))
-      .map(element => element.textContent?.trim());
+    expect(fixture.nativeElement.querySelectorAll('app-email-signup-form')).toHaveLength(2);
+    expect(fixture.nativeElement.textContent).toContain('Public beta in preparation');
+    expect(fixture.nativeElement.querySelector('a[href^="https://app."]')).toBeNull();
+  });
 
-    expect(summaries).toEqual([
-      DEFAULT_EARLY_ACCESS_OFFER_CONFIG.offerSummary,
-      DEFAULT_EARLY_ACCESS_OFFER_CONFIG.offerSummary,
-    ]);
+  it('switches both calls to action to approved app URLs when public beta is enabled', async () => {
+    const fixture = await createHomeFixture({
+      ...DEFAULT_PUBLIC_APP_CONFIG,
+      publicBetaEnabled: true,
+      registrationUrl: 'https://app.jobseekercopilot.com/register',
+      signInUrl: 'https://app.jobseekercopilot.com/sign-in',
+    });
+
+    expect(fixture.nativeElement.textContent).toContain('UK public beta open');
+    expect(fixture.nativeElement.querySelectorAll('app-email-signup-form')).toHaveLength(0);
+    expect(fixture.nativeElement.querySelectorAll(
+      'a[href="https://app.jobseekercopilot.com/register"]',
+    ).length).toBeGreaterThan(1);
+    expect(fixture.nativeElement.textContent).toContain('Try the public beta');
+    expect(fixture.nativeElement.textContent).not.toContain('Get product updates');
   });
 
   it('places an accessible, sourced comparison immediately before the roadmap', async () => {

@@ -9,11 +9,7 @@
     } @else if (state() === 'confirmed') {
       <span class="eyebrow success">Email confirmed</span>
       <h1 id="action-title">You’re on the waiting list.</h1>
-      @if (offer.offerEnabled) {
-        <p>Thanks for confirming. Confirmed waitlist members are eligible for priority early access and the promotional {{ formattedBonusTokens }}-token offer, subject to the early-access terms. Selection is not guaranteed.</p>
-      } @else {
-        <p>Thanks for confirming. Important Job Seeker Copilot availability and early-access updates will come from {{ contact.productUpdates }}.</p>
-      }
+      <p>Thanks for confirming. Important Job Seeker Copilot availability and early-access updates will come from {{ contact.productUpdates }}.</p>
     } @else if (state() === 'already-confirmed') {
       <span class="eyebrow success">Already confirmed</span>
       <h1 id="action-title">You’re already on the list.</h1>
@@ -25,7 +21,7 @@
     } @else if (state() === 'resent') {
       <span class="eyebrow success">Request received</span>
       <h1 id="action-title">Check your inbox if confirmation is pending.</h1>
-      <p>If that address has a pending subscription, a new confirmation email will be sent from {{ contact.productUpdates }}. Requesting a link does not confirm the address or credit bonus tokens.</p>
+      <p>If that address has a pending subscription, a new confirmation email will be sent from {{ contact.productUpdates }}. Requesting a link does not confirm the address or create a product entitlement.</p>
     } @else if (state() === 'resend-ready') {
       <span class="eyebrow">Confirmation help</span>
       <h1 id="action-title">Request a new confirmation email.</h1>

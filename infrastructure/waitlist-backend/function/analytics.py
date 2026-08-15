@@ -26,6 +26,8 @@ EVENT_METRICS = {
     "waitlist_attempt": "WaitlistAttempts",
     "contact_form_view": "ContactFormViews",
     "contact_attempt": "ContactAttempts",
+    "pricing_view": "PricingViews",
+    "pricing_cta": "PricingCtaClicks",
 }
 PUBLIC_PATHS = {
     "/", "/about", "/faq", "/the-journey-so-far/job-search-platform-comparison",
@@ -95,6 +97,9 @@ def _validated_event(payload: dict[str, Any]) -> dict[str, Any]:
             raise RequestError(400, "INVALID_ANALYTICS_EVENT", "The analytics event is invalid.")
     elif event_name.startswith("waitlist_"):
         if context not in {"hero", "footer"}:
+            raise RequestError(400, "INVALID_ANALYTICS_EVENT", "The analytics event is invalid.")
+    elif event_name.startswith("pricing_"):
+        if path != "/" or context != "pricing":
             raise RequestError(400, "INVALID_ANALYTICS_EVENT", "The analytics event is invalid.")
     elif path != "/contact" or context != "contact":
         raise RequestError(400, "INVALID_ANALYTICS_EVENT", "The analytics event is invalid.")

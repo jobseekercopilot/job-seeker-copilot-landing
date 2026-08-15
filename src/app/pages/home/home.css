@@ -71,6 +71,26 @@
   margin-top: 10px;
 }
 
+.beta-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.beta-note {
+  color: var(--colour-text-muted);
+  font-size: 0.78rem;
+  line-height: 1.55;
+  margin: 0 0 12px;
+}
+
+.beta-actions-final {
+  align-self: center;
+  justify-content: flex-end;
+}
+
 .hero-reassurance span {
   align-items: center;
   display: inline-flex;
@@ -272,10 +292,6 @@
 .final-cta p {
   color: #c7d4e5;
   margin-bottom: 0;
-}
-
-.final-cta app-waitlist-offer {
-  margin-top: 24px;
 }
 
 .contextual-faq-link {

@@ -1,53 +1,64 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { RouterLink } from '@angular/router';
-import { EARLY_ACCESS_OFFER_CONFIG, formatOfferTokenAmount } from '../../config/early-access-offer';
+import {ChangeDetectionStrategy, Component, inject} from '@angular/core';
+import {RouterLink} from '@angular/router';
+import {AnalyticsViewDirective} from '../../analytics/analytics-view.directive';
+import {AnalyticsService} from '../../analytics/analytics.service';
+import {PUBLIC_APP_CONFIG} from '../../config/public-app-config';
 
 interface CreditPack {
+  applications: string;
+  credits: number;
+  description: string;
+  id: 'free' | 'starter' | 'active' | 'power';
   name: string;
   price: string;
-  tokens: string;
-  generations: string;
-  description: string;
 }
 
 @Component({
   selector: 'app-pricing-section',
-  imports: [RouterLink],
+  imports: [RouterLink, AnalyticsViewDirective],
   templateUrl: './pricing-section.html',
   styleUrl: './pricing-section.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PricingSectionComponent {
-  protected readonly offer = inject(EARLY_ACCESS_OFFER_CONFIG);
-  protected readonly formattedBonusTokens = formatOfferTokenAmount(this.offer.bonusTokens);
-  protected readonly packs: CreditPack[] = [
+  private readonly analytics = inject(AnalyticsService);
+  protected readonly config = inject(PUBLIC_APP_CONFIG);
+  protected readonly packs: readonly CreditPack[] = [
     {
+      id: 'free',
       name: 'Free',
       price: '£0',
-      tokens: '20,000 AI credits',
-      generations: 'Try tailored document generation',
-      description: 'Included when you create your Job Seeker Copilot account.',
+      credits: 2,
+      applications: 'One complete CV and cover-letter application',
+      description: 'Included once when you create your Job Seeker Copilot account.',
     },
     {
+      id: 'starter',
       name: 'Starter',
       price: '£7.99',
-      tokens: '100,000 AI credits',
-      generations: 'About 25–30 CV and cover letter pairs',
-      description: 'Good for trying the document-generation features.',
+      credits: 10,
+      applications: 'Up to 5 complete applications',
+      description: 'A focused one-off pack for a smaller set of applications.',
     },
     {
-      name: 'Standard',
+      id: 'active',
+      name: 'Active',
       price: '£16.99',
-      tokens: '250,000 AI credits',
-      generations: 'About 60–70 CV and cover letter pairs',
-      description: 'Useful for an active job search with several applications.',
+      credits: 25,
+      applications: 'Up to 12 complete applications, plus one document',
+      description: 'The most useful one-off pack for an active job search.',
     },
     {
-      name: 'Pro',
+      id: 'power',
+      name: 'Power',
       price: '£34.99',
-      tokens: '600,000 AI credits',
-      generations: 'About 140+ CV and cover letter pairs',
-      description: 'Designed for heavier document-generation use.',
+      credits: 60,
+      applications: 'Up to 30 complete applications',
+      description: 'A larger one-off pack for sustained application activity.',
     },
   ];
+
+  protected trackPricingCta(): void {
+    this.analytics.track('pricing_cta', 'pricing');
+  }
 }

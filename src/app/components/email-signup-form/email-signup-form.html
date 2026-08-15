@@ -31,11 +31,7 @@
     } @else if (submitting()) {
       <p class="message message-info">Submitting your request securely…</p>
     } @else if (isRequestAccepted()) {
-      @if (offer.offerEnabled) {
-        <p class="message message-success">Request received. If this address needs confirmation, check its inbox for an email from {{ contact.productUpdates }}. If it is already confirmed, no further action is needed. Once confirmed, you may be eligible for priority early access and the promotional {{ formattedBonusTokens }}-token offer, subject to the early-access terms.</p>
-      } @else {
-        <p class="message message-success">Request received. If this address needs confirmation, check its inbox for an email from {{ contact.productUpdates }}. If it is already confirmed, no further action is needed.</p>
-      }
+      <p class="message message-success">Request received. If this address needs confirmation, check its inbox for an email from {{ contact.productUpdates }}. If it is already confirmed, no further action is needed.</p>
       <p class="recovery-note">Nothing arrived? <a routerLink="/waitlist/resend">Request a new confirmation email</a>.</p>
     } @else if (state() === 'validation-error') {
       <p class="message message-error">Enter a valid email address.</p>

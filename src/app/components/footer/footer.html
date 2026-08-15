@@ -13,7 +13,11 @@
         <a routerLink="/" fragment="pricing">Pricing</a>
         <a routerLink="/" fragment="uk-job-market">UK job market</a>
         <a routerLink="/" fragment="accessibility">Accessibility</a>
-        <a routerLink="/" fragment="waitlist">Waiting list</a>
+        @if (config.publicBetaEnabled) {
+          <a [href]="config.registrationUrl">Create account</a>
+        } @else {
+          <a routerLink="/" fragment="waitlist">Waiting list</a>
+        }
       </div>
       <div>
         <strong>Information</strong>

@@ -43,6 +43,18 @@ h1 {
   padding: 8px 11px;
 }
 
+.legal-readiness-notice {
+  background: #fff7ed;
+  border: 1px solid #fdba74 !important;
+  border-radius: 10px;
+  margin: 0 0 34px;
+  padding: 18px;
+}
+
+.legal-readiness-notice h2 {
+  color: #9a3412;
+}
+
 .offer-status {
   background: #effcf6;
   border: 1px solid #a7e3c7;
