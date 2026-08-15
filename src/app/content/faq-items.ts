@@ -113,6 +113,28 @@ export const FAQ_ITEMS: readonly FaqItem[] = [
   },
 ];
 
+export function faqItemsForRelease(publicBetaEnabled: boolean): readonly FaqItem[] {
+  if (!publicBetaEnabled) return FAQ_ITEMS;
+
+  return FAQ_ITEMS.map(item => item.id === 'availability' ? {
+    ...item,
+    blocks: [
+      {type: 'paragraph' as const, text: 'Yes. Job Seeker Copilot is available as a UK public beta.'},
+      {type: 'paragraph' as const, text: 'Beta features may change as reliability, security and usability evidence is gathered.'},
+      {type: 'paragraph' as const, text: 'Create a free account to begin with two document credits, or sign in if you already have an account.'},
+    ],
+    callToAction: undefined,
+  } : {
+    ...item,
+    blocks: item.blocks.map(block => block.type === 'paragraph'
+      ? {...block, text: block.text.replace(
+        'Job Seeker Copilot is currently at a pre-beta stage.',
+        'Job Seeker Copilot is currently available as a public beta.',
+      )}
+      : block),
+  });
+}
+
 export function faqAnswerText(item: FaqItem): string {
   return item.blocks.map(block => block.type === 'bullets' ? block.items.join(' ') : block.text).join(' ');
 }

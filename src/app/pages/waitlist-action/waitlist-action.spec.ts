@@ -2,7 +2,6 @@ import { Location } from '@angular/common';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { Observable, of, Subject, throwError } from 'rxjs';
-import { DEFAULT_EARLY_ACCESS_OFFER_CONFIG, EARLY_ACCESS_OFFER_CONFIG } from '../../config/early-access-offer';
 import { DEFAULT_PUBLIC_APP_CONFIG, PUBLIC_APP_CONFIG } from '../../config/public-app-config';
 import { EmailSubscriptionService, WaitlistActionResult } from '../../services/email-subscription.service';
 import { WaitlistActionPage } from './waitlist-action';
@@ -43,7 +42,6 @@ describe('WaitlistActionPage', () => {
           data: { action }, queryParamMap: convertToParamMap(token ? { token } : {}),
         } } },
         { provide: Location, useValue: location },
-        { provide: EARLY_ACCESS_OFFER_CONFIG, useValue: DEFAULT_EARLY_ACCESS_OFFER_CONFIG },
         { provide: PUBLIC_APP_CONFIG, useValue: DEFAULT_PUBLIC_APP_CONFIG },
         { provide: EmailSubscriptionService, useClass: ActionServiceStub },
       ],

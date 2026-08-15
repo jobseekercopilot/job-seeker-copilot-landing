@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import {ChangeDetectionStrategy, Component, inject} from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AccessibilitySectionComponent } from '../../components/accessibility-section/accessibility-section';
 import { CompetitorComparisonSectionComponent } from '../../components/competitor-comparison-section/competitor-comparison-section';
@@ -11,14 +11,13 @@ import { LabourMarketSectionComponent } from '../../components/labour-market-sec
 import { PricingSectionComponent } from '../../components/pricing-section/pricing-section';
 import { RoadmapSectionComponent } from '../../components/roadmap-section/roadmap-section';
 import { ScreenshotFrameComponent } from '../../components/screenshot-frame/screenshot-frame';
-import { WaitlistOfferComponent } from '../../components/waitlist-offer/waitlist-offer';
+import {PUBLIC_APP_CONFIG} from '../../config/public-app-config';
 
 @Component({
   selector: 'app-home-page',
   imports: [
     HeaderComponent,
     EmailSignupFormComponent,
-    WaitlistOfferComponent,
     ScreenshotFrameComponent,
     HowItWorksComponent,
     FeatureSectionComponent,
@@ -35,6 +34,7 @@ import { WaitlistOfferComponent } from '../../components/waitlist-offer/waitlist
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HomePage {
+  protected readonly config = inject(PUBLIC_APP_CONFIG);
   protected readonly features: LandingFeature[] = [
     {
       id: 'multi-source-search',

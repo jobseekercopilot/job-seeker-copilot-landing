@@ -40,4 +40,25 @@ describe('AboutPage', () => {
     expect(navigationLinks[1].textContent).toContain('14 July 2026');
     expect(navigationLinks[1].getAttribute('aria-current')).toBe('page');
   });
+
+  it('describes active public-beta feedback instead of pre-registration waiting', async () => {
+    TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      imports: [AboutPage],
+      providers: [
+        provideRouter([]),
+        {
+          provide: PUBLIC_APP_CONFIG,
+          useValue: {...DEFAULT_PUBLIC_APP_CONFIG, publicBetaEnabled: true},
+        },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(AboutPage);
+    fixture.detectChanges();
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+
+    expect(text).toContain('The public beta exists');
+    expect(text).toContain('Opening a public beta gives early users a chance');
+    expect(text).not.toContain('before registrations open');
+  });
 });

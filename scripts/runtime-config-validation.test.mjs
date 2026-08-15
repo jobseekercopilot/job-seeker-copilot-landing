@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
+  validatePublicBetaConfig,
   validateAnalyticsConfig,
   validateLiveSubmissionConfig,
   validateSearchIndexingConfig,
@@ -64,6 +65,85 @@ describe('live submission runtime configuration', () => {
       waitlistResendApiUrl: '/waitlist/resend',
       contactApiUrl: '/contact',
     }));
+  });
+});
+
+describe('public beta runtime configuration', () => {
+  const beta = {
+    publicBetaEnabled: true,
+    environmentName: 'production',
+    publicWebsiteUrl: 'https://www.jobseekercopilot.com',
+    mainApplicationUrl: 'https://app.jobseekercopilot.com',
+    registrationUrl: 'https://app.jobseekercopilot.com/register',
+    signInUrl: 'https://app.jobseekercopilot.com/sign-in',
+    pricingUrl: 'https://app.jobseekercopilot.com/payment',
+    legalDocumentsReviewed: true,
+    minimumUserAge: 18,
+    legalEffectiveDate: '2026-09-01',
+    legalVersion: 'beta-1',
+    legalEntityType: 'SOLE_TRADER',
+    taxStatus: 'NOT_VAT_REGISTERED',
+    legalEntityName: 'Northstar Career Services',
+    tradingName: 'Job Seeker Copilot',
+    businessAddress: '10 High Street, London, SW1A 1AA',
+    privacyEmail: 'privacy@jobseekercopilot.com',
+    supportEmail: 'support@jobseekercopilot.com',
+    icoRegistrationStatus: 'NOT_REQUIRED_CONFIRMED',
+    icoRegistrationReference: '',
+    accountDeletionCompletionDays: 30,
+    documentDeletionCompletionDays: 30,
+    securityLogRetentionDays: 30,
+    supportRecordRetentionDays: 365,
+    financialRecordRetentionYears: 6,
+  };
+
+  it('accepts only the canonical production website and one approved HTTPS app origin', () => {
+    assert.doesNotThrow(() => validatePublicBetaConfig(beta));
+    assert.throws(
+      () => validatePublicBetaConfig({...beta, registrationUrl: 'https://other.example/register'}),
+      /approved app URLs/,
+    );
+    assert.throws(
+      () => validatePublicBetaConfig({...beta, environmentName: 'development'}),
+      /requires production/,
+    );
+  });
+
+  it('allows the launch switch to remain disabled with no app URLs', () => {
+    assert.doesNotThrow(() => validatePublicBetaConfig({publicBetaEnabled: false}));
+  });
+
+  it('fails closed if the reviewed beta age policy is not exactly 18+', () => {
+    assert.throws(
+      () => validatePublicBetaConfig({...beta, minimumUserAge: 16}),
+      /reviewed legal identity configuration/,
+    );
+  });
+
+  it('fails closed without an explicit reviewed seller form and tax status', () => {
+    assert.throws(
+      () => validatePublicBetaConfig({...beta, legalEntityType: 'NOT_CONFIGURED'}),
+      /reviewed legal identity configuration/,
+    );
+    assert.throws(
+      () => validatePublicBetaConfig({...beta, taxStatus: 'NOT_CONFIGURED'}),
+      /reviewed legal identity configuration/,
+    );
+  });
+
+  it('fails closed for impossible dates and release placeholders', () => {
+    assert.throws(
+      () => validatePublicBetaConfig({...beta, legalEffectiveDate: '2026-02-30'}),
+      /reviewed legal identity configuration/,
+    );
+    assert.throws(
+      () => validatePublicBetaConfig({...beta, legalEntityName: 'Example Legal Entity'}),
+      /reviewed legal identity configuration/,
+    );
+    assert.throws(
+      () => validatePublicBetaConfig({...beta, businessAddress: 'Address supplied at release'}),
+      /reviewed legal identity configuration/,
+    );
   });
 });
 

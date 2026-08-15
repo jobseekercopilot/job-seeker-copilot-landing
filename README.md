@@ -40,9 +40,17 @@ Copy `.env.example` only as a reference for variable names. Browser configuratio
 Important switches:
 
 - `PUBLIC_ENVIRONMENT_NAME` must be `development`, `test` or `production`.
+- `PUBLIC_BETA_ENABLED` remains `false` until the canonical app URLs and the
+  complete reviewed legal configuration are supplied. The legal gate requires
+  an exact 18+ policy, policy version/effective date, controller and trading
+  identity, address, contacts, ICO position, retention periods,
+  `LEGAL_ENTITY_TYPE=SOLE_TRADER|LIMITED_COMPANY` and
+  `TAX_STATUS=NOT_VAT_REGISTERED|VAT_REGISTERED`. The same `LEGAL_VERSION` must
+  be served by the application's registration-requirements endpoint. Missing
+  values do not fall back to example seller details.
 - `ENABLE_LIVE_SUBMISSIONS` must remain `false` until SES identity/DKIM verification and a permitted-recipient end-to-end confirmation test have passed.
 - `WAITLIST_API_URL`, `WAITLIST_CONFIRMATION_API_URL`, `WAITLIST_RESEND_API_URL`, `WAITLIST_UNSUBSCRIBE_API_URL` and `CONTACT_API_URL` are full public route URLs. A production build with live submissions enabled fails before writing runtime configuration unless the waitlist submit, confirmation, resend and contact routes are valid absolute HTTPS URLs.
-- main-application, registration, sign-in, pricing, legal and support URLs are separately configurable because the final domain layout is undecided.
+- main-application, registration, sign-in, pricing, legal and support URLs are separately configurable. Public beta accepts one query-free HTTPS app origin and exact `/register`, `/sign-in` and `/payment` routes.
 - anti-bot fields reserve public provider configuration only. The backend controls remain independent.
 
 If live submissions are disabled in a production config, buttons are disabled and a neutral unavailable message is shown. The development-only explanatory message is not shown in production.
@@ -65,13 +73,18 @@ and treats only a typed `CONTACT_ACCEPTED` response as success. It disables all
 fields and announces progress while a request is active, resets only after
 confirmed acceptance, preserves input for a safe retry, and never renders raw
 backend errors. If the production route is unavailable, visitors can use the
-public company address `hello@jobseekercopilot.com`; no private recipient is
+public contact address `hello@jobseekercopilot.com`; no private recipient is
 present in browser configuration. The full contract is in
 [docs/launch/contact-frontend-contract.md](./docs/launch/contact-frontend-contract.md).
 
 ## AWS Amplify Hosting
 
 `amplify.yml` uses the lock file (`npm ci`), generates public runtime configuration, runs the production build, publishes the verified browser output directory and caches `node_modules`.
+
+The build specification rejects every branch except protected `main` and also
+requires the production-only `AMPLIFY_RELEASE_AUTHORISED=true` switch before
+dependency installation. `develop` remains build/test-only, and an unapproved
+main update cannot publish through an obsolete external Amplify connection.
 
 Before promoting the existing Amplify app to a verified production release:
 
@@ -82,6 +95,9 @@ Before promoting the existing Amplify app to a verified production release:
 5. keep live submission disabled until SES, API, CORS, email receipt and single-use confirmation pass an end-to-end test.
 
 `amplify.yml` remains portable and does not hard-code an Amplify application or AWS account.
+The [release artifact and stack-output contract](./docs/launch/release-artifact-contract.md)
+defines the immutable static artifact, main-only publication boundary and the
+SAM outputs consumed by central infrastructure.
 
 ## Serverless infrastructure
 

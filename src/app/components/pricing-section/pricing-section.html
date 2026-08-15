@@ -1,46 +1,67 @@
-<section id="pricing" class="section pricing-section" aria-labelledby="pricing-heading">
+<section
+  id="pricing"
+  class="section pricing-section"
+  aria-labelledby="pricing-heading"
+  appAnalyticsView="pricing_view"
+  analyticsContext="pricing">
   <div class="container">
     <div class="pricing-heading">
       <div>
-        <span class="eyebrow">Current pricing model</span>
-        <h2 id="pricing-heading" class="section-heading">Search for free. Add AI Credit when you need tailored documents.</h2>
+        <span class="eyebrow">Simple one-off pricing</span>
+        <h2 id="pricing-heading" class="section-heading">Search for free. Buy document credits only when you need tailored documents.</h2>
+        <p class="section-intro">No subscription and no automatic renewal. Search, matching, tracking, editing, uploads, downloads and exports remain free.</p>
       </div>
       <div class="free-credit-note">
-        <span aria-hidden="true">+</span>
-        <p><strong>20,000 AI credits included</strong>New users currently receive free AI Credit to try tailored document generation.</p>
+        <span aria-hidden="true">2</span>
+        <p><strong>Two document credits included</strong>Enough to create one tailored CV and cover-letter pair.</p>
       </div>
     </div>
 
-    <div class="pricing-grid">
-      @for (pack of packs; track pack.name) {
-        <article class="pricing-card">
+    <div class="pricing-grid" aria-label="Document-credit plans">
+      @for (pack of packs; track pack.id) {
+        <article
+          class="pricing-card"
+          [class.pricing-card-featured]="pack.id === 'active'"
+          data-analytics-event="pricing_plan_view"
+          [attr.data-analytics-plan]="pack.id">
+          @if (pack.id === 'active') {
+            <span class="featured-label">Most useful for an active search</span>
+          }
           <div class="pack-heading">
             <h3>{{ pack.name }}</h3>
             <strong>{{ pack.price }}</strong>
           </div>
           <p>{{ pack.description }}</p>
           <ul>
-            <li><span aria-hidden="true">✓</span>{{ pack.tokens }}</li>
-            <li><span aria-hidden="true">✓</span>{{ pack.generations }}</li>
-            <li><span aria-hidden="true">✓</span>Core job-search features are free</li>
+            <li><span aria-hidden="true">✓</span>{{ pack.credits }} document credits</li>
+            <li><span aria-hidden="true">✓</span>{{ pack.applications }}</li>
+            <li><span aria-hidden="true">✓</span>{{ pack.id === 'free' ? 'Included account allowance' : 'One-off purchase' }}</li>
           </ul>
-          <a class="button button-secondary" routerLink="/" fragment="waitlist">Join the waitlist</a>
+          @if (config.publicBetaEnabled) {
+            <a
+              class="button button-secondary"
+              [href]="config.registrationUrl"
+              data-analytics-event="pricing_cta"
+              [attr.data-analytics-plan]="pack.id"
+              (click)="trackPricingCta()">{{ pack.id === 'free' ? 'Create a free account' : 'Start with free credits' }}</a>
+          } @else {
+            <a class="button button-secondary" routerLink="/" fragment="waitlist" (click)="trackPricingCta()">Join the waitlist</a>
+          }
         </article>
       }
     </div>
 
-    @if (offer.offerEnabled) {
-      <aside class="early-access-credit-note" aria-labelledby="early-access-credit-heading">
-        <div>
-          <span class="promotion-label">Early-access promotion</span>
-          <h3 id="early-access-credit-heading">{{ formattedBonusTokens }} bonus tokens for eligible early-access members</h3>
-          <p>{{ offer.offerSummary }}</p>
-          <small>This is promotional credit, not a permanent pricing plan or an additional paid package. Eligibility and use are subject to the early-access offer terms.</small>
-        </div>
-        <a class="button button-secondary" [routerLink]="offer.termsRoute" fragment="early-access-offer">Read the early-access offer terms</a>
-      </aside>
-    }
+    <div class="credit-rules" aria-labelledby="credit-rules-heading">
+      <div>
+        <h3 id="credit-rules-heading">What uses a document credit?</h3>
+        <p>One successfully delivered tailored CV or one successfully delivered cover letter uses one credit. A complete pair uses two. A regeneration is a new document and uses another credit after you choose it.</p>
+      </div>
+      <div>
+        <h3>What does not use a credit?</h3>
+        <p>Failed or cancelled generation, duplicate or replayed requests, identified no-charge fallbacks, uploads, editing, downloads and exports. Any unfinished reservation is released.</p>
+      </div>
+    </div>
 
-    <p class="pricing-note">Generation estimates vary with document length and complexity. These values reflect the current application configuration and may be reviewed before public launch.</p>
+    <p class="pricing-note">Prices are fixed GBP totals for customers with a UK billing address. Tax treatment, where applicable, is confirmed before payment.</p>
   </div>
 </section>

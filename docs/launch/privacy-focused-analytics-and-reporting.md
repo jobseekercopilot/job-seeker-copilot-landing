@@ -38,6 +38,8 @@ must never block navigation or either form.
 | `waitlist_attempt` | Frontend, one valid intended submit before the HTTP request | `hero` or `footer` | `Analytics/WaitlistAttempts` |
 | `contact_form_view` | Frontend, first 25%-visible contact form after acceptance | `/contact`, `contact` | `Analytics/ContactFormViews` |
 | `contact_attempt` | Frontend, one valid intended submit before the HTTP request | `/contact`, `contact` | `Analytics/ContactAttempts` |
+| `pricing_view` | Frontend, first 25%-visible pricing section after acceptance | `/`, `pricing` | `Analytics/PricingViews` |
+| `pricing_cta` | Frontend, a deliberate pricing call-to-action click after acceptance | `/`, `pricing` | `Analytics/PricingCtaClicks` |
 | Waitlist accepted | Submit Lambda, only after a new pending record and confirmation send succeed | No browser fields | `Waitlist/WaitlistAcceptedRequests` |
 | Confirmation sent | Submit Lambda, same true new-delivery point | No browser fields | `Waitlist/WaitlistConfirmationSent` |
 | Address confirmed | Confirm Lambda, only after the DynamoDB transaction succeeds | No token dimension | `Waitlist/WaitlistConfirmed` |

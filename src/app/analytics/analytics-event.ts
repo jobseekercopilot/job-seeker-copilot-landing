@@ -5,10 +5,12 @@ export const ANALYTICS_EVENT_NAMES = [
   'waitlist_attempt',
   'contact_form_view',
   'contact_attempt',
+  'pricing_view',
+  'pricing_cta',
 ] as const;
 
 export type AnalyticsEventName = typeof ANALYTICS_EVENT_NAMES[number];
-export type AnalyticsContext = 'hero' | 'footer' | 'contact';
+export type AnalyticsContext = 'hero' | 'footer' | 'contact' | 'pricing';
 export type AnalyticsViewport = 'mobile' | 'tablet' | 'desktop';
 export type AnalyticsTrafficClass = 'production' | 'smoke';
 export type AnalyticsAcquisition = 'direct' | 'search' | 'social' | 'email' | 'partner' | 'other';

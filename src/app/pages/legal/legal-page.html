@@ -5,13 +5,26 @@
       <header class="legal-header">
         <span class="eyebrow">Privacy</span>
         <h1>Privacy Policy</h1>
-        <p class="lead">This policy explains how Job Seeker Copilot handles personal information collected through this pre-launch website.</p>
-        <p class="effective-date">Effective {{ effectiveDate }}.</p>
+        <p class="lead">This policy explains how Job Seeker Copilot handles personal information on the public website and, when enabled, the product beta.</p>
+        <p class="effective-date">{{ legalReady ? 'Effective ' + config.legalEffectiveDate + ' · version ' + config.legalVersion : 'Draft for legal review · not yet effective' }}.</p>
       </header>
+
+      @if (!legalReady) {
+        <section class="legal-readiness-notice" role="status">
+          <h2>Public beta legal gate</h2>
+          <p>This draft is not a launch approval. The public-beta switch remains disabled until the controller identity, address, ICO position, contacts, effective date and reviewed version are supplied through release configuration.</p>
+        </section>
+      } @else {
+        <section>
+          <h2>Data controller</h2>
+          <p>{{ config.legalEntityName }}, trading as {{ config.tradingName }}, is the data controller. Contact address: {{ config.businessAddress }}. Privacy enquiries: <a [href]="'mailto:' + config.privacyEmail">{{ config.privacyEmail }}</a>.</p>
+          <p>ICO status: {{ config.icoRegistrationStatus === 'REGISTERED' ? 'registered (' + config.icoRegistrationReference + ')' : 'registration not required, confirmed during release review' }}.</p>
+        </section>
+      }
 
       <section>
         <h2>1. Who this policy applies to</h2>
-        <p>This policy applies when you visit the Job Seeker Copilot landing page, join the early-access list or send us an enquiry. The main Job Seeker Copilot product is still in development; a separate product privacy notice will be provided before public accounts are opened.</p>
+        <p>This policy applies when you visit the website, join the updates list, send an enquiry or use a public-beta account. The in-product notice provides additional detail at the point of use.</p>
       </section>
       <section>
         <h2>2. Information we collect</h2>
@@ -22,15 +35,19 @@
           <li><strong>Contact details:</strong> your name, email address, message subject and message when you use the contact form.</li>
           <li><strong>Optional aggregate analytics:</strong> only after you choose “Allow analytics”, we may record a controlled event name, approved page path, form location, broad viewport category, production or smoke-test traffic class, a coarse acquisition category and approved non-personal campaign labels.</li>
           <li><strong>Technical information:</strong> limited server, security and diagnostic information such as IP address, browser type, requested pages and timestamps may be processed by our hosting provider.</li>
+          <li><strong>Product account and profile:</strong> identity, sign-in security, job preferences, career evidence, saved vacancies, applications and support records.</li>
+          <li><strong>Documents and AI requests:</strong> uploaded and generated CVs or cover letters, the selected vacancy and relevant evidence sent to contracted AI services to provide the requested generation.</li>
+          <li><strong>Payments:</strong> order, entitlement, refund and dispute records. Stripe processes card details; Job Seeker Copilot does not store full card numbers.</li>
         </ul>
-        <p>We do not ask for a password, payment information, CV, employment history or application documents on this website.</p>
+        <p>The public website does not ask for a product password, card details, CV, employment history or application documents.</p>
       </section>
       <section>
         <h2>3. How we use information</h2>
         <p>When you submit the waiting-list form, the address is stored as pending and Amazon SES sends a confirmation email. The address becomes confirmed only after its secure, single-use link is used. Launch and early-access messages must not be sent to pending records. Each future update will support unsubscribe.</p>
-        <p>The early-access offer does not add any fields to the waiting-list form. Only confirmed addresses may be considered for early access and the promotional offer; we do not ask for employment details, phone numbers, CVs, referrals or profiling information for this offer.</p>
+        <p>Joining the updates list does not reserve a product account or determine eligibility for a purchase promotion. Any live offer is controlled by the product’s payment service and is confirmed only if it is reserved for a specific checkout.</p>
         <p>We use contact-form information only to understand and respond to the enquiry; sending a contact message does not add anyone to the waiting list. Technical information may be used to operate, secure and improve the website. Optional aggregate analytics help us understand which public pages and forms are useful and whether the waiting-list and contact journeys work.</p>
         <p>Where UK data-protection law applies, the intended lawful bases are consent for optional waitlist communications and our legitimate interests in responding to enquiries, protecting the service and understanding basic website performance. You may withdraw consent to waitlist updates at any time.</p>
+        <p>For product accounts, processing is necessary to perform the service contract; security, fraud prevention and service improvement rely on legitimate interests; legal and financial records are retained where required by law. AI assists document preparation but Job Seeker Copilot does not make hiring decisions or automatically submit applications.</p>
       </section>
       <section>
         <h2>4. Cookies and similar technologies</h2>
@@ -41,12 +58,18 @@
       <section>
         <h2>5. Storage, sharing and international transfers</h2>
         <p>Waitlist addresses and registration records are stored in Amazon DynamoDB. Amazon SES processes the address to deliver confirmation and later permitted messages. Hard-bounce and complaint information may be retained for suppression and compliance so further email is not sent improperly. Contact messages are intended to be delivered through Amazon SES to an authorised private mailbox. Optional analytics events are sent to our own restricted AWS collector and CloudWatch logs in the deployed UK Region (currently eu-west-2); AWS necessarily processes network traffic to provide that infrastructure, while our analytics event and API access-log design omits full IP addresses and user-agent values. Access is limited to authorised operators and contracted providers that host, deliver or secure the service. We may also disclose information when required by law. We do not sell personal information.</p>
-        <p>If a provider processes information outside the UK, we will use an approved transfer mechanism and appropriate safeguards where required.</p>
+        <p>If a provider processes information outside the UK, we use an applicable UK adequacy regulation, UK International Data Transfer Agreement or UK Addendum and appropriate supplementary safeguards where required.</p>
       </section>
       <section>
         <h2>6. How long we keep information</h2>
         <p>Confirmation links expire after 48 hours by default. Pending records are configured for deletion after 30 days if confirmation is not completed. Confirmed records remain until unsubscribe, an approved deletion request or the end of the waiting-list purpose. Bounce and complaint suppression records are retained only as long as necessary for compliance and safe delivery. DynamoDB expiry is asynchronous, so deletion may occur shortly after the stated retention point rather than immediately.</p>
         <p>Contact messages will normally exist in the receiving mailbox and be retained only as long as needed to respond, keep an appropriate business record and meet legal obligations. Optional analytics and security log groups have a 30-day retention setting. Aggregate CloudWatch metrics may remain available for operational reporting without containing visitor identifiers or submitted form content.</p>
+        @if (legalReady) {
+          <p>After a verified account-deletion request, account deletion is normally completed within {{ config.accountDeletionCompletionDays }} days. A verified deletion request for stored application documents is normally completed within {{ config.documentDeletionCompletionDays }} days. Security logs are retained for {{ config.securityLogRetentionDays }} days and support records for {{ config.supportRecordRetentionDays }} days, subject to a legal hold or an active security investigation.</p>
+          <p>Financial, fraud, refund and dispute records may be retained for {{ config.financialRecordRetentionYears }} years after the relevant transaction where required for tax, accounting, legal claims or fraud prevention. A user can request an export before deletion through <a [href]="'mailto:' + config.privacyEmail">{{ config.privacyEmail }}</a>.</p>
+        } @else {
+          <p>Exact product retention, deletion and export periods remain a public-beta release gate and will be published from reviewed runtime configuration. This draft does not invent those periods.</p>
+        }
       </section>
       <section>
         <h2>7. Security</h2>
@@ -57,13 +80,13 @@
         <p>Depending on your circumstances, UK data-protection law may give you rights to request access, correction, deletion, restriction or transfer of your personal information, to object to certain processing and to withdraw consent. You may also complain to the UK Information Commissioner’s Office at <a href="https://ico.org.uk/make-a-complaint/" rel="noreferrer">ico.org.uk</a>.</p>
       </section>
       <section>
-        <h2>9. Children</h2>
-        <p>This website is intended for people managing their own job search and is not directed at children under 16. Please do not submit a child’s personal information.</p>
+        <h2>9. Age and UK availability</h2>
+        <p>The public beta is intended only for UK residents aged 18 or over who are managing their own job search.</p>
       </section>
       <section>
         <h2>10. Changes and contact</h2>
         <p>We may update this policy as Job Seeker Copilot develops or its providers change. The effective date above will be updated when material changes are published.</p>
-        <p>Privacy questions, stored-data export requests and deletion requests can be sent to <a [href]="'mailto:' + contact.privacy">{{ contact.privacy }}</a>. Waiting-list messages will include a link that immediately marks the address unsubscribed without requiring an account.</p>
+        <p>Privacy questions, stored-data export requests and deletion requests can be sent to <a [href]="'mailto:' + (legalReady ? config.privacyEmail : contact.privacy)">{{ legalReady ? config.privacyEmail : contact.privacy }}</a>. Waiting-list messages will include a link that immediately marks the address unsubscribed without requiring an account.</p>
       </section>
       <a class="button button-secondary return-link" routerLink="/">Return to the landing page</a>
     </article>
@@ -72,33 +95,23 @@
       <header class="legal-header">
         <span class="eyebrow">Legal</span>
         <h1>Terms &amp; Conditions</h1>
-        <p class="lead">These terms govern use of the Job Seeker Copilot pre-launch website and early-access list.</p>
-        <p class="effective-date">Effective {{ effectiveDate }}.</p>
+        <p class="lead">These terms govern the Job Seeker Copilot public website and, when enabled, public-beta account access.</p>
+        <p class="effective-date">{{ legalReady ? 'Effective ' + config.legalEffectiveDate + ' · version ' + config.legalVersion : 'Draft for legal review · not yet effective' }}.</p>
       </header>
 
       <section>
         <h2>1. About these terms</h2>
-        <p>By using this website, you agree to these terms. If you do not agree, please do not use the website or submit information through its forms. Job Seeker Copilot is currently in development and is not being offered as a fully available public service through this website.</p>
+        @if (legalReady) {
+          <p>By using this website or creating a public-beta account, you agree to these terms. The public beta is available only to UK residents aged 18 or over who are managing their own job search. If you do not agree, do not create or use an account.</p>
+          <p>These terms form an agreement with {{ config.legalEntityName }}, trading as {{ config.tradingName }}. Contact address: {{ config.businessAddress }}. Support enquiries: <a [href]="'mailto:' + config.supportEmail">{{ config.supportEmail }}</a>.</p>
+        } @else {
+          <p>These draft terms describe the intended website and public-beta rules but are not yet effective. Product account access and payments remain disabled until reviewed terms are published.</p>
+        }
       </section>
       <section>
         <h2>2. Early-access list</h2>
-        <p>Joining the waitlist records your interest in product updates. It does not create a product account, guarantee access, reserve a place in a particular release or commit us to a launch date. You may ask to leave the list at any time.</p>
+        <p>Joining the updates list records your interest in product news. It does not create a product account, guarantee access or commit us to a release date. You may ask to leave the list at any time.</p>
       </section>
-      @if (offer.offerEnabled) {
-        <section id="early-access-offer">
-          <h2>2A. Early-access offer terms</h2>
-          <p class="offer-status"><strong>Owner reviewed.</strong> No separate promotional start, end or invitation date is specified. The offer applies only while it is enabled and displayed on this website.</p>
-          <p>This promotional offer applies only to eligible confirmed waitlist participants selected for the early-access programme. Joining the waitlist does not guarantee selection, immediate access or an invitation on a particular date.</p>
-          <ul>
-            <li>The submitted email address must be confirmed before a participant can be considered eligible.</li>
-            <li>The bonus is limited to {{ formattedBonusTokens }} tokens per eligible person or account and is credited only when the eligible early-access account is created.</li>
-            <li>Duplicate, fraudulent or automated registrations may be excluded.</li>
-            <li>Promotional tokens are non-transferable, have no cash value and cannot be refunded or exchanged for money.</li>
-            <li>The offer may be amended or withdrawn before tokens are credited. Any material change affecting participants who have already qualified should be communicated fairly.</li>
-            <li>Use of promotional tokens remains subject to the product Terms &amp; Conditions.</li>
-          </ul>
-        </section>
-      }
       <section>
         <h2>3. Acceptable use</h2>
         <p>You must use the website lawfully and must not:</p>
@@ -116,7 +129,10 @@
       </section>
       <section>
         <h2>5. Product information and pricing</h2>
-        <p>Feature descriptions, roadmap items, AI Credit pricing and generation estimates describe the current development direction and application configuration. They may change before or after launch. Planned features are not commitments, and no release dates are promised.</p>
+        <p>Document-credit pricing uses fixed GBP totals for UK billing addresses. One credit covers one successfully delivered tailored CV or cover letter; a pair uses two. Packs are one-off purchases with no subscription or automatic renewal. Failed, cancelled, duplicate or replayed generations use no credit and unfinished reservations are released.</p>
+        <p>A regeneration is a new document and uses another credit after confirmation. Promotional availability is not guaranteed until the server reserves a stated bonus for a specific checkout. The server-owned catalogue and checkout show the final GBP total and applicable tax treatment before payment.</p>
+        <p>Before checkout you must request immediate supply of the digital credits and acknowledge that, once the supply is fully completed, you may lose the statutory 14-day cancellation right. This does not affect rights where digital content is faulty, misdescribed or not supplied with reasonable care and skill.</p>
+        <p>Refunds and disputes are recorded by the payment service and can reverse unused purchased entitlement. Credits already consumed may require manual review. A failed or cancelled document generation does not use a credit; its reservation is released. Contact <a [href]="'mailto:' + (legalReady ? config.supportEmail : contact.support)">{{ legalReady ? config.supportEmail : contact.support }}</a> about a payment problem.</p>
       </section>
       <section>
         <h2>6. Job-search information</h2>
@@ -128,16 +144,16 @@
       </section>
       <section>
         <h2>8. Service availability</h2>
-        <p>We may change, suspend or withdraw any part of the pre-launch website without notice. We aim to keep information useful and the website available, but we do not promise uninterrupted, secure or error-free operation.</p>
+        <p>We may change, suspend or withdraw beta features as the service develops. We aim to keep information useful and the service available, but we do not promise uninterrupted, secure or error-free operation.</p>
       </section>
       <section>
         <h2>9. Limitation of liability</h2>
-        <p>To the fullest extent permitted by law, we are not liable for indirect or consequential loss, loss of opportunity, loss of data or loss arising from reliance on pre-launch information or third-party content. Nothing in these terms excludes liability that cannot legally be excluded, including liability for death or personal injury caused by negligence, fraud or fraudulent misrepresentation. Consumer rights that apply by law are not affected.</p>
+        <p>To the fullest extent permitted by law, we are not liable for indirect or consequential loss, loss of opportunity, loss of data or loss arising from reliance on beta information or third-party content. Nothing in these terms excludes liability that cannot legally be excluded, including liability for death or personal injury caused by negligence, fraud or fraudulent misrepresentation. Consumer rights that apply by law are not affected.</p>
       </section>
       <section>
         <h2>10. Changes, governing law and contact</h2>
-        <p>We may update these terms as the website and product develop. These terms are governed by the laws of England and Wales, and the courts of England and Wales will have jurisdiction, subject to any mandatory consumer rights.</p>
-        <p>Questions about these terms can be sent to <a [href]="'mailto:' + contact.legal">{{ contact.legal }}</a>.</p>
+        <p>We may update these terms as the website and product develop. These terms are governed by the laws of England and Wales, subject to mandatory consumer protections and jurisdiction rights where you live.</p>
+        <p>Questions about these terms can be sent to <a [href]="'mailto:' + (legalReady ? config.supportEmail : contact.legal)">{{ legalReady ? config.supportEmail : contact.legal }}</a>.</p>
       </section>
       <a class="button button-secondary return-link" routerLink="/">Return to the landing page</a>
     </article>
@@ -147,7 +163,7 @@
         <span class="eyebrow">Accessibility</span>
         <h1>Accessibility Statement</h1>
         <p class="lead">Job Seeker Copilot is being developed with the aim of making job-search planning and application support usable by as many people as possible.</p>
-        <p class="effective-date">Last reviewed {{ effectiveDate }}. Accessibility is an active area of development, not a certification claim.</p>
+        <p class="effective-date">{{ legalReady ? 'Last reviewed ' + config.legalEffectiveDate + '.' : 'Draft statement — review date not yet supplied.' }} Accessibility is an active area of development, not a certification claim.</p>
       </header>
 
       <section>
