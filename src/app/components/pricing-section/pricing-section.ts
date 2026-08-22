@@ -35,7 +35,7 @@ export class PricingSectionComponent {
     {
       id: 'starter',
       name: 'Starter',
-      price: '£7.99',
+      price: '£4.99',
       credits: 10,
       applications: 'Up to 5 complete applications',
       description: 'A focused one-off pack for a smaller set of applications.',
@@ -43,7 +43,7 @@ export class PricingSectionComponent {
     {
       id: 'active',
       name: 'Active',
-      price: '£16.99',
+      price: '£11.99',
       credits: 25,
       applications: 'Up to 12 complete applications, plus one individual document',
       description: 'The most useful one-off pack for an active job search.',
@@ -51,7 +51,7 @@ export class PricingSectionComponent {
     {
       id: 'power',
       name: 'Power',
-      price: '£34.99',
+      price: '£19.99',
       credits: 60,
       applications: 'Up to 30 complete applications',
       description: 'A larger one-off pack for sustained application activity.',

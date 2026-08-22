@@ -7,9 +7,9 @@ Launch with the implemented non-renewing document-credit catalogue:
 | Offer | Price | Documents | Understandable outcome |
 | --- | ---: | ---: | --- |
 | Free account allowance | £0 | 2 | One tailored CV and cover-letter pair |
-| Starter | £7.99 | 10 | Up to 5 complete pairs |
-| Active | £16.99 | 25 | Up to 12 pairs plus one document |
-| Power | £34.99 | 60 | Up to 30 complete pairs |
+| Starter | £4.99 | 10 | Up to 5 complete pairs |
+| Active | £11.99 | 25 | Up to 12 pairs plus one document |
+| Power | £19.99 | 60 | Up to 30 complete pairs |
 
 Search, matching, profile management, application tracking, uploads, document
 history, downloads and reporting are not divided into artificial paid feature
@@ -20,15 +20,20 @@ Do not describe these offers as subscriptions or promise an expiry policy that
 has not been reviewed and versioned. Checkout stays disabled until seller,
 legal, tax and Stripe release gates are explicitly approved.
 
-## Why the proposed monthly tiers are not the launch catalogue
+These are one-off purchases, not monthly subscriptions. The lower launch
+prices are economically supportable on measured variable cost and are helped
+temporarily by the $1,000 AWS Activate award. The award is runway, not a reason
+to hide the post-credit fixed-cost break-even point.
 
-The proposed £4.99/10-pack, £11.99/30-pack and £19.99/75-pack monthly structure
-is inexpensive to serve at established usage, but the current payment system is
-deliberately a one-off Checkout and append-only credit ledger. A safe recurring
-product additionally needs renewal, cancellation, failed-payment/dunning,
-subscription-webhook ordering, entitlement-period rollover, receipts and
-consumer-term behaviour. Adding those semantics immediately before launch
-would turn the final Stripe credential step into a new payment project.
+## Why the launch catalogue remains one-off
+
+The target prices are used with the implemented 10/25/60-credit one-off packs.
+The payment system is deliberately a one-off Checkout and append-only credit
+ledger. A safe recurring product additionally needs renewal, cancellation,
+failed-payment/dunning, subscription-webhook ordering, entitlement-period
+rollover, receipts and consumer-term behaviour. Changing that model immediately
+before launch would turn the final Stripe credential step into a new payment
+project.
 
 The monthly proposal should be reconsidered after the beta supplies observed
 conversion, credit use, regeneration, support and churn data. It must not be
@@ -65,21 +70,83 @@ tax and any currency conversion, that implies:
 
 | Pack | Gross | Indicative Stripe fee | Net before other costs |
 | --- | ---: | ---: | ---: |
-| Starter | £7.99 | £0.32 | £7.67 |
-| Active | £16.99 | £0.45 | £16.54 |
-| Power | £34.99 | £0.72 | £34.27 |
+| Starter | £4.99 | £0.27 | £4.72 |
+| Active | £11.99 | £0.38 | £11.61 |
+| Power | £19.99 | £0.50 | £19.49 |
+
+Stripe also lists a £20 dispute-received fee. If a deliberately adverse 1% of
+payments were lost disputes, the expected per-sale exposure from that fee plus
+the lost pack price would be about £0.25, £0.32 and £0.40 respectively. The
+heavy-AI contributions would still be approximately £4.30, £10.86 and £18.07.
+That does not justify raising the launch price, but disputes must be monitored
+and the included Radar/3DS controls must remain enabled; this is not permission
+to tolerate an elevated dispute rate.
+
+The founding promotion can add 50% to the delivered credits, making the maximum
+first-purchase allocations 15, 38 and 90 documents. The following sensitivity
+uses the measured heavy AI case and, deliberately, treats every USD of AI cost
+as one GBP rather than relying on a favourable exchange rate:
+
+| Pack | Heavy AI, base credits | Heavy AI, founding allocation | Net contribution after Stripe and promoted AI at USD=GBP parity |
+| --- | ---: | ---: | ---: |
+| Starter | $0.1135 | $0.1703 | £4.55 |
+| Active | $0.2838 | $0.4313 | £11.18 |
+| Power | $0.6810 | $1.0215 | £18.47 |
+
+This does not include support, tax, refunds, disputes or unknown future paid
+search/location-provider charges. It does show that measured model consumption
+does not require increasing the target prices. The bounded document-credit
+allowance prevents open-ended generation liability.
 
 The lean AWS plan is approximately $560/month, with a $750 alert ceiling, and
 is the material early-stage cost. At 100, 500 and 2,000 monthly active users,
 that fixed subtotal is $5.60, $1.12 and $0.28 per user respectively before
 OpenAI, support and other variable services. The $1,000 Activate award covers
-only about 1.8 months at the expected lean baseline, so credits are runway, not
-evidence that the service is free to operate.
+about 1.79 months at the currently proven lean baseline.
 
-The current one-off catalogue therefore has adequate measured LLM headroom and
-better low-volume fixed-cost protection than the proposed £4.99 entry
-subscription. Pricing should still be reviewed after the first 30 and 90 days
-of real use.
+The smallest credible infrastructure saving is to benchmark an x86-64
+`m6a.2xlarge` in place of `m7i.2xlarge`. The official AWS Price List snapshot
+for London on 22 August quotes $0.39960/hour rather than $0.46620/hour while
+retaining 8 vCPU and 32 GiB. That saves about $48.62 per 730-hour month, lowers
+the planning total from roughly $560 to **$511**, and extends the $1,000 award
+to about **1.96 months**. The checked-in release must retain `m7i.2xlarge`
+until the alternative passes the existing full-image health, 29-task placement
+and 1/5/10/15/20/25-user browser benchmark. The lower price is therefore not
+being justified by an unproven infrastructure switch.
+
+A deeper `r6a.xlarge` benchmark could retain 32 GiB while reducing the estimate
+to about $414/month and extending the award to about 2.41 months, but it halves
+compute to four vCPU and cannot currently satisfy the 6,528-unit application,
+scanner, operator and host reservation envelope. It needs a measured CPU
+reservation rebudget and the complete concurrency ladder; it is not assumed by
+this pricing approval.
+
+At the same conservative USD=GBP parity and after the worst-case founding AI
+allocation, the monthly AWS baseline is covered by approximately 124 Starter,
+51 Active or 31 Power purchases. A real sales mix will fall between those
+points. The two-credit free allowance costs $0.0227 per account even at the
+heavy sensitivity, or $11.35 for 500 fully used free allowances.
+
+The £4.99/£11.99/£19.99 catalogue is therefore approved as an introductory
+one-off launch catalogue without an upward adjustment. It is variable-cost
+positive without Activate; Activate gives the product time to build enough
+purchase volume to cover fixed infrastructure. Review pricing after 30 and 90
+days, when the Activate balance approaches exhaustion, and whenever the model,
+promotion, infrastructure shape or paid-provider contracts change.
+
+AWS Activate currently also lists a Stripe for Startups offer with $500 in
+credits to offset eligible Stripe product fees. Stripe says a startup offer
+expires 12 months after activation or when its limit is reached, whichever is
+first, and can be redeemed only once. It should therefore be activated only
+when the live Stripe account is ready to process payments. The normal Stripe
+fees remain in every calculation above; this conditional credit is additional
+launch runway, not permanent unit-economics evidence.
+
+At deliberately conservative USD=GBP parity, $500 would cover roughly 1,819
+Starter, 1,316 Active or 1,000 Power standard-UK-card fees at the current list
+rate. The real mix and exchange rate will differ, and Stripe must confirm which
+fee categories the activated award offsets. Verify the applied balance under
+Stripe Reports → Fee Credits before treating any fee as subsidised.
 
 ## Tax and human approvals
 
@@ -94,5 +161,8 @@ disclosures are explicitly configured and reviewed.
 
 - [OpenAI GPT-4.1 mini model pricing](https://developers.openai.com/api/docs/models/gpt-4.1-mini)
 - [Stripe UK pricing](https://stripe.com/gb/pricing)
+- [AWS Activate Stripe offer](https://startups.aws.com/offers/stripe)
+- [Stripe Startups programme FAQ](https://support.stripe.com/questions/stripe-startups-program-faqs)
+- [AWS public Price List API, Amazon EC2 in London](https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/current/eu-west-2/index.json)
 - Infrastructure evidence: `docs/aws-public-beta/cost-controls.md` and
   `docs/unit-economics-2026-08-11.md`
