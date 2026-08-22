@@ -53,6 +53,10 @@ Important switches:
 - main-application, registration, sign-in, pricing, legal and support URLs are separately configurable. Public beta accepts one query-free HTTPS app origin and exact `/register`, `/sign-in` and `/payment` routes.
 - anti-bot fields reserve public provider configuration only. The backend controls remain independent.
 
+The public one-off credit catalogue and the measured decision not to introduce
+subscriptions immediately before beta launch are documented in
+[the 22 August pricing decision](./docs/launch/pricing-decision-2026-08-22.md).
+
 If live submissions are disabled in a production config, buttons are disabled and a neutral unavailable message is shown. The development-only explanatory message is not shown in production.
 
 ## Form contracts

@@ -71,4 +71,15 @@ describe('FaqPage', () => {
 
     expect(comparison?.getAttribute('href')).toBe('/the-journey-so-far/job-search-platform-comparison');
   });
+
+  it('describes the implemented private progress summary without implying DWP integration', () => {
+    const fixture = TestBed.createComponent(FaqPage);
+    fixture.detectChanges();
+    const reporting = fixture.nativeElement.querySelector('#work-search-reporting') as HTMLElement;
+
+    expect(reporting.textContent).toContain('current product');
+    expect(reporting.textContent).toContain('private progress summary');
+    expect(reporting.textContent).toContain('not connected to the Department for Work and Pensions');
+    expect(reporting.textContent).not.toContain('Planned functionality');
+  });
 });
