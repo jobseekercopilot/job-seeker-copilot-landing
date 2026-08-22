@@ -4,9 +4,9 @@ import {AnalyticsViewDirective} from '../../analytics/analytics-view.directive';
 import {AnalyticsService} from '../../analytics/analytics.service';
 import {PUBLIC_APP_CONFIG} from '../../config/public-app-config';
 
-interface CreditPack {
+interface GenerationPack {
   applications: string;
-  credits: number;
+  generations: number;
   description: string;
   id: 'free' | 'starter' | 'active' | 'power';
   name: string;
@@ -23,12 +23,12 @@ interface CreditPack {
 export class PricingSectionComponent {
   private readonly analytics = inject(AnalyticsService);
   protected readonly config = inject(PUBLIC_APP_CONFIG);
-  protected readonly packs: readonly CreditPack[] = [
+  protected readonly packs: readonly GenerationPack[] = [
     {
       id: 'free',
       name: 'Free',
       price: '£0',
-      credits: 2,
+      generations: 2,
       applications: 'One complete CV and cover-letter application',
       description: 'Included once when you create your Job Seeker Copilot account.',
     },
@@ -36,7 +36,7 @@ export class PricingSectionComponent {
       id: 'starter',
       name: 'Starter',
       price: '£4.99',
-      credits: 10,
+      generations: 10,
       applications: 'Up to 5 complete applications',
       description: 'A focused one-off pack for a smaller set of applications.',
     },
@@ -44,7 +44,7 @@ export class PricingSectionComponent {
       id: 'active',
       name: 'Active',
       price: '£11.99',
-      credits: 25,
+      generations: 25,
       applications: 'Up to 12 complete applications, plus one individual document',
       description: 'The most useful one-off pack for an active job search.',
     },
@@ -52,7 +52,7 @@ export class PricingSectionComponent {
       id: 'power',
       name: 'Power',
       price: '£19.99',
-      credits: 60,
+      generations: 60,
       applications: 'Up to 30 complete applications',
       description: 'A larger one-off pack for sustained application activity.',
     },

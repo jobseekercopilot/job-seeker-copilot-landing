@@ -33,23 +33,23 @@ describe('PricingSectionComponent', () => {
     return fixture;
   }
 
-  it('renders exact one-off document-credit packages without token estimates', async () => {
+  it('renders exact one-off document-generation packages without token estimates', async () => {
     const fixture = await render();
     const text = fixture.nativeElement.textContent;
 
     expect(text).toContain('Free');
-    expect(text).toContain('2 document credits');
+    expect(text).toContain('2 document generations');
     expect(text).toContain('Starter');
     expect(text).toContain('£4.99');
-    expect(text).toContain('10 document credits');
+    expect(text).toContain('10 document generations');
     expect(text).toContain('Active');
     expect(text).toContain('£11.99');
-    expect(text).toContain('25 document credits');
+    expect(text).toContain('25 document generations');
     expect(text).toContain('Power');
     expect(text).toContain('£19.99');
-    expect(text).toContain('60 document credits');
+    expect(text).toContain('60 document generations');
     expect(text).toContain('No subscription and no automatic renewal');
-    expect(text).toContain('Standard pack prices and credits');
+    expect(text).toContain('Standard pack prices and generations');
     expect(text).toContain('eligibility and the exact bonus are confirmed only when secure checkout reserves the offer');
     expect(text).toContain('Availability can end before checkout');
     expect(text).toContain('Up to 12 complete applications, plus one individual document');

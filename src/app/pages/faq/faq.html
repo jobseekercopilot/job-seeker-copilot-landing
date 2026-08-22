@@ -75,7 +75,7 @@
     </div>
 
     <aside class="faq-closing" [attr.aria-label]="config.publicBetaEnabled ? 'Public beta' : 'Waiting list'">
-      <div><strong>{{ config.publicBetaEnabled ? 'Ready to try the public beta?' : 'Interested in following the product?' }}</strong><p>{{ config.publicBetaEnabled ? 'Create a free account with two document credits.' : 'Join the waiting list for development updates and public beta information.' }}</p></div>
+      <div><strong>{{ config.publicBetaEnabled ? 'Ready to try the public beta?' : 'Interested in following the product?' }}</strong><p>{{ config.publicBetaEnabled ? 'Create a free account with two document generations.' : 'Join the waiting list for development updates and public beta information.' }}</p></div>
       @if (config.publicBetaEnabled) {
         <a class="button button-primary" [href]="config.registrationUrl">Create a free account</a>
       } @else {

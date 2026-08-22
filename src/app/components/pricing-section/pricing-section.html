@@ -8,16 +8,16 @@
     <div class="pricing-heading">
       <div>
         <span class="eyebrow">Simple one-off pricing</span>
-        <h2 id="pricing-heading" class="section-heading">Search for free. Buy document credits only when you need tailored documents.</h2>
+        <h2 id="pricing-heading" class="section-heading">Search for free. Buy document generations only when you need tailored documents.</h2>
         <p class="section-intro">No subscription and no automatic renewal. Search, matching, tracking, editing, uploads, downloads and exports remain free.</p>
       </div>
       <div class="free-credit-note">
         <span aria-hidden="true">2</span>
-        <p><strong>Two document credits included</strong>Enough to create one tailored CV and cover-letter pair.</p>
+        <p><strong>Two document generations included</strong>Enough to create one tailored CV and cover-letter pair.</p>
       </div>
     </div>
 
-    <div class="pricing-grid" aria-label="Document-credit plans">
+    <div class="pricing-grid" aria-label="Document-generation plans">
       @for (pack of packs; track pack.id) {
         <article
           class="pricing-card"
@@ -33,7 +33,7 @@
           </div>
           <p>{{ pack.description }}</p>
           <ul>
-            <li><span aria-hidden="true">✓</span>{{ pack.credits }} document credits</li>
+            <li><span aria-hidden="true">✓</span>{{ pack.generations }} document generations</li>
             <li><span aria-hidden="true">✓</span>{{ pack.applications }}</li>
             <li><span aria-hidden="true">✓</span>{{ pack.id === 'free' ? 'Included account allowance' : 'One-off purchase' }}</li>
           </ul>
@@ -52,18 +52,18 @@
     </div>
 
     <aside class="promotion-note" aria-label="Limited first-purchase offers">
-      <strong>Standard pack prices and credits</strong>
+      <strong>Standard pack prices and generations</strong>
       <p>If a limited first-purchase bonus is available in the app, eligibility and the exact bonus are confirmed only when secure checkout reserves the offer. Availability can end before checkout.</p>
     </aside>
 
     <div class="credit-rules" aria-labelledby="credit-rules-heading">
       <div>
-        <h3 id="credit-rules-heading">What uses a document credit?</h3>
-        <p>One successfully delivered tailored CV or one successfully delivered cover letter uses one credit. A complete pair uses two. A regeneration is a new document and uses another credit after you choose it.</p>
+        <h3 id="credit-rules-heading">What uses a document generation?</h3>
+        <p>One successfully delivered tailored CV or one successfully delivered cover letter uses one generation. A complete pair uses two. A regeneration is a new document and uses another generation after you choose it. Failed or cancelled delivery uses none; a fallback that is successfully delivered uses one.</p>
       </div>
       <div>
-        <h3>What does not use a credit?</h3>
-        <p>Failed or cancelled generation, duplicate or replayed requests, identified no-charge fallbacks, uploads, editing, downloads and exports. Any unfinished reservation is released.</p>
+        <h3>What does not use a generation?</h3>
+        <p>Failed or cancelled generation, duplicate or replayed requests, fallback attempts that do not deliver a usable document, uploads, editing, downloads and exports. Any unfinished reservation is released.</p>
       </div>
     </div>
 

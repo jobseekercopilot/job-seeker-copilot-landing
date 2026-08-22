@@ -22,6 +22,7 @@
     "test:backend:deployed": "python3 -m unittest discover -s infrastructure/waitlist-backend/tests -v",
     "test:backend:reference": "python3 -m unittest discover -s infrastructure/tests -v",
     "test:a11y": "node scripts/accessibility-check.mjs",
+    "test:mobile-product": "node scripts/mobile-product-check.mjs",
     "test:analytics-browser": "node scripts/analytics-browser-check.mjs",
     "test:e2e:waitlist-browser": "node scripts/waitlist-e2e-browser.mjs",
     "test:e2e-runner-policy": "node scripts/waitlist-e2e-browser-validation.test.mjs",

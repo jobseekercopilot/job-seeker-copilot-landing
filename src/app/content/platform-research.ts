@@ -173,7 +173,7 @@ export const PLATFORM_RESEARCH: readonly PlatformResearch[] = [
       'AI-generated cover letters, email templates and PDF résumé export.',
     ],
     boundaries: [
-      'Some analysis, AI and template capabilities depend on plan or credit limits.',
+      'Some tailored-document capabilities depend on the purchased document-generation allowance.',
       'The documented workflow guides the user to submit the application rather than submitting it automatically.',
     ],
     notConfirmed: [
