@@ -40,10 +40,10 @@
           @if (config.publicBetaEnabled) {
             <a
               class="button button-secondary"
-              [href]="config.registrationUrl"
+              [href]="pack.id === 'free' ? config.registrationUrl : config.pricingUrl"
               data-analytics-event="pricing_cta"
               [attr.data-analytics-plan]="pack.id"
-              (click)="trackPricingCta()">{{ pack.id === 'free' ? 'Create a free account' : 'Start with free credits' }}</a>
+              (click)="trackPricingCta()">{{ pack.id === 'free' ? 'Create a free account' : 'View plans in the app' }}</a>
           } @else {
             <a class="button button-secondary" routerLink="/" fragment="waitlist" (click)="trackPricingCta()">Join the waitlist</a>
           }

@@ -88,6 +88,10 @@
   color: var(--colour-primary);
 }
 
+.primary-navigation .nav-account-link {
+  color: var(--colour-primary);
+}
+
 .nav-cta {
   min-height: 42px;
   padding: 8px 16px;

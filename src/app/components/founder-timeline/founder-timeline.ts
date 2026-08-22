@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { PUBLIC_APP_CONFIG } from '../../config/public-app-config';
 
 @Component({
   selector: 'app-founder-timeline',
@@ -6,4 +7,6 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
   styleUrl: './founder-timeline.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class FounderTimelineComponent {}
+export class FounderTimelineComponent {
+  protected readonly config = inject(PUBLIC_APP_CONFIG);
+}

@@ -1,0 +1,233 @@
+<header class="article-site-header">
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <div class="container article-site-header-inner">
+    <a class="article-brand" routerLink="/" aria-label="Job Seeker Copilot home">
+      <img src="/brand/jobseeker-copilot-logo.svg" width="38" height="38" alt="">
+      <span>Job Seeker Copilot</span>
+    </a>
+    <a class="back-link" routerLink="/">Back to the homepage</a>
+  </div>
+</header>
+
+<main id="main-content" class="research-main" tabindex="-1">
+  <div class="journey-layout">
+    <aside class="journey-sidebar">
+      <app-journey-navigation [articles]="journeyArticles" [currentPath]="articlePath" />
+    </aside>
+
+    <article class="research-article">
+      <header class="article-header">
+        <span class="eyebrow">The Journey So Far · Statistics</span>
+        <h1>The UK Job Market in 2026: What the Statistics Show</h1>
+        <p class="subtitle">An evidence-led overview of unemployment, vacancies, youth employment, application competition and changes in recruitment across the UK.</p>
+        <ul class="article-meta" aria-label="Article details">
+          <li>Published <time datetime="2026-07-24">24 July 2026</time></li>
+          <li>Bernard McGeever</li>
+          <li>Approx. 18 min read</li>
+        </ul>
+        <p class="review-date"><strong>Updated:</strong>&nbsp;<time datetime="2026-08-22">22 August 2026</time>. Headline figures use the ONS release published on 18 August 2026; the historical comparison table retains its clearly labelled July 2026 common-period dataset.</p>
+      </header>
+
+      <p class="opening">The UK job search now combines changing labour-market conditions with a recruitment process spread across job boards, employer portals, assessments, documents and follow-up systems. This article examines those changes using official statistics, government guidance, parliamentary analysis and clearly scoped industry evidence.</p>
+
+      <section aria-labelledby="platforms-opening">
+        <h2 id="platforms-opening">Recruitment infrastructure has changed</h2>
+        <p>Long-run ONS data show why no single past decade provides a simple baseline: the UK unemployment rate was 3.7% in 1974 and 11.8% in 1984, illustrating how sharply conditions changed across periods.</p>
+        <p>What has clearly changed is the infrastructure around recruitment. Research published in 2003 already documented employers using websites, online forms, email responses and applicant-tracking workflows, while also reporting concerns about receiving large quantities of unsuitable applications.</p>
+        <p>A candidate may now move between job boards, employer career sites and assessment providers, creating accounts and passwords while tailoring CVs, cover letters and screening answers. ISE research describes online application technology as one factor making it easier to apply for more graduate roles. For some Universal Credit claimants, agreed work-search actions and online account tasks add another record to maintain.</p>
+        <p class="source-line"><strong>Sources:</strong> <a href="https://www.ons.gov.uk/economy/economicoutputandproductivity/output/articles/changesintheeconomysincethe1970s/2019-09-02" target="_blank" rel="noopener noreferrer">ONS historical analysis</a>, <a href="https://www.employment-studies.co.uk/system/files/resources/files/402.pdf" target="_blank" rel="noopener noreferrer">Institute for Employment Studies</a>, <a href="https://ise.org.uk/knowledge/insights/492/apprenticeships_rise_as_graduate_vacancies_drop_8/" target="_blank" rel="noopener noreferrer">Institute of Student Employers</a> and <a href="https://www.gov.uk/universal-credit/your-claimant-commitment" target="_blank" rel="noopener noreferrer">GOV.UK</a>.</p>
+      </section>
+
+      <section aria-labelledby="market-now">
+        <h2 id="market-now">The UK labour market now</h2>
+        <div class="headline-statistics" aria-label="Latest headline UK labour-market statistics">
+          @for (statistic of labourMarket.statistics; track statistic.label) {
+            <article class="headline-statistic">
+              <p class="headline-value">{{ statistic.value }}</p>
+              <h3>{{ statistic.label }}</h3>
+              <p>{{ statistic.period }}</p>
+              <p>{{ statistic.comparison }}</p>
+              @if (statistic.isProvisional) {
+                <p class="estimate-label">Provisional early estimate</p>
+              }
+              <a class="card-source" [href]="statistic.sourceUrl" target="_blank" rel="noopener noreferrer">View source <span aria-hidden="true">↗</span><span class="sr-only"> (opens in a new tab)</span></a>
+            </article>
+          }
+        </div>
+
+        <p>The unemployment rate is the proportion of economically active people—those in work plus those seeking and available for work—who are unemployed. It is not the percentage of the whole population without a job.</p>
+        <p>The April-to-June release estimated a 75.1% employment rate and a 20.9% economic inactivity rate among people aged 16 to 64. The Claimant Count is an administrative benefit measure—not another name for unemployment—and its coverage changes when benefit rules or eligibility change.</p>
+        <p>The vacancy count estimates positions for which employers are actively seeking recruits from outside their organisation. It is based on a business survey and excludes agriculture, forestry and fishing, and activities of households as employers.</p>
+        <p>The ratio of 2.5 unemployed people per vacancy is a national measure of labour-market “tightness”. It does not mean that only 2.5 applications are submitted for each advertised role: the numerator counts unemployed people, while an employer’s application total counts submissions and can include employed or inactive candidates, repeat candidates across roles and people who do not meet the requirements.</p>
+        <aside class="quality-note" aria-label="Data quality note">
+          <strong>Read short-term changes carefully.</strong>
+          <p>The ONS redesignated Labour Force Survey estimates as official statistics in August 2026. It still advises users to consider them alongside other labour-market indicators and to focus on longer movements because some volatility remains.</p>
+        </aside>
+        <p class="source-line"><strong>Sources:</strong> <a href="https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/employmentandemployeetypes/bulletins/uklabourmarket/august2026" target="_blank" rel="noopener noreferrer">ONS labour-market overview</a>, <a href="https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/employmentandemployeetypes/bulletins/employmentintheuk/august2026" target="_blank" rel="noopener noreferrer">employment bulletin</a> and <a href="https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/employmentandemployeetypes/bulletins/jobsandvacanciesintheuk/august2026" target="_blank" rel="noopener noreferrer">vacancies bulletin</a>.</p>
+      </section>
+
+      <section aria-labelledby="fewer-vacancies">
+        <h2 id="fewer-vacancies">Fewer vacancies and greater competition</h2>
+        <p>The latest early estimate was 707,000 vacancies in May to July 2026: 19,000, or 2.7%, fewer than a year earlier and 81,000, or 10.3%, below the January-to-March 2020 pre-pandemic level.</p>
+        <p>The table is a dated historical comparison using matching three-month periods so that unemployment, youth unemployment, vacancies and the unemployed-to-vacancy ratio can be compared consistently. Its 2026 vacancy value therefore remains 710,000 for March to May; it is not the newer May-to-July headline.</p>
+
+        <div class="table-scroll" tabindex="0" role="region" aria-labelledby="history-table-caption">
+          <table>
+            <caption id="history-table-caption">Selected consistent UK labour-market comparisons, using the July 2026 common-period dataset</caption>
+            <thead>
+              <tr>
+                <th scope="col">Period and context</th>
+                <th scope="col">Unemployment rate</th>
+                <th scope="col">Unemployed people</th>
+                <th scope="col">Youth unemployment rate</th>
+                <th scope="col">Youth unemployed</th>
+                <th scope="col">Vacancies</th>
+                <th scope="col">Unemployed per vacancy</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (point of research.historicalLabourMarket; track point.period) {
+                <tr>
+                  <th scope="row">{{ point.period }}<small>{{ point.context }}</small></th>
+                  <td>{{ point.unemploymentRate }}</td>
+                  <td>{{ point.unemployedPeople }}</td>
+                  <td>{{ point.youthUnemploymentRate }}</td>
+                  <td>{{ point.youthUnemployedPeople }}</td>
+                  <td>{{ point.vacancies }}</td>
+                  <td>{{ point.unemployedPerVacancy }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <p class="source-line"><strong>Sources:</strong> ONS <a href="https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/employmentandemployeetypes/datasets/employmentunemploymentandeconomicinactivitybyagegroupseasonallyadjusteda05sa" target="_blank" rel="noopener noreferrer">A05 SA</a> and <a href="https://www.ons.gov.uk/employmentandlabourmarket/peoplenotinwork/unemployment/datasets/vacanciesandunemploymentvacs01" target="_blank" rel="noopener noreferrer">VACS01</a>, released 21 July 2026.</p>
+
+        <p>Vacancies reached 1.294 million in April to June 2022, the highest value in the current VACS01 series, before falling to the latest level. The near-peak March-to-May comparison above had 1.293 million vacancies and one unemployed person per vacancy.</p>
+        <p>Neither January to March 2020 nor 2022 is an ordinary baseline. The first sits immediately before the pandemic shock; the second reflects the exceptional reopening-era vacancy surge. The ONS series shows unemployment rising during the pandemic, falling below pre-pandemic rates by mid-2022, and then largely increasing.</p>
+      </section>
+
+      <section aria-labelledby="young-people">
+        <h2 id="young-people">Young people are facing particular difficulty</h2>
+        <p>In April to June 2026, an estimated 739,000 people aged 16 to 24 were unemployed. Their unemployment rate was 16.2%, up from 14.3% a year earlier, while the level increased by 97,000.</p>
+        <p>A youth unemployment rate of 16.2% does not mean that 16.2% of every young person was unemployed. It is the share of economically active 16-to-24-year-olds who were unemployed; economically inactive young people sit outside the unemployment-rate denominator.</p>
+        <p>“Unemployed”, “economically inactive” and “not in employment, education or training” (NEET) are different categories. The latest NEET estimate available to the Commons Library was 1.01 million, or 13.5% of 16-to-24-year-olds, for January to March 2026; it includes both unemployed and economically inactive young people who were not in education or training.</p>
+        <p>Students can therefore affect interpretation: a student who is not seeking or available for work is economically inactive, while one who meets the job-search and availability definition can be unemployed. Granular age estimates also have smaller samples, so the ONS asks readers to use additional caution.</p>
+        <p class="source-line"><strong>Sources:</strong> ONS <a href="https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/employmentandemployeetypes/datasets/employmentunemploymentandeconomicinactivitybyagegroupseasonallyadjusteda05sa" target="_blank" rel="noopener noreferrer">A05 SA</a> and the House of Commons Library’s <a href="https://commonslibrary.parliament.uk/research-briefings/sn05871/" target="_blank" rel="noopener noreferrer">youth unemployment briefing</a>.</p>
+      </section>
+
+      <section aria-labelledby="graduate-applications">
+        <h2 id="graduate-applications">Graduate applications have risen dramatically</h2>
+        <p>The Institute of Student Employers reports that its member employers received an average of 38 applications per graduate vacancy in 2002/03, 86 in 2022/23 and 140 in each of the next two recruitment cycles.</p>
+
+        <figure class="application-figure">
+          <figcaption>Mean applications received per graduate vacancy among employers reporting to ISE</figcaption>
+          <div class="bar-chart" aria-hidden="true">
+            @for (point of research.graduateApplications; track point.recruitmentCycle) {
+              <div class="bar-row">
+                <span>{{ point.recruitmentCycle }}</span>
+                <span class="bar-track"><span class="bar-fill" [style.width.%]="point.applicationsPerVacancy / 1.4"></span></span>
+                <strong>{{ point.applicationsPerVacancy }}</strong>
+              </div>
+            }
+          </div>
+          <div class="table-scroll compact-table" tabindex="0" role="region" aria-label="Graduate application chart data">
+            <table>
+              <caption>Text alternative and data table for the graduate application comparison</caption>
+              <thead>
+                <tr><th scope="col">Recruitment cycle</th><th scope="col">Mean applications per graduate vacancy</th><th scope="col">Scope note</th></tr>
+              </thead>
+              <tbody>
+                @for (point of research.graduateApplications; track point.recruitmentCycle) {
+                  <tr><th scope="row">{{ point.recruitmentCycle }}</th><td>{{ point.applicationsPerVacancy }}</td><td>{{ point.note }}</td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <p class="source-line"><strong>Sources:</strong> Institute of Student Employers’ <a href="https://ise.org.uk/knowledge/insights/410/record_graduate_job_applications/" target="_blank" rel="noopener noreferrer">2024 analysis</a>, <a href="https://ise.org.uk/knowledge/insights/492/apprenticeships_rise_as_graduate_vacancies_drop_8/" target="_blank" rel="noopener noreferrer">2025 analysis</a> and <a href="https://ise.org.uk/_userfiles/pages/files/reports/student_recruitment_survey_2025.pdf" target="_blank" rel="noopener noreferrer">Student Recruitment Survey 2025</a>.</p>
+        </figure>
+
+        <p>For the 2023/24 cycle, responding employers collectively reported more than 1.2 million applications to just under 17,000 graduate vacancies; ISE separately reported a mean of 140 applications per graduate vacancy and called it the highest level since it began collecting the measure in 1991.</p>
+        <p>In the following 2024/25 survey, graduate recruitment among participating employers fell by 8%, while apprenticeship starts rose by 8%. These are changes within ISE’s member sample, not national totals for all entry-level hiring.</p>
+        <aside class="scope-note" aria-label="Graduate survey limitations">
+          <strong>What the ratio does—and does not—mean</strong>
+          <p>The research principally covers ISE members: mainly large employers running formal graduate and apprenticeship programmes. The 2025 survey analysed 155 member employers, more than 31,000 student hires and more than 1.8 million applications across its student-recruitment pathways.</p>
+          <p>It is not a measurement of the whole UK labour market and should not be generalised to retail, hospitality, care, construction or every entry-level job. It counts applications received by employers, not the number one person must submit. One candidate can apply to several vacancies, and a vacancy can receive applications from people who do not meet its requirements; the ratio is not an individual probability of success.</p>
+        </aside>
+      </section>
+
+      <section aria-labelledby="application-administration">
+        <h2 id="application-administration">Application volume and administration</h2>
+        <p>Technology can make vacancies easier to discover and initial applications quicker to submit. ISE points to online tools such as easy-apply functions, broader eligibility and AI-assisted drafting as possible contributors to higher graduate application volumes, while stressing that reduced hiring and economic conditions also matter.</p>
+        <p>No current national statistic establishes how many applications a person must make to secure a job. Available person-level figures cover particular groups and periods. A DWP survey of around 1,000 people who first claimed Universal Credit in November or December 2016 found that claimants in the intensive work-search group reported a mean of eight applications in the previous week at the second survey wave. Separate DWP research conducted in 2015 and 2016 found that Universal Credit family claimants who were required to look for work applied for an average of 11 jobs in the previous week at the first survey wave and 12 at the second.</p>
+        <p>These are historical, self-reported figures for specific groups of claimants—not a present-day UK average and not a target for finding work. More recent industry evidence points to increased friction without providing a universal application count: a March-to-April 2026 Totaljobs survey of 2,017 UK workers reported that applications submitted had risen 16% compared with its previous study, while 77% said getting an interview was harder than a year earlier and 66% said they received no response beyond an automated acknowledgement.</p>
+        <p>Submitting an application can require more than sending a CV. Depending on the employer, a candidate may need to tailor documents, answer screening questions, complete assessments and keep track of:</p>
+        <ul class="record-list">
+          <li>the role, employer, original advert, job board, application date and closing date;</li>
+          <li>the CV and cover-letter versions submitted, screening answers and employer contact details;</li>
+          <li>assessments, interviews, follow-ups, responses, rejections, offers and status changes; and</li>
+          <li>notes or evidence the candidate may want when reviewing their own search.</li>
+        </ul>
+        <p>That information can arrive through different sites and inboxes, while adverts may disappear after their closing dates. The evidence supports treating application administration as a material part of the modern job search, but it does not support a universal number of applications that every person should make.</p>
+        <p class="source-line"><strong>Sources:</strong> <a href="https://www.gov.uk/government/publications/universal-credit-full-service-claimant-survey" target="_blank" rel="noopener noreferrer">DWP Universal Credit full service claimant survey</a>, <a href="https://www.gov.uk/government/publications/universal-credit-test-and-learn-evaluation-families" target="_blank" rel="noopener noreferrer">DWP research with Universal Credit families</a> and <a href="https://www.totaljobs.com/recruiter-advice/hiring-people/hiring-trends-update/" target="_blank" rel="noopener noreferrer">Totaljobs Spring 2026 Hiring Trends Update</a>.</p>
+      </section>
+
+      <section aria-labelledby="recruiter-pressure">
+        <h2 id="recruiter-pressure">Recruiters are also facing operational pressure</h2>
+        <p>Higher application volumes create work on the employer side as well as the candidate side. In a June-to-July 2025 Totaljobs survey of 748 UK HR leaders, 72% said that screening large numbers of irrelevant applications slowed recruitment. Respondents reported receiving an average of 20 applications per role and spending 3.6 hours per vacancy screening CVs.</p>
+        <p>The same research estimated 17.7 hours of manual work per vacancy across tasks including screening, interview scheduling, post-interview updates and data entry. This is an industry estimate based on the surveyed recruiters’ reported workload, not an official measure covering every UK employer.</p>
+        <p>Totaljobs’ March-to-April 2026 follow-up research with 885 UK employers and HR decision-makers reported that average time to hire had increased from 10 weeks in autumn 2025 to 12 weeks. It also found that 55% of talent-acquisition respondents said their workload had become harder to manage.</p>
+        <p>These findings show pressure on both sides of recruitment: candidates may be managing more submissions and follow-up, while recruiters may be processing larger and less targeted applicant pools. They do not establish that application volume alone caused the change in hiring time.</p>
+        <p class="source-line"><strong>Sources:</strong> Totaljobs’ <a href="https://www.totaljobs.com/recruiter-advice/hiring-people/whats-slowing-down-your-hiring/" target="_blank" rel="noopener noreferrer">2025 hiring-efficiency survey</a> and <a href="https://www.totaljobs.com/recruiter-advice/hiring-people/hiring-trends-update/" target="_blank" rel="noopener noreferrer">Spring 2026 Hiring Trends Update</a>.</p>
+      </section>
+
+      <section aria-labelledby="universal-credit">
+        <h2 id="universal-credit">Universal Credit work-search records</h2>
+        <p>A Universal Credit claimant commitment records what an individual agrees to do to prepare for and look for work or increase earnings. Requirements depend on circumstances and can change; they may include updating a CV, searching and applying for suitable work, attending appointments or training, and completing agreed preparation.</p>
+        <p>If an agreed work-related activity is not completed without good reason, a payment may be reduced through a sanction. GOV.UK tells claimants who cannot meet a commitment to contact Universal Credit promptly and explain the reason.</p>
+        <p>The online account can show a claimant commitment and to-do list, and its journal can be used to message a case manager or work coach. DWP research also describes work-search reviews as tailored conversations whose effectiveness depends on the claimant’s barriers, skills, motivation and goals—not merely a uniform application count.</p>
+        <aside class="important-note">
+          <p>There is no fixed national application requirement for every Universal Credit claimant. People should follow the individual requirements agreed with their work coach and contact Universal Credit promptly if they cannot meet a commitment.</p>
+        </aside>
+        <p class="source-line"><strong>Sources:</strong> GOV.UK guidance on <a href="https://www.gov.uk/universal-credit/your-claimant-commitment" target="_blank" rel="noopener noreferrer">claimant commitments</a>, <a href="https://www.gov.uk/guidance/universal-credit-sanctions" target="_blank" rel="noopener noreferrer">sanctions</a> and the <a href="https://www.gov.uk/sign-in-universal-credit" target="_blank" rel="noopener noreferrer">Universal Credit online account</a>; DWP research on <a href="https://www.gov.uk/government/publications/what-makes-work-search-reviews-effective" target="_blank" rel="noopener noreferrer">work-search reviews</a>.</p>
+      </section>
+
+      <section aria-labelledby="ai-responsible">
+        <h2 id="ai-responsible">Is AI responsible?</h2>
+        <p>AI is part of the recruitment change, but the available evidence does not establish it as a single explanation for a weaker labour market. ISE reports that candidates use AI mainly for tasks such as drafting CVs, cover letters and online answers, and that 79% of employers in its 2025 survey were redesigning or reviewing recruitment processes in response to AI developments.</p>
+        <p>Easier drafting can lower the time needed to adapt an application and may contribute to volume. Employers are also experimenting with automation, authenticity checks and different assessments. However, ISE simultaneously identifies fewer roles, wider eligibility and economic pressure, while the ONS vacancy survey records feedback about labour costs and other operating expenses.</p>
+        <p>The ONS bulletins measure labour-market outcomes; they do not attribute the current unemployment level or vacancy decline to AI. It would therefore be an unsupported causal leap to say AI created today’s unemployment, has replaced most entry-level jobs or makes mass unemployment inevitable.</p>
+        <p class="source-line"><strong>Sources:</strong> Institute of Student Employers’ <a href="https://ise.org.uk/_userfiles/pages/files/reports/student_recruitment_survey_2025.pdf" target="_blank" rel="noopener noreferrer">Student Recruitment Survey 2025</a>, <a href="https://luminate.prospects.ac.uk/three-key-trends-in-graduate-recruitment-this-year" target="_blank" rel="noopener noreferrer">Prospects analysis</a> and the ONS <a href="https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/employmentandemployeetypes/bulletins/jobsandvacanciesintheuk/july2026" target="_blank" rel="noopener noreferrer">vacancies bulletin</a>.</p>
+      </section>
+
+      <section aria-labelledby="methodology">
+        <h2 id="methodology">Methodology and limitations</h2>
+        <ul class="methodology-list">
+          <li><strong>Review date:</strong> headline ONS and Commons Library figures were checked on 22 August 2026. The next scheduled ONS labour-market release is 15 September 2026. Other sources retain their individual publication and access dates below.</li>
+          <li><strong>Primary sources:</strong> national figures use ONS bulletins or datasets. The A01 summary dataset was used as an additional series cross-check; Commons Library briefings helped cross-check interpretation, not replace the underlying ONS source.</li>
+          <li><strong>Different periods:</strong> the LFS reports rolling three-month household-survey estimates; the Vacancy Survey publishes a newer rolling three-month period; the Claimant Count is monthly. Figures have not been forced into a false single “current” date.</li>
+          <li><strong>Survey uncertainty:</strong> LFS estimates have sampling variability and are official statistics. Vacancy estimates are accredited official statistics, but the latest total is an early estimate with a confidence interval.</li>
+          <li><strong>Revisions:</strong> the historical table retains the July 2026 common-period dataset. Headline figures were refreshed from the August release. The latest Claimant Count is provisional and can be revised as administrative records change.</li>
+          <li><strong>Application measures:</strong> employer applications per vacancy are not applications per person and are not a universal success rate. Person-level DWP figures are historical self-reports from particular claimant groups. Totaljobs figures are current industry survey evidence, not official national statistics.</li>
+        </ul>
+        <p>This article will be reviewed when the next ONS release is published and should be treated as a dated research record, not a live dashboard.</p>
+      </section>
+
+      <section id="sources" class="sources-list" aria-labelledby="sources-heading">
+        <h2 id="sources-heading">Sources</h2>
+        <p>Links throughout the article lead directly to the relevant publications. This list brings them together in one place; industry evidence is clearly separated from official national statistics.</p>
+        <ul>
+          @for (source of research.sources; track source.id) {
+            <li>
+              <a class="source-link" [href]="source.url" target="_blank" rel="noopener noreferrer">
+                <strong>{{ source.organisation }}</strong>: {{ source.title }} <span aria-hidden="true">↗</span><span class="sr-only"> (opens in a new tab)</span>
+              </a>
+              <span>{{ source.publicationDate }} · {{ source.sourceType }}</span>
+            </li>
+          }
+        </ul>
+      </section>
+    </article>
+  </div>
+</main>
+
+<app-footer />

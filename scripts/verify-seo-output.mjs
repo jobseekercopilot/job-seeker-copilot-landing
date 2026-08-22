@@ -15,7 +15,7 @@ for (const [key, route] of namedRoutes) {
   const description = meta(head, 'name', 'description');
   const robots = meta(head, 'name', 'robots');
   const canonical = captureOptional(head, /<link\b(?=[^>]*rel="canonical")(?=[^>]*href="([^"]+)")[^>]*>/i);
-  const expectedCanonical = `${CANONICAL_PUBLIC_ORIGIN}${route.path}`;
+  const expectedCanonical = canonicalPublicUrl(route.path);
   const expectedRobots = runtimeConfig.searchIndexingEnabled && route.indexable
     ? 'index, follow, max-image-preview:large'
     : 'noindex, nofollow, noarchive';
@@ -101,7 +101,7 @@ function verifyInternalLinks(pagesToCheck) {
 async function verifySitemapAndRobots() {
   const sitemap = await readFile(join(output, 'sitemap.xml'), 'utf8');
   const actual = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match => match[1]);
-  const expected = namedRoutes.filter(([, route]) => route.indexable).map(([, route]) => `${CANONICAL_PUBLIC_ORIGIN}${route.path}`);
+  const expected = namedRoutes.filter(([, route]) => route.indexable).map(([, route]) => canonicalPublicUrl(route.path));
   assert(JSON.stringify(actual) === JSON.stringify(expected), 'Sitemap URLs or deterministic ordering are incorrect.');
   assert(unique(actual), 'Sitemap URLs must be unique.');
   assert(actual.every(value => value.startsWith(`${CANONICAL_PUBLIC_ORIGIN}/`) && !/[?#]|\/waitlist\//.test(value)), 'Sitemap contains a prohibited URL.');
@@ -112,6 +112,11 @@ async function verifySitemapAndRobots() {
   } else {
     assert(robots === 'User-agent: *\nDisallow: /\n', 'Disabled robots policy must disallow all crawling.');
   }
+}
+
+function canonicalPublicUrl(path) {
+  const canonicalPath = path === '/' ? '/' : `${path.replace(/\/+$/, '')}/`;
+  return `${CANONICAL_PUBLIC_ORIGIN}${canonicalPath}`;
 }
 
 async function verifySocialImage() {

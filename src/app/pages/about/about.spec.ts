@@ -33,12 +33,14 @@ describe('AboutPage', () => {
     fixture.detectChanges();
     const navigationLinks = fixture.nativeElement.querySelectorAll('.journey-navigation a') as NodeListOf<HTMLAnchorElement>;
 
-    expect(navigationLinks).toHaveLength(2);
-    expect(navigationLinks[0].textContent).toContain('How Job Seeker Copilot Compares');
-    expect(navigationLinks[0].textContent).toContain('16 July 2026');
-    expect(navigationLinks[1].textContent).toContain('The Story Behind Job Seeker Copilot');
-    expect(navigationLinks[1].textContent).toContain('14 July 2026');
-    expect(navigationLinks[1].getAttribute('aria-current')).toBe('page');
+    expect(navigationLinks).toHaveLength(3);
+    expect(navigationLinks[0].textContent).toContain('Statistics');
+    expect(navigationLinks[0].textContent).toContain('24 July 2026');
+    expect(navigationLinks[1].textContent).toContain('How Job Seeker Copilot Compares');
+    expect(navigationLinks[1].textContent).toContain('16 July 2026');
+    expect(navigationLinks[2].textContent).toContain('The Story Behind Job Seeker Copilot');
+    expect(navigationLinks[2].textContent).toContain('14 July 2026');
+    expect(navigationLinks[2].getAttribute('aria-current')).toBe('page');
   });
 
   it('describes active public-beta feedback instead of pre-registration waiting', async () => {

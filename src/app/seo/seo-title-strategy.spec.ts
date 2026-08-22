@@ -41,6 +41,7 @@ describe('SeoTitleStrategy', () => {
     expect(homeSchema['@graph'].map((item: { '@type': string }) => item['@type'])).toEqual(['Organization', 'WebSite']);
 
     strategy.updateTitle(snapshot(SEO_ROUTES.faq));
+    expect(document.querySelector<HTMLLinkElement>('link[rel="canonical"]')?.href).toBe('https://www.jobseekercopilot.com/faq/');
     const faqSchema = JSON.parse(document.querySelector<HTMLScriptElement>('#seo-structured-data')?.textContent ?? '{}');
     expect(faqSchema['@type']).toBe('FAQPage');
     expect(faqSchema.mainEntity).toHaveLength(9);
@@ -49,7 +50,19 @@ describe('SeoTitleStrategy', () => {
     strategy.updateTitle(snapshot(SEO_ROUTES.comparison));
     const articleSchema = JSON.parse(document.querySelector<HTMLScriptElement>('#seo-structured-data')?.textContent ?? '{}');
     expect(articleSchema['@type']).toBe('BlogPosting');
-    expect(articleSchema.mainEntityOfPage).toBe('https://www.jobseekercopilot.com/the-journey-so-far/job-search-platform-comparison');
+    expect(articleSchema.headline).toBe('How Job Seeker Copilot Compares with Today’s Job Search Platforms');
+    expect(articleSchema.datePublished).toBe('2026-07-16');
+    expect(articleSchema.mainEntityOfPage).toBe('https://www.jobseekercopilot.com/the-journey-so-far/job-search-platform-comparison/');
+
+    strategy.updateTitle(snapshot(SEO_ROUTES.statistics));
+    const statisticsSchema = JSON.parse(document.querySelector<HTMLScriptElement>('#seo-structured-data')?.textContent ?? '{}');
+    expect(statisticsSchema['@type']).toBe('BlogPosting');
+    expect(statisticsSchema.headline).toBe('The UK Job Market in 2026: What the Statistics Show');
+    expect(statisticsSchema.datePublished).toBe('2026-07-24');
+    expect(statisticsSchema.dateModified).toBe('2026-08-22');
+    expect(statisticsSchema.mainEntityOfPage).toBe('https://www.jobseekercopilot.com/the-journey-so-far/uk-job-search-statistics/');
+    expect(TestBed.inject(Meta).getTag('property="article:published_time"')?.content).toBe('2026-07-24');
+    expect(TestBed.inject(Meta).getTag('property="article:modified_time"')?.content).toBe('2026-08-22');
   });
 
   it('publishes public-beta FAQ structured data only when the release flag is enabled', () => {

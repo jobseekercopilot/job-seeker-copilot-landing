@@ -41,6 +41,17 @@
   font-weight: 700;
 }
 
+.journey-navigation .article-label {
+  color: #4267a9;
+  display: block;
+  font-family: var(--font-sans);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  margin-bottom: 2px;
+  text-transform: uppercase;
+}
+
 .journey-navigation time {
   color: #596575;
   display: block;

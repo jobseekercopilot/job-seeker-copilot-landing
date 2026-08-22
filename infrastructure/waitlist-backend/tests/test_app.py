@@ -495,7 +495,10 @@ class EventAndSecurityTests(unittest.TestCase):
             "Action: [dynamodb:GetItem, dynamodb:PutItem, dynamodb:UpdateItem, dynamodb:TransactWriteItems]",
             waitlist_role,
         )
-        self.assertIn("Action: [dynamodb:PutItem, dynamodb:TransactWriteItems]", waitlist_role)
+        self.assertIn(
+            "Action: [dynamodb:DeleteItem, dynamodb:PutItem, dynamodb:TransactWriteItems]",
+            waitlist_role,
+        )
         self.assertIn(
             "Action: [dynamodb:GetItem, dynamodb:UpdateItem, dynamodb:TransactWriteItems]",
             confirmation_role,
