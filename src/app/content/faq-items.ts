@@ -119,7 +119,7 @@ export function faqItemsForRelease(publicBetaEnabled: boolean): readonly FaqItem
     blocks: [
       {type: 'paragraph' as const, text: 'Yes. Job Seeker Copilot is available as a UK public beta.'},
       {type: 'paragraph' as const, text: 'Beta features may change as reliability, security and usability evidence is gathered.'},
-      {type: 'paragraph' as const, text: 'Create a free account to begin with two document credits, or sign in if you already have an account.'},
+      {type: 'paragraph' as const, text: 'Create a free account to begin with two document generations, or sign in if you already have an account.'},
     ],
     callToAction: undefined,
   } : {

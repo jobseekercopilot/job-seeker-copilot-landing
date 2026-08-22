@@ -2,7 +2,7 @@
 
 ## Decision
 
-Launch with the implemented non-renewing document-credit catalogue:
+Launch with the implemented non-renewing document-generation catalogue:
 
 | Offer | Price | Documents | Understandable outcome |
 | --- | ---: | ---: | --- |
@@ -14,7 +14,7 @@ Launch with the implemented non-renewing document-credit catalogue:
 Search, matching, profile management, application tracking, uploads, document
 history, downloads and reporting are not divided into artificial paid feature
 tiers. One successfully delivered CV or cover letter consumes one document
-credit; failure, cancellation and replay do not consume a credit.
+generation; failure, cancellation and replay do not consume a generation.
 
 Do not describe these offers as subscriptions or promise an expiry policy that
 has not been reviewed and versioned. Checkout stays disabled until seller,
@@ -27,8 +27,8 @@ to hide the post-credit fixed-cost break-even point.
 
 ## Why the launch catalogue remains one-off
 
-The target prices are used with the implemented 10/25/60-credit one-off packs.
-The payment system is deliberately a one-off Checkout and append-only credit
+The target prices are used with the implemented 10/25/60-generation one-off packs.
+The payment system is deliberately a one-off Checkout and append-only allowance
 ledger. A safe recurring product additionally needs renewal, cancellation,
 failed-payment/dunning, subscription-webhook ordering, entitlement-period
 rollover, receipts and consumer-term behaviour. Changing that model immediately
@@ -36,7 +36,7 @@ before launch would turn the final Stripe credential step into a new payment
 project.
 
 The monthly proposal should be reconsidered after the beta supplies observed
-conversion, credit use, regeneration, support and churn data. It must not be
+conversion, allowance use, regeneration, support and churn data. It must not be
 implemented merely by renaming one-off Stripe Prices as subscriptions.
 
 ## Measured AI cost
@@ -82,12 +82,12 @@ That does not justify raising the launch price, but disputes must be monitored
 and the included Radar/3DS controls must remain enabled; this is not permission
 to tolerate an elevated dispute rate.
 
-The founding promotion can add 50% to the delivered credits, making the maximum
+The founding promotion can add 50% to the delivered generations, making the maximum
 first-purchase allocations 15, 38 and 90 documents. The following sensitivity
 uses the measured heavy AI case and, deliberately, treats every USD of AI cost
 as one GBP rather than relying on a favourable exchange rate:
 
-| Pack | Heavy AI, base credits | Heavy AI, founding allocation | Net contribution after Stripe and promoted AI at USD=GBP parity |
+| Pack | Heavy AI, base generations | Heavy AI, founding allocation | Net contribution after Stripe and promoted AI at USD=GBP parity |
 | --- | ---: | ---: | ---: |
 | Starter | $0.1135 | $0.1703 | £4.55 |
 | Active | $0.2838 | $0.4313 | £11.18 |
@@ -95,7 +95,7 @@ as one GBP rather than relying on a favourable exchange rate:
 
 This does not include support, tax, refunds, disputes or unknown future paid
 search/location-provider charges. It does show that measured model consumption
-does not require increasing the target prices. The bounded document-credit
+does not require increasing the target prices. The bounded document-generation
 allowance prevents open-ended generation liability.
 
 The lean AWS plan is approximately $560/month, with a $750 alert ceiling, and
@@ -124,7 +124,7 @@ this pricing approval.
 At the same conservative USD=GBP parity and after the worst-case founding AI
 allocation, the monthly AWS baseline is covered by approximately 124 Starter,
 51 Active or 31 Power purchases. A real sales mix will fall between those
-points. The two-credit free allowance costs $0.0227 per account even at the
+points. The two-generation free allowance costs $0.0227 per account even at the
 heavy sensitivity, or $11.35 for 500 fully used free allowances.
 
 The £4.99/£11.99/£19.99 catalogue is therefore approved as an introductory
