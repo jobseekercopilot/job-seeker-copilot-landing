@@ -12,7 +12,13 @@
     "title": "The Story Behind Job Seeker Copilot | The Journey So Far",
     "description": "Read why Bernard McGeever began building Job Seeker Copilot and the milestones that shaped the project’s journey so far.",
     "indexable": true,
-    "socialType": "article"
+    "socialType": "article",
+    "article": {
+      "headline": "The Story Behind Job Seeker Copilot",
+      "publishedDate": "2026-07-14",
+      "modifiedDate": "2026-07-14",
+      "author": "Bernard McGeever"
+    }
   },
   "faq": {
     "path": "/faq",
@@ -28,7 +34,27 @@
     "description": "An official-source comparison of Job Seeker Copilot with UK job boards and specialist job-search platforms across discovery, documents and tracking.",
     "indexable": true,
     "socialType": "article",
-    "schema": "comparison"
+    "schema": "article",
+    "article": {
+      "headline": "How Job Seeker Copilot Compares with Today’s Job Search Platforms",
+      "publishedDate": "2026-07-16",
+      "modifiedDate": "2026-07-16",
+      "author": "Bernard McGeever"
+    }
+  },
+  "statistics": {
+    "path": "/the-journey-so-far/uk-job-search-statistics",
+    "title": "The UK Job Market in 2026: What the Statistics Show",
+    "description": "An evidence-led overview of UK unemployment, vacancies, youth unemployment, application competition and changes in recruitment.",
+    "indexable": true,
+    "socialType": "article",
+    "schema": "article",
+    "article": {
+      "headline": "The UK Job Market in 2026: What the Statistics Show",
+      "publishedDate": "2026-07-24",
+      "modifiedDate": "2026-08-22",
+      "author": "Bernard McGeever"
+    }
   },
   "privacy": {
     "path": "/privacy",
@@ -40,7 +66,7 @@
   "terms": {
     "path": "/terms",
     "title": "Terms | Job Seeker Copilot",
-    "description": "Read the terms for using the Job Seeker Copilot landing site, joining early access and understanding the current pre-beta service boundaries.",
+    "description": "Read the terms for using the Job Seeker Copilot website, public beta and early-access services, including the current service boundaries.",
     "indexable": true,
     "socialType": "website"
   },

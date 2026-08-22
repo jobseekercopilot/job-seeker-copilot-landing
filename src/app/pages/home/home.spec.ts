@@ -33,27 +33,37 @@ describe('HomePage', () => {
       publicBetaEnabled: true,
       registrationUrl: 'https://app.jobseekercopilot.com/register',
       signInUrl: 'https://app.jobseekercopilot.com/sign-in',
+      pricingUrl: 'https://app.jobseekercopilot.com/payment',
     });
 
-    expect(fixture.nativeElement.textContent).toContain('UK public beta open');
+    expect(fixture.nativeElement.textContent).toContain('UK public beta · Accounts open');
     expect(fixture.nativeElement.querySelectorAll('app-email-signup-form')).toHaveLength(0);
     expect(fixture.nativeElement.querySelectorAll(
       'a[href="https://app.jobseekercopilot.com/register"]',
     ).length).toBeGreaterThan(1);
+    expect(fixture.nativeElement.querySelectorAll(
+      'a[href="https://app.jobseekercopilot.com/sign-in"]',
+    ).length).toBeGreaterThan(1);
+    expect(fixture.nativeElement.querySelectorAll(
+      'a[href="https://app.jobseekercopilot.com/payment"]',
+    )).toHaveLength(3);
     expect(fixture.nativeElement.textContent).toContain('Try the public beta');
     expect(fixture.nativeElement.textContent).not.toContain('Get product updates');
   });
 
-  it('places an accessible, sourced comparison immediately before the roadmap', async () => {
+  it('places an accessible, sourced comparison before pricing and keeps roadmap work below current capabilities', async () => {
     const fixture = await createHomeFixture();
     const root = fixture.nativeElement as HTMLElement;
     const comparison = root.querySelector('#competitor-comparison');
     const comparisonHost = root.querySelector('app-competitor-comparison-section');
+    const pricing = root.querySelector('app-pricing-section');
     const roadmap = root.querySelector('app-roadmap-section');
+    const accessibility = root.querySelector('app-accessibility-section');
     const matrix = comparison?.querySelector('.comparison-scroll');
 
     expect(comparison).toBeTruthy();
-    expect(comparisonHost?.nextElementSibling).toBe(roadmap);
+    expect(comparisonHost?.nextElementSibling).toBe(pricing);
+    expect(accessibility?.nextElementSibling).toBe(roadmap);
     expect(matrix?.getAttribute('tabindex')).toBe('0');
     expect(comparison?.querySelectorAll('thead img')).toHaveLength(9);
     expect(Array.from(comparison?.querySelectorAll('thead img') ?? []).every(image => image.getAttribute('alt')?.endsWith(' logo'))).toBe(true);
@@ -75,5 +85,27 @@ describe('HomePage', () => {
     expect(hrefs).toContain('/faq#work-search-reporting');
     expect(root.querySelector('footer a[href="/faq"]')?.textContent).toContain('Frequently Asked Questions');
     expect(root.querySelector('footer a[href="/about"]')?.textContent).toContain('The Journey So Far');
+  });
+
+  it('renders four current ONS statistics with periods, release dates and safe sources', async () => {
+    const fixture = await createHomeFixture();
+    const root = fixture.nativeElement as HTMLElement;
+    const statistics = root.querySelectorAll<HTMLElement>('#uk-job-market .statistic-card');
+    const sourceLinks = Array.from(
+      root.querySelectorAll<HTMLAnchorElement>('#uk-job-market .statistic-source a, #uk-job-market .source-panel a'),
+    );
+
+    expect(statistics).toHaveLength(4);
+    expect(Array.from(statistics).map(statistic => statistic.querySelector('.statistic-value')?.textContent?.trim()))
+      .toEqual(['4.9%', '1.772 million', '707,000', '2.5']);
+    expect(Array.from(statistics).every(statistic => statistic.textContent?.includes('Measurement period:'))).toBe(true);
+    expect(Array.from(statistics).every(statistic => statistic.textContent?.includes('Data released: 18 August 2026'))).toBe(true);
+    expect(root.querySelectorAll('.provisional-label')).toHaveLength(1);
+    expect(root.querySelector<HTMLAnchorElement>('#uk-job-market a[href="/the-journey-so-far/uk-job-search-statistics"]'))
+      .toBeTruthy();
+    expect(sourceLinks).toHaveLength(7);
+    expect(sourceLinks.every(link => link.href.startsWith('https://www.ons.gov.uk/'))).toBe(true);
+    expect(sourceLinks.every(link => link.target === '_blank' && link.rel === 'noopener noreferrer')).toBe(true);
+    expect(root.textContent).toContain('next scheduled review 15 September 2026');
   });
 });

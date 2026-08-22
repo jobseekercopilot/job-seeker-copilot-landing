@@ -21,6 +21,9 @@ describe('PricingSectionComponent', () => {
             registrationUrl: publicBetaEnabled
               ? 'https://app.jobseekercopilot.com/register'
               : '',
+            pricingUrl: publicBetaEnabled
+              ? 'https://app.jobseekercopilot.com/payment'
+              : '',
           },
         },
       ],
@@ -61,5 +64,9 @@ describe('PricingSectionComponent', () => {
     expect(fixture.nativeElement.querySelector(
       'a[href="https://app.jobseekercopilot.com/register"]',
     )).toBeTruthy();
+    expect(fixture.nativeElement.querySelectorAll(
+      'a[href="https://app.jobseekercopilot.com/payment"]',
+    )).toHaveLength(3);
+    expect(fixture.nativeElement.textContent).toContain('View plans in the app');
   });
 });

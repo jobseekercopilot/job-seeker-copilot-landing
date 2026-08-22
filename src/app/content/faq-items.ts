@@ -125,12 +125,25 @@ export function faqItemsForRelease(publicBetaEnabled: boolean): readonly FaqItem
   } : {
     ...item,
     blocks: item.blocks.map(block => block.type === 'paragraph'
-      ? {...block, text: block.text.replace(
-        'Job Seeker Copilot is currently at a pre-beta stage.',
-        'Job Seeker Copilot is currently available as a public beta.',
-      )}
+      ? {...block, text: publicBetaParagraph(block.text)}
       : block),
   });
+}
+
+function publicBetaParagraph(text: string): string {
+  return text
+    .replace(
+      'Job Seeker Copilot is currently at a pre-beta stage.',
+      'Job Seeker Copilot is currently available as a public beta.',
+    )
+    .replace(
+      'The initial version is being developed for UK jobseekers',
+      'The public beta is designed for UK jobseekers',
+    )
+    .replace(
+      'It is being developed as a UK-focused workspace',
+      'It is available as a UK-focused workspace',
+    );
 }
 
 export function faqAnswerText(item: FaqItem): string {

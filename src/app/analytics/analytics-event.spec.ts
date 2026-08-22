@@ -10,6 +10,8 @@ import {
 describe('privacy-bounded analytics event helpers', () => {
   it('allows only approved public paths and never returns a query or fragment', () => {
     expect(approvedAnalyticsPath('/about/?private=value#section')).toBe('/about');
+    expect(approvedAnalyticsPath('/the-journey-so-far/uk-job-search-statistics#sources'))
+      .toBe('/the-journey-so-far/uk-job-search-statistics');
     expect(approvedAnalyticsPath('/waitlist/confirm?token=private')).toBeNull();
     expect(approvedAnalyticsPath('/waitlist/resend?token=private')).toBeNull();
     expect(approvedAnalyticsPath('/internal')).toBeNull();
