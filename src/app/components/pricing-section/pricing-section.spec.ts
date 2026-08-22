@@ -40,17 +40,28 @@ describe('PricingSectionComponent', () => {
     expect(text).toContain('Free');
     expect(text).toContain('2 document credits');
     expect(text).toContain('Starter');
-    expect(text).toContain('£7.99');
+    expect(text).toContain('£4.99');
     expect(text).toContain('10 document credits');
     expect(text).toContain('Active');
-    expect(text).toContain('£16.99');
+    expect(text).toContain('£11.99');
     expect(text).toContain('25 document credits');
     expect(text).toContain('Power');
-    expect(text).toContain('£34.99');
+    expect(text).toContain('£19.99');
     expect(text).toContain('60 document credits');
     expect(text).toContain('No subscription and no automatic renewal');
+    expect(text).toContain('Standard pack prices and credits');
+    expect(text).toContain('eligibility and the exact bonus are confirmed only when secure checkout reserves the offer');
+    expect(text).toContain('Availability can end before checkout');
+    expect(text).toContain('Up to 12 complete applications, plus one individual document');
+    expect(text).toContain('Each displayed price is the total charged at checkout');
     expect(text).not.toContain('token');
     expect(text).not.toContain('25–30');
+    expect(text).not.toContain('5 bonus');
+    expect(text).not.toContain('13 bonus');
+    expect(text).not.toContain('30 bonus');
+    expect(text).not.toContain('£7.99');
+    expect(text).not.toContain('£16.99');
+    expect(text).not.toContain('£34.99');
   });
 
   it('uses fail-closed waitlist links until the public beta runtime switch is valid', async () => {
