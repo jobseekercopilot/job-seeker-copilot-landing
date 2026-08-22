@@ -45,7 +45,7 @@ export class PricingSectionComponent {
       name: 'Active',
       price: '£16.99',
       credits: 25,
-      applications: 'Up to 12 complete applications, plus one document',
+      applications: 'Up to 12 complete applications, plus one individual document',
       description: 'The most useful one-off pack for an active job search.',
     },
     {

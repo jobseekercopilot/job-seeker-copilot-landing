@@ -145,6 +145,27 @@
   width: 100%;
 }
 
+.promotion-note {
+  background: #fffbeb;
+  border: 1px solid #f5d86f;
+  border-radius: var(--radius-card);
+  color: var(--colour-text-soft);
+  margin-top: 24px;
+  padding: 18px 20px;
+}
+
+.promotion-note strong {
+  color: var(--colour-text);
+  display: block;
+  font-size: 0.86rem;
+  margin-bottom: 3px;
+}
+
+.promotion-note p {
+  font-size: 0.8rem;
+  margin: 0;
+}
+
 .credit-rules {
   background: #f7fbff;
   border: 1px solid #b7d1f8;
@@ -152,7 +173,7 @@
   display: grid;
   gap: 24px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  margin-top: 24px;
+  margin-top: 18px;
   padding: clamp(22px, 4vw, 32px);
 }
 
