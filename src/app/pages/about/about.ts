@@ -1,8 +1,9 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { FooterComponent } from '../../components/footer/footer';
 import { FounderTimelineComponent } from '../../components/founder-timeline/founder-timeline';
 import { JourneyNavigationComponent } from '../../components/journey-navigation/journey-navigation';
+import { PUBLIC_APP_CONFIG } from '../../config/public-app-config';
 import { JOURNEY_ARTICLES } from '../../content/journey-articles';
 
 @Component({
@@ -13,6 +14,7 @@ import { JOURNEY_ARTICLES } from '../../content/journey-articles';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AboutPage {
+  protected readonly config = inject(PUBLIC_APP_CONFIG);
   protected readonly journeyArticles = JOURNEY_ARTICLES;
   protected readonly currentArticlePath = '/about';
 

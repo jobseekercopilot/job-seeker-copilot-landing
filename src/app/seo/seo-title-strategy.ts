@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Meta, Title } from '@angular/platform-browser';
 import { RouterStateSnapshot, TitleStrategy } from '@angular/router';
 import { PUBLIC_APP_CONFIG } from '../config/public-app-config';
-import { FAQ_ITEMS, faqAnswerText } from '../content/faq-items';
+import {faqAnswerText, faqItemsForRelease} from '../content/faq-items';
 import {
   CANONICAL_ORIGIN,
   SOCIAL_IMAGE_ALT,
@@ -108,7 +108,12 @@ export class SeoTitleStrategy extends TitleStrategy {
     const script = this.document.createElement('script');
     script.id = 'seo-structured-data';
     script.type = 'application/ld+json';
-    script.textContent = JSON.stringify(schemaFor(kind, seo, canonicalUrl)).replaceAll('<', '\\u003c');
+    script.textContent = JSON.stringify(schemaFor(
+      kind,
+      seo,
+      canonicalUrl,
+      this.config.publicBetaEnabled,
+    )).replaceAll('<', '\\u003c');
     this.document.head.appendChild(script);
   }
 
@@ -129,7 +134,12 @@ export class SeoTitleStrategy extends TitleStrategy {
   }
 }
 
-function schemaFor(kind: SeoSchemaKind, seo: SeoRouteData, canonicalUrl: string): object {
+function schemaFor(
+  kind: SeoSchemaKind,
+  seo: SeoRouteData,
+  canonicalUrl: string,
+  publicBetaEnabled: boolean,
+): object {
   if (kind === 'home') {
     return {
       '@context': 'https://schema.org',
@@ -156,7 +166,7 @@ function schemaFor(kind: SeoSchemaKind, seo: SeoRouteData, canonicalUrl: string)
     return {
       '@context': 'https://schema.org',
       '@type': 'FAQPage',
-      mainEntity: FAQ_ITEMS.map(item => ({
+      mainEntity: faqItemsForRelease(publicBetaEnabled).map(item => ({
         '@type': 'Question',
         name: item.question,
         acceptedAnswer: { '@type': 'Answer', text: faqAnswerText(item) },

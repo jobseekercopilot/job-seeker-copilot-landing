@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import {ChangeDetectionStrategy, Component, inject} from '@angular/core';
 import { RouterLink } from '@angular/router';
+import {PUBLIC_APP_CONFIG} from '../../config/public-app-config';
 
 interface RoadmapItem {
   title: string;
@@ -15,6 +16,7 @@ interface RoadmapItem {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RoadmapSectionComponent {
+  protected readonly config = inject(PUBLIC_APP_CONFIG);
   protected readonly items: RoadmapItem[] = [
     { marker: '01', title: 'Job match analysis', copy: 'Compare your experience with a job description and identify potential skills gaps to work on.' },
     { marker: '02', title: 'Built-in document editor', copy: 'Edit generated CVs and cover letters directly in the workspace without external software.' },

@@ -20,8 +20,13 @@
     </div>
 
     <div class="roadmap-cta">
-      <span>Want to follow the product as it grows?</span>
-      <a class="button button-primary" routerLink="/" fragment="waitlist">Get product updates</a>
+      @if (config.publicBetaEnabled) {
+        <span>Ready to help shape what comes next?</span>
+        <a class="button button-primary" [href]="config.registrationUrl">Try the public beta</a>
+      } @else {
+        <span>Want to follow the product as it grows?</span>
+        <a class="button button-primary" routerLink="/" fragment="waitlist">Get product updates</a>
+      }
     </div>
   </div>
 </section>

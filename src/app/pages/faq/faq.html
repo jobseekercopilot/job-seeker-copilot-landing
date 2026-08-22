@@ -12,10 +12,10 @@
 <main id="main-content" class="faq-main" tabindex="-1">
   <div class="faq-shell">
     <header class="faq-heading">
-      <span class="status-badge"><i aria-hidden="true"></i>Pre-beta</span>
+      <span class="status-badge"><i aria-hidden="true"></i>{{ config.publicBetaEnabled ? 'Public beta' : 'Beta in preparation' }}</span>
       <h1>Frequently Asked Questions</h1>
       <p class="faq-introduction">Find out what Job Seeker Copilot does, who it is being built for, how it searches for vacancies and how it aims to make the job-search process easier to organise.</p>
-      <p class="status-explanation">Job Seeker Copilot is currently in active development and is being prepared for private beta testing. Some features described as planned or in development may change before release.</p>
+      <p class="status-explanation">{{ config.publicBetaEnabled ? 'Job Seeker Copilot is available as a UK public beta. Beta features may change as reliability, security and usability evidence is gathered.' : 'Job Seeker Copilot is in active development and being prepared for public beta. Some features described as planned or in development may change before release.' }}</p>
     </header>
 
     <div class="faq-layout">
@@ -74,9 +74,13 @@
       </section>
     </div>
 
-    <aside class="faq-closing" aria-label="Waiting list">
-      <div><strong>Interested in following the product?</strong><p>Join the waiting list for development updates and future private beta information.</p></div>
-      <a class="button button-primary" routerLink="/" fragment="waitlist">Join the waiting list</a>
+    <aside class="faq-closing" [attr.aria-label]="config.publicBetaEnabled ? 'Public beta' : 'Waiting list'">
+      <div><strong>{{ config.publicBetaEnabled ? 'Ready to try the public beta?' : 'Interested in following the product?' }}</strong><p>{{ config.publicBetaEnabled ? 'Create a free account with two document generations.' : 'Join the waiting list for development updates and public beta information.' }}</p></div>
+      @if (config.publicBetaEnabled) {
+        <a class="button button-primary" [href]="config.registrationUrl">Create a free account</a>
+      } @else {
+        <a class="button button-primary" routerLink="/" fragment="waitlist">Join the waiting list</a>
+      }
     </aside>
   </div>
 </main>

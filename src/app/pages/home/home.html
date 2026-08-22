@@ -4,16 +4,23 @@
   <section class="hero" aria-labelledby="hero-heading">
     <div class="hero-grid container">
       <div class="hero-copy">
-        <span class="status-pill"><i aria-hidden="true"></i>Coming soon · Waitlist open</span>
-        <h1 id="hero-heading">Your whole job search, <span>working together.</span></h1>
-        <p class="hero-lead">Find roles across supported job sites, generate a tailored CV and cover letter together for each opportunity, keep the latest versions organised and track what happens next.</p>
+        <span class="status-pill"><i aria-hidden="true"></i>{{ config.publicBetaEnabled ? 'UK public beta · Accounts open' : 'Public beta in preparation · Waitlist open' }}</span>
+        <h1 id="hero-heading">Find the role. Build the application. <span>Keep every next step clear.</span></h1>
+        <p class="hero-lead">Search supported UK job sources, understand each match, create a tailored CV and cover letter, then keep the application, documents and follow-ups together.</p>
         <p class="contextual-faq-link">Have questions about how it works? <a routerLink="/faq">Read the FAQs.</a></p>
-        <app-waitlist-offer context="hero" />
-        <app-email-signup-form context="hero" />
+        @if (config.publicBetaEnabled) {
+          <div class="beta-actions" aria-label="Public beta account actions">
+            <a class="button button-primary" [href]="config.registrationUrl">Create a free account</a>
+            <a class="button button-secondary" [href]="config.signInUrl">Sign in</a>
+          </div>
+          <p class="beta-note">Available to UK jobseekers. Search, matching and tracking are free. Start with two document generations; no subscription is required.</p>
+        } @else {
+          <app-email-signup-form context="hero" />
+        }
         <div class="hero-reassurance" aria-label="Product highlights">
           <span><i aria-hidden="true">✓</i>One calm workspace</span>
           <span><i aria-hidden="true">✓</i>Job-specific documents</span>
-          <span><i aria-hidden="true">✓</i>Built for real job searches</span>
+          <span><i aria-hidden="true">✓</i>{{ config.publicBetaEnabled ? 'Start free · No subscription' : 'Built for real job searches' }}</span>
         </div>
       </div>
 
@@ -64,24 +71,30 @@
 
   <app-competitor-comparison-section />
 
-  <app-roadmap-section />
-
   <app-pricing-section />
 
   <app-labour-market-section />
 
   <app-accessibility-section />
 
+  <app-roadmap-section />
+
   <section id="waitlist" class="final-cta" aria-labelledby="waitlist-heading">
     <div class="container final-cta-inner">
       <div>
-        <span class="cta-kicker">Waitlist open</span>
+        <span class="cta-kicker">{{ config.publicBetaEnabled ? 'Public beta' : 'Waitlist open' }}</span>
         <h2 id="waitlist-heading">Ready for a more organised job search?</h2>
-        <p>Register your interest now. Invitations and product account creation happen separately.</p>
-        <app-waitlist-offer context="final" />
-        <p class="final-faq-link">Not ready to join yet? <a routerLink="/faq">Read the FAQs.</a></p>
+        <p>{{ config.publicBetaEnabled ? 'Create an account and organise your job search in one UK-focused workspace.' : 'Register your interest now. Invitations and product account creation happen separately.' }}</p>
+        <p class="final-faq-link">{{ config.publicBetaEnabled ? 'Want to understand it first?' : 'Not ready to join yet?' }} <a routerLink="/faq">Read the FAQs.</a></p>
       </div>
-      <app-email-signup-form context="footer" />
+      @if (config.publicBetaEnabled) {
+        <div class="beta-actions beta-actions-final">
+          <a class="button button-primary" [href]="config.registrationUrl">Start free</a>
+          <a class="button button-secondary" [href]="config.signInUrl">Sign in</a>
+        </div>
+      } @else {
+        <app-email-signup-form context="footer" />
+      }
     </div>
   </section>
 </main>

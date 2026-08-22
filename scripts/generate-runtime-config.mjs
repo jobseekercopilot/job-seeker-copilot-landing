@@ -2,6 +2,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { resolveAnalyticsEnabled } from './analytics-policy.mjs';
 import {
+  validatePublicBetaConfig,
   validateAnalyticsConfig,
   validateLiveSubmissionConfig,
   validateSearchIndexingConfig,
@@ -13,6 +14,7 @@ const outputPath = resolve(process.env.RUNTIME_CONFIG_OUTPUT_PATH || 'public/con
 const config = {
   environmentName: oneOf(process.env.PUBLIC_ENVIRONMENT_NAME, ['development', 'test', 'production'], 'production'),
   enableLiveSubmissions: process.env.ENABLE_LIVE_SUBMISSIONS === 'true',
+  publicBetaEnabled: process.env.PUBLIC_BETA_ENABLED === 'true',
   searchIndexingEnabled: resolveSearchIndexingEnabled(),
   analyticsEnabled: resolveAnalyticsEnabled(),
   analyticsEndpointUrl: text('ANALYTICS_ENDPOINT_URL'),
@@ -25,6 +27,32 @@ const config = {
   registrationUrl: text('REGISTRATION_URL'),
   signInUrl: text('SIGN_IN_URL'),
   pricingUrl: text('PRICING_URL'),
+  legalDocumentsReviewed: process.env.LEGAL_DOCUMENTS_REVIEWED === 'true',
+  minimumUserAge: 18,
+  legalEffectiveDate: text('LEGAL_EFFECTIVE_DATE'),
+  legalVersion: text('LEGAL_VERSION'),
+  legalEntityType: oneOf(
+    process.env.LEGAL_ENTITY_TYPE,
+    ['NOT_CONFIGURED', 'SOLE_TRADER', 'LIMITED_COMPANY'],
+    'NOT_CONFIGURED',
+  ),
+  taxStatus: oneOf(
+    process.env.TAX_STATUS,
+    ['NOT_CONFIGURED', 'NOT_VAT_REGISTERED', 'VAT_REGISTERED'],
+    'NOT_CONFIGURED',
+  ),
+  legalEntityName: text('LEGAL_ENTITY_NAME'),
+  tradingName: text('TRADING_NAME'),
+  businessAddress: text('BUSINESS_ADDRESS'),
+  privacyEmail: text('PRIVACY_EMAIL'),
+  supportEmail: text('SUPPORT_EMAIL'),
+  icoRegistrationStatus: text('ICO_REGISTRATION_STATUS'),
+  icoRegistrationReference: text('ICO_REGISTRATION_REFERENCE'),
+  accountDeletionCompletionDays: positiveInteger('ACCOUNT_DELETION_COMPLETION_DAYS', 0),
+  documentDeletionCompletionDays: positiveInteger('DOCUMENT_DELETION_COMPLETION_DAYS', 0),
+  securityLogRetentionDays: positiveInteger('SECURITY_LOG_RETENTION_DAYS', 0),
+  supportRecordRetentionDays: positiveInteger('SUPPORT_RECORD_RETENTION_DAYS', 0),
+  financialRecordRetentionYears: positiveInteger('FINANCIAL_RECORD_RETENTION_YEARS', 0),
   publicWebsiteUrl: text('PUBLIC_WEBSITE_URL'),
   privacyPolicyUrl: text('PRIVACY_POLICY_URL', '/privacy'),
   termsUrl: text('TERMS_URL', '/terms'),
@@ -38,6 +66,7 @@ const config = {
 };
 
 validateLiveSubmissionConfig(config);
+validatePublicBetaConfig(config);
 validateSearchIndexingConfig(config);
 validateAnalyticsConfig(config);
 

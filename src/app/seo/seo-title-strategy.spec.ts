@@ -45,6 +45,7 @@ describe('SeoTitleStrategy', () => {
     const faqSchema = JSON.parse(document.querySelector<HTMLScriptElement>('#seo-structured-data')?.textContent ?? '{}');
     expect(faqSchema['@type']).toBe('FAQPage');
     expect(faqSchema.mainEntity).toHaveLength(9);
+    expect(JSON.stringify(faqSchema)).toContain('pre-beta stage');
 
     strategy.updateTitle(snapshot(SEO_ROUTES.comparison));
     const articleSchema = JSON.parse(document.querySelector<HTMLScriptElement>('#seo-structured-data')?.textContent ?? '{}');
@@ -58,10 +59,23 @@ describe('SeoTitleStrategy', () => {
     expect(statisticsSchema['@type']).toBe('BlogPosting');
     expect(statisticsSchema.headline).toBe('The UK Job Market in 2026: What the Statistics Show');
     expect(statisticsSchema.datePublished).toBe('2026-07-24');
-    expect(statisticsSchema.dateModified).toBe('2026-07-24');
+    expect(statisticsSchema.dateModified).toBe('2026-08-22');
     expect(statisticsSchema.mainEntityOfPage).toBe('https://www.jobseekercopilot.com/the-journey-so-far/uk-job-search-statistics/');
     expect(TestBed.inject(Meta).getTag('property="article:published_time"')?.content).toBe('2026-07-24');
-    expect(TestBed.inject(Meta).getTag('property="article:modified_time"')?.content).toBe('2026-07-24');
+    expect(TestBed.inject(Meta).getTag('property="article:modified_time"')?.content).toBe('2026-08-22');
+  });
+
+  it('publishes public-beta FAQ structured data only when the release flag is enabled', () => {
+    config.publicBetaEnabled = true;
+    strategy.updateTitle(snapshot(SEO_ROUTES.faq));
+
+    const faqSchema = JSON.parse(
+      document.querySelector<HTMLScriptElement>('#seo-structured-data')?.textContent ?? '{}',
+    );
+    const schemaText = JSON.stringify(faqSchema);
+    expect(schemaText).toContain('available as a UK public beta');
+    expect(schemaText).not.toContain('future private beta access');
+    expect(schemaText).not.toContain('currently at a pre-beta stage');
   });
 
   it('keeps every route noindex until the explicit launch gate is enabled', () => {

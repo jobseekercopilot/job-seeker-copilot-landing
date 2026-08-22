@@ -4,7 +4,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { filter } from 'rxjs';
 import { FooterComponent } from '../../components/footer/footer';
-import { FAQ_ITEMS, FaqItem } from '../../content/faq-items';
+import {PUBLIC_APP_CONFIG} from '../../config/public-app-config';
+import {faqItemsForRelease, FaqItem} from '../../content/faq-items';
 
 @Component({
   selector: 'app-faq-page',
@@ -18,9 +19,10 @@ export class FaqPage {
   private readonly destroyRef = inject(DestroyRef);
   private readonly document = inject(DOCUMENT);
   private readonly platformId = inject(PLATFORM_ID);
+  protected readonly config = inject(PUBLIC_APP_CONFIG);
 
-  protected readonly items = FAQ_ITEMS;
-  protected readonly openItemId = signal<string | null>(FAQ_ITEMS[0].id);
+  protected readonly items = faqItemsForRelease(this.config.publicBetaEnabled);
+  protected readonly openItemId = signal<string | null>(this.items[0].id);
 
   constructor() {
     this.activatedRoute.fragment

@@ -21,7 +21,7 @@ const [events, consent, service, collector, submit, confirm, contact, template, 
 
 describe('privacy-focused monitoring policy', () => {
   it('uses an exact bounded frontend/backend event contract with no personal fields', () => {
-    for (const name of ['visit', 'page_view', 'waitlist_form_view', 'waitlist_attempt', 'contact_form_view', 'contact_attempt']) {
+    for (const name of ['visit', 'page_view', 'waitlist_form_view', 'waitlist_attempt', 'contact_form_view', 'contact_attempt', 'pricing_view', 'pricing_cta']) {
       assert.match(events, new RegExp(`'${name}'`));
       assert.match(collector, new RegExp(`"${name}"`));
     }

@@ -5,7 +5,6 @@ import { finalize } from 'rxjs';
 import { AnalyticsService } from '../../analytics/analytics.service';
 import { AnalyticsViewDirective } from '../../analytics/analytics-view.directive';
 import { BUSINESS_CONTACT_DETAILS } from '../../config/business-contact-details';
-import { EARLY_ACCESS_OFFER_CONFIG, formatOfferTokenAmount } from '../../config/early-access-offer';
 import { PUBLIC_APP_CONFIG } from '../../config/public-app-config';
 import { normaliseWaitlistEmail, waitlistEmailValidator } from '../../services/waitlist-email';
 import { WaitlistService } from '../../services/waitlist.service';
@@ -26,8 +25,6 @@ export class EmailSignupFormComponent {
   private readonly analytics = inject(AnalyticsService);
   protected readonly contact = BUSINESS_CONTACT_DETAILS;
   protected readonly config = inject(PUBLIC_APP_CONFIG);
-  protected readonly offer = inject(EARLY_ACCESS_OFFER_CONFIG);
-  protected readonly formattedBonusTokens = formatOfferTokenAmount(this.offer.bonusTokens);
 
   readonly context = input<'hero' | 'footer'>('hero');
   protected readonly email = new FormControl('', {

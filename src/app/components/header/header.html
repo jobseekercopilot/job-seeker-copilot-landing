@@ -22,10 +22,15 @@
     <nav id="primary-navigation" class="primary-navigation" [class.is-open]="menuOpen()" aria-label="Primary navigation">
       <a routerLink="/" fragment="features" (click)="closeMenu()">Features</a>
       <a routerLink="/" fragment="how-it-works" (click)="closeMenu()">How it works</a>
+      <a routerLink="/" fragment="pricing" (click)="closeMenu()">Pricing</a>
       <a routerLink="/" fragment="uk-job-market" (click)="closeMenu()">UK job market</a>
-      <a routerLink="/" fragment="accessibility" (click)="closeMenu()">Accessibility</a>
-      <a routerLink="/contact" (click)="closeMenu()">Contact</a>
-      <a class="button button-primary nav-cta" routerLink="/" fragment="waitlist" (click)="closeMenu()">Join the waitlist</a>
+      <a routerLink="/faq" (click)="closeMenu()">FAQs</a>
+      @if (config.publicBetaEnabled) {
+        <a class="nav-account-link" [href]="config.signInUrl" (click)="closeMenu()">Sign in</a>
+        <a class="button button-primary nav-cta" [href]="config.registrationUrl" (click)="closeMenu()">Start free</a>
+      } @else {
+        <a class="button button-primary nav-cta" routerLink="/" fragment="waitlist" (click)="closeMenu()">Join the waitlist</a>
+      }
     </nav>
   </div>
 </header>

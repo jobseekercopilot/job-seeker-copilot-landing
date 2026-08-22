@@ -25,8 +25,9 @@ describe('JobMarketStatisticsPage', () => {
 
     expect(root.querySelector('h1')?.textContent).toContain('The UK Job Market in 2026');
     expect(root.querySelector('time[datetime="2026-07-24"]')?.textContent).toContain('24 July 2026');
+    expect(root.querySelector('time[datetime="2026-08-22"]')?.textContent).toContain('22 August 2026');
     expect(root.querySelector('.review-date')?.textContent?.replace(/\s+/g, ' ').trim())
-      .toContain('Data last reviewed: 24 July 2026');
+      .toContain('Headline figures use the ONS release published on 18 August 2026');
     expect(root.querySelector('#methodology')).toBeTruthy();
     expect(root.querySelector('#sources-heading')?.textContent).toBe('Sources');
     expect(root.querySelectorAll('.sources-list > ul > li')).toHaveLength(23);
@@ -72,6 +73,10 @@ describe('JobMarketStatisticsPage', () => {
     expect(text).toContain('applications submitted had risen 16%');
     expect(text).toContain('72% said that screening large numbers of irrelevant applications slowed recruitment');
     expect(text).toContain('17.7 hours of manual work per vacancy');
+    expect(text).toContain('707,000 vacancies in May to July 2026');
+    expect(text).toContain('739,000 people aged 16 to 24');
+    expect(text).toContain('15 September 2026');
+    expect(text).not.toContain('Back to the waiting list');
     expect(root.querySelector('#why-building')).toBeNull();
     expect(text).not.toContain('Why Job Seeker Copilot is being built');
     expect(text).not.toContain('Job Seeker Copilot is designed');

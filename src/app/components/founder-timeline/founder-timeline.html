@@ -16,9 +16,12 @@
       <strong>Job Seeker Copilot created</strong>
     </li>
     <li><span>Public waiting list launched</span></li>
+    @if (config.publicBetaEnabled) {
+      <li><span>UK public beta opened</span></li>
+    }
     <li class="current-step">
       <small>Current stage</small>
-      <strong>Building with feedback from early users</strong>
+      <strong>{{ config.publicBetaEnabled ? 'Improving the public beta with user feedback' : 'Building with feedback from early users' }}</strong>
     </li>
   </ol>
 </aside>

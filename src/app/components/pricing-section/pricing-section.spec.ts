@@ -1,31 +1,83 @@
-import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
-import { DEFAULT_EARLY_ACCESS_OFFER_CONFIG, EARLY_ACCESS_OFFER_CONFIG } from '../../config/early-access-offer';
-import { PricingSectionComponent } from './pricing-section';
+import {TestBed} from '@angular/core/testing';
+import {provideRouter} from '@angular/router';
+import {AnalyticsService} from '../../analytics/analytics.service';
+import {DEFAULT_PUBLIC_APP_CONFIG, PUBLIC_APP_CONFIG} from '../../config/public-app-config';
+import {PricingSectionComponent} from './pricing-section';
 
 describe('PricingSectionComponent', () => {
-  it('renders the current free grant and paid credit packages', async () => {
+  const analytics = {consent: {canCollect: () => false}, track: vi.fn(() => false)};
+
+  async function render(publicBetaEnabled = false) {
     await TestBed.configureTestingModule({
       imports: [PricingSectionComponent],
       providers: [
         provideRouter([]),
-        { provide: EARLY_ACCESS_OFFER_CONFIG, useValue: DEFAULT_EARLY_ACCESS_OFFER_CONFIG },
+        {provide: AnalyticsService, useValue: analytics},
+        {
+          provide: PUBLIC_APP_CONFIG,
+          useValue: {
+            ...DEFAULT_PUBLIC_APP_CONFIG,
+            publicBetaEnabled,
+            registrationUrl: publicBetaEnabled
+              ? 'https://app.jobseekercopilot.com/register'
+              : '',
+            pricingUrl: publicBetaEnabled
+              ? 'https://app.jobseekercopilot.com/payment'
+              : '',
+          },
+        },
       ],
     }).compileComponents();
-
     const fixture = TestBed.createComponent(PricingSectionComponent);
     fixture.detectChanges();
+    return fixture;
+  }
+
+  it('renders exact one-off document-generation packages without token estimates', async () => {
+    const fixture = await render();
     const text = fixture.nativeElement.textContent;
 
     expect(text).toContain('Free');
-    expect(text).toContain('20,000 AI credits');
+    expect(text).toContain('2 document generations');
     expect(text).toContain('Starter');
-    expect(text).toContain('£7.99');
-    expect(text).toContain('Standard');
-    expect(text).toContain('£16.99');
-    expect(text).toContain('Pro');
-    expect(text).toContain('£34.99');
-    expect(text).toContain('20,000 bonus tokens for eligible early-access members');
-    expect(text).toContain('not a permanent pricing plan or an additional paid package');
+    expect(text).toContain('£4.99');
+    expect(text).toContain('10 document generations');
+    expect(text).toContain('Active');
+    expect(text).toContain('£11.99');
+    expect(text).toContain('25 document generations');
+    expect(text).toContain('Power');
+    expect(text).toContain('£19.99');
+    expect(text).toContain('60 document generations');
+    expect(text).toContain('No subscription and no automatic renewal');
+    expect(text).toContain('Standard pack prices and generations');
+    expect(text).toContain('eligibility and the exact bonus are confirmed only when secure checkout reserves the offer');
+    expect(text).toContain('Availability can end before checkout');
+    expect(text).toContain('Up to 12 complete applications, plus one individual document');
+    expect(text).toContain('Each displayed price is the total charged at checkout');
+    expect(text).not.toContain('token');
+    expect(text).not.toContain('25–30');
+    expect(text).not.toContain('5 bonus');
+    expect(text).not.toContain('13 bonus');
+    expect(text).not.toContain('30 bonus');
+    expect(text).not.toContain('£7.99');
+    expect(text).not.toContain('£16.99');
+    expect(text).not.toContain('£34.99');
+  });
+
+  it('uses fail-closed waitlist links until the public beta runtime switch is valid', async () => {
+    const fixture = await render();
+    expect(fixture.nativeElement.querySelector('a[href="/#waitlist"]')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('a[href^="https://app."]')).toBeNull();
+  });
+
+  it('uses the runtime registration URL after public beta activation', async () => {
+    const fixture = await render(true);
+    expect(fixture.nativeElement.querySelector(
+      'a[href="https://app.jobseekercopilot.com/register"]',
+    )).toBeTruthy();
+    expect(fixture.nativeElement.querySelectorAll(
+      'a[href="https://app.jobseekercopilot.com/payment"]',
+    )).toHaveLength(3);
+    expect(fixture.nativeElement.textContent).toContain('View plans in the app');
   });
 });

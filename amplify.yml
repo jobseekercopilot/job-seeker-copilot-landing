@@ -3,6 +3,7 @@ frontend:
   phases:
     preBuild:
       commands:
+        - node scripts/amplify-release-branch-gate.mjs
         - npm ci
         - npm run config:generate
     build:

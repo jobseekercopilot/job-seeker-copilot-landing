@@ -946,6 +946,14 @@ class AnalyticsTests(unittest.TestCase):
         self.assertEqual([result["statusCode"] for result in results], [202, 202])
         self.assertEqual([call.args[0] for call in emitted.call_args_list], ["WaitlistAttempts", "ContactFormViews"])
 
+    def test_pricing_events_are_aggregate_homepage_counts(self):
+        pricing_view = {**self.valid_payload(), "eventName": "pricing_view", "path": "/", "context": "pricing"}
+        pricing_cta = {**self.valid_payload(), "eventName": "pricing_cta", "path": "/", "context": "pricing"}
+        with patch.object(analytics, "metric") as emitted:
+            results = [analytics.handler(event(payload), Context()) for payload in (pricing_view, pricing_cta)]
+        self.assertEqual([result["statusCode"] for result in results], [202, 202])
+        self.assertEqual([call.args[0] for call in emitted.call_args_list], ["PricingViews", "PricingCtaClicks"])
+
     def test_visit_is_a_context_free_aggregate_count(self):
         visit = {**self.valid_payload(), "eventName": "visit", "path": "/"}
         with patch.object(analytics, "metric") as emitted:
@@ -961,6 +969,7 @@ class AnalyticsTests(unittest.TestCase):
             {**valid, "path": "/about?token=private"},
             {**valid, "eventName": "contact_attempt", "context": "hero"},
             {**valid, "eventName": "contact_attempt", "context": "contact", "path": "/about"},
+            {**valid, "eventName": "pricing_cta", "context": "pricing", "path": "/about"},
             {**valid, "campaign": {"source": "personal value with spaces"}},
             {**valid, "campaign": {"visitor": "identifier"}},
             {**valid, "viewport": "exact-device-model"},

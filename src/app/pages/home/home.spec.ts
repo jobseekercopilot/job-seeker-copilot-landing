@@ -1,19 +1,17 @@
 import { provideHttpClient } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { DEFAULT_EARLY_ACCESS_OFFER_CONFIG, EARLY_ACCESS_OFFER_CONFIG } from '../../config/early-access-offer';
 import { DEFAULT_PUBLIC_APP_CONFIG, PUBLIC_APP_CONFIG } from '../../config/public-app-config';
 import { HomePage } from './home';
 
 describe('HomePage', () => {
-  async function createHomeFixture() {
+  async function createHomeFixture(publicConfig = DEFAULT_PUBLIC_APP_CONFIG) {
     await TestBed.configureTestingModule({
       imports: [HomePage],
       providers: [
         provideHttpClient(),
         provideRouter([]),
-        { provide: EARLY_ACCESS_OFFER_CONFIG, useValue: DEFAULT_EARLY_ACCESS_OFFER_CONFIG },
-        { provide: PUBLIC_APP_CONFIG, useValue: DEFAULT_PUBLIC_APP_CONFIG },
+        { provide: PUBLIC_APP_CONFIG, useValue: publicConfig },
       ],
     }).compileComponents();
 
@@ -22,27 +20,50 @@ describe('HomePage', () => {
     return fixture;
   }
 
-  it('uses the same offer data in the opening and final waitlist sections', async () => {
+  it('keeps account links fail closed and shows the waitlist before beta activation', async () => {
     const fixture = await createHomeFixture();
-    const summaries = Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('.offer-summary'))
-      .map(element => element.textContent?.trim());
-
-    expect(summaries).toEqual([
-      DEFAULT_EARLY_ACCESS_OFFER_CONFIG.offerSummary,
-      DEFAULT_EARLY_ACCESS_OFFER_CONFIG.offerSummary,
-    ]);
+    expect(fixture.nativeElement.querySelectorAll('app-email-signup-form')).toHaveLength(2);
+    expect(fixture.nativeElement.textContent).toContain('Public beta in preparation');
+    expect(fixture.nativeElement.querySelector('a[href^="https://app."]')).toBeNull();
   });
 
-  it('places an accessible, sourced comparison immediately before the roadmap', async () => {
+  it('switches both calls to action to approved app URLs when public beta is enabled', async () => {
+    const fixture = await createHomeFixture({
+      ...DEFAULT_PUBLIC_APP_CONFIG,
+      publicBetaEnabled: true,
+      registrationUrl: 'https://app.jobseekercopilot.com/register',
+      signInUrl: 'https://app.jobseekercopilot.com/sign-in',
+      pricingUrl: 'https://app.jobseekercopilot.com/payment',
+    });
+
+    expect(fixture.nativeElement.textContent).toContain('UK public beta · Accounts open');
+    expect(fixture.nativeElement.querySelectorAll('app-email-signup-form')).toHaveLength(0);
+    expect(fixture.nativeElement.querySelectorAll(
+      'a[href="https://app.jobseekercopilot.com/register"]',
+    ).length).toBeGreaterThan(1);
+    expect(fixture.nativeElement.querySelectorAll(
+      'a[href="https://app.jobseekercopilot.com/sign-in"]',
+    ).length).toBeGreaterThan(1);
+    expect(fixture.nativeElement.querySelectorAll(
+      'a[href="https://app.jobseekercopilot.com/payment"]',
+    )).toHaveLength(3);
+    expect(fixture.nativeElement.textContent).toContain('Try the public beta');
+    expect(fixture.nativeElement.textContent).not.toContain('Get product updates');
+  });
+
+  it('places an accessible, sourced comparison before pricing and keeps roadmap work below current capabilities', async () => {
     const fixture = await createHomeFixture();
     const root = fixture.nativeElement as HTMLElement;
     const comparison = root.querySelector('#competitor-comparison');
     const comparisonHost = root.querySelector('app-competitor-comparison-section');
+    const pricing = root.querySelector('app-pricing-section');
     const roadmap = root.querySelector('app-roadmap-section');
+    const accessibility = root.querySelector('app-accessibility-section');
     const matrix = comparison?.querySelector('.comparison-scroll');
 
     expect(comparison).toBeTruthy();
-    expect(comparisonHost?.nextElementSibling).toBe(roadmap);
+    expect(comparisonHost?.nextElementSibling).toBe(pricing);
+    expect(accessibility?.nextElementSibling).toBe(roadmap);
     expect(matrix?.getAttribute('tabindex')).toBe('0');
     expect(comparison?.querySelectorAll('thead img')).toHaveLength(9);
     expect(Array.from(comparison?.querySelectorAll('thead img') ?? []).every(image => image.getAttribute('alt')?.endsWith(' logo'))).toBe(true);
@@ -76,15 +97,15 @@ describe('HomePage', () => {
 
     expect(statistics).toHaveLength(4);
     expect(Array.from(statistics).map(statistic => statistic.querySelector('.statistic-value')?.textContent?.trim()))
-      .toEqual(['4.9%', '1.76 million', '712,000', '2.5']);
+      .toEqual(['4.9%', '1.772 million', '707,000', '2.5']);
     expect(Array.from(statistics).every(statistic => statistic.textContent?.includes('Measurement period:'))).toBe(true);
-    expect(Array.from(statistics).every(statistic => statistic.textContent?.includes('Data released: 21 July 2026'))).toBe(true);
+    expect(Array.from(statistics).every(statistic => statistic.textContent?.includes('Data released: 18 August 2026'))).toBe(true);
     expect(root.querySelectorAll('.provisional-label')).toHaveLength(1);
     expect(root.querySelector<HTMLAnchorElement>('#uk-job-market a[href="/the-journey-so-far/uk-job-search-statistics"]'))
       .toBeTruthy();
     expect(sourceLinks).toHaveLength(7);
     expect(sourceLinks.every(link => link.href.startsWith('https://www.ons.gov.uk/'))).toBe(true);
     expect(sourceLinks.every(link => link.target === '_blank' && link.rel === 'noopener noreferrer')).toBe(true);
-    expect(root.textContent).toContain('next scheduled review 18 August 2026');
+    expect(root.textContent).toContain('next scheduled review 15 September 2026');
   });
 });

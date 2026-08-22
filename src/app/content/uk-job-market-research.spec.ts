@@ -2,8 +2,8 @@ import { UK_JOB_MARKET_RESEARCH } from './uk-job-market-research';
 
 describe('UK_JOB_MARKET_RESEARCH', () => {
   it('records the reviewed and next scheduled ONS dates', () => {
-    expect(UK_JOB_MARKET_RESEARCH.dataReviewed).toBe('24 July 2026');
-    expect(UK_JOB_MARKET_RESEARCH.nextScheduledOnsRelease).toBe('18 August 2026');
+    expect(UK_JOB_MARKET_RESEARCH.dataReviewed).toBe('22 August 2026');
+    expect(UK_JOB_MARKET_RESEARCH.nextScheduledOnsRelease).toBe('15 September 2026');
   });
 
   it('keeps the consistent ONS comparison periods and the verified vacancy peak context', () => {
@@ -27,7 +27,8 @@ describe('UK_JOB_MARKET_RESEARCH', () => {
     expect(new Set(sources.map(source => source.id)).size).toBe(sources.length);
     expect(new Set(sources.map(source => source.number)).size).toBe(sources.length);
     expect(sources.every(source => source.url.startsWith('https://'))).toBe(true);
-    expect(sources.every(source => source.accessedDate === '24 July 2026')).toBe(true);
+    expect(sources.every(source => /^\d{1,2} [A-Z][a-z]+ 2026$/.test(source.accessedDate))).toBe(true);
+    expect(sources.slice(0, 3).every(source => source.accessedDate === '22 August 2026')).toBe(true);
     expect(sources.every(source => source.supports.length > 20)).toBe(true);
     expect(sources.map(source => source.id)).toContain('source-totaljobs-2026');
     expect(sources.map(source => source.id)).toContain('source-totaljobs-hiring-efficiency-2025');

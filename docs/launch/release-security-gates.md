@@ -106,20 +106,17 @@ contain only public endpoints, public labels and fail-closed switches. Backend
 recipient, deduplication pepper, subscriber key material, AWS values and mailbox
 details must never enter it.
 
-## Dependency findings on 22 July 2026
+## Dependency findings updated 15 August 2026
 
 - The production npm graph reported zero vulnerabilities.
-- The full graph initially reported one High `fast-uri` advisory through the
-  Angular build toolchain. The lockfile moved from `3.1.3` to fixed `3.1.4` and
-  the High/Critical gate became clean.
-- Three Moderate reports remain for `@hono/node-server` through Angular CLI's
-  development-only MCP dependency. The advisory concerns Windows encoded
-  backslash handling in its static server; the package is not included in the
-  production browser artifact or Lambda package, and CI/build run on Linux.
-  Angular CLI 21 currently constrains the transitive package below the fixed
-  major. Owner: Landing Website. Action: take the first compatible Angular 21
-  update, otherwise re-evaluate before RELEASE-01 and no later than 22 August
-  2026. This exception does not change the High/Critical failure threshold.
+- The full graph also reports zero vulnerabilities after moving the Angular 21
+  framework to `21.2.20`, its build/CLI/SSR tooling to `21.2.21`, and refreshing
+  the lockfile to the compatible patched transitive releases. The previous
+  `fast-uri` and development-only `@hono/node-server` exceptions are closed.
+- `npm ci --ignore-scripts` and `npm audit --audit-level=high` were rerun from
+  the committed lockfile before the complete test, production build and
+  browser-accessibility checks. The normal release workflow must still use
+  `npm ci` and preserve the High/Critical failure threshold.
 - Both Lambda packages contain zero PyPI dependencies. `boto3`/`botocore` are
   supplied by the managed AWS Lambda Python 3.12 runtime; the import inventory
   fails if another external runtime module appears. The empty package manifest

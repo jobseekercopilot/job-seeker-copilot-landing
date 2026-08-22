@@ -102,16 +102,49 @@ export const FAQ_ITEMS: readonly FaqItem[] = [
     id: 'work-search-reporting',
     question: 'Can Job Seeker Copilot help me record my Universal Credit work-search activity?',
     blocks: [
-      { type: 'paragraph', text: 'Job Seeker Copilot aims to make it easier for users to record and understand the work they are doing to find employment.' },
-      { type: 'paragraph', text: 'Applications, generated documents, job statuses and other activity can be kept together rather than being spread across websites, email accounts, folders and handwritten notes.' },
-      { type: 'emphasis', text: 'Planned functionality — not currently available:' },
-      { type: 'paragraph', text: 'Reporting features are being developed to provide clearer summaries of activity, including:' },
+      { type: 'paragraph', text: 'Yes. The current product keeps applications, generated documents, job statuses and other recorded activity together and provides a private progress summary.' },
+      { type: 'paragraph', text: 'The summary can help you review the work you have recorded, including:' },
       { type: 'bullets', items: ['Jobs considered.', 'Applications made.', 'CVs and cover letters prepared.', 'Interviews.', 'Follow-up activity.', 'Application outcomes.'] },
-      { type: 'paragraph', text: 'Future versions may allow users to export or copy a weekly activity summary that they can review and use when updating their Universal Credit journal or discussing progress with a work coach.' },
-      { type: 'paragraph', text: 'Job Seeker Copilot is independent and is not connected to the Department for Work and Pensions, Jobcentre Plus or Universal Credit. Users remain responsible for reviewing the information and deciding what they submit through official government services.' },
+      { type: 'paragraph', text: 'It is an organisational aid, not an official Universal Credit record or automatic submission. Review the summary yourself before using it when updating a journal or discussing progress with a work coach.' },
+      { type: 'paragraph', text: 'Job Seeker Copilot is independent and is not connected to the Department for Work and Pensions, Jobcentre Plus or Universal Credit.' },
     ],
   },
 ];
+
+export function faqItemsForRelease(publicBetaEnabled: boolean): readonly FaqItem[] {
+  if (!publicBetaEnabled) return FAQ_ITEMS;
+
+  return FAQ_ITEMS.map(item => item.id === 'availability' ? {
+    ...item,
+    blocks: [
+      {type: 'paragraph' as const, text: 'Yes. Job Seeker Copilot is available as a UK public beta.'},
+      {type: 'paragraph' as const, text: 'Beta features may change as reliability, security and usability evidence is gathered.'},
+      {type: 'paragraph' as const, text: 'Create a free account to begin with two document generations, or sign in if you already have an account.'},
+    ],
+    callToAction: undefined,
+  } : {
+    ...item,
+    blocks: item.blocks.map(block => block.type === 'paragraph'
+      ? {...block, text: publicBetaParagraph(block.text)}
+      : block),
+  });
+}
+
+function publicBetaParagraph(text: string): string {
+  return text
+    .replace(
+      'Job Seeker Copilot is currently at a pre-beta stage.',
+      'Job Seeker Copilot is currently available as a public beta.',
+    )
+    .replace(
+      'The initial version is being developed for UK jobseekers',
+      'The public beta is designed for UK jobseekers',
+    )
+    .replace(
+      'It is being developed as a UK-focused workspace',
+      'It is available as a UK-focused workspace',
+    );
+}
 
 export function faqAnswerText(item: FaqItem): string {
   return item.blocks.map(block => block.type === 'bullets' ? block.items.join(' ') : block.text).join(' ');

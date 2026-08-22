@@ -23,7 +23,7 @@
   "faq": {
     "path": "/faq",
     "title": "Frequently Asked Questions | Job Seeker Copilot",
-    "description": "Answers about Job Seeker Copilot, supported job sources, tailored application documents, private beta access and planned work-search reporting.",
+    "description": "Answers about Job Seeker Copilot, supported job sources, tailored application documents, public beta availability and planned work-search reporting.",
     "indexable": true,
     "socialType": "website",
     "schema": "faq"
@@ -52,7 +52,7 @@
     "article": {
       "headline": "The UK Job Market in 2026: What the Statistics Show",
       "publishedDate": "2026-07-24",
-      "modifiedDate": "2026-07-24",
+      "modifiedDate": "2026-08-22",
       "author": "Bernard McGeever"
     }
   },
@@ -66,14 +66,14 @@
   "terms": {
     "path": "/terms",
     "title": "Terms | Job Seeker Copilot",
-    "description": "Read the terms for using the Job Seeker Copilot landing site, joining early access and understanding the current pre-beta service boundaries.",
+    "description": "Read the terms for using the Job Seeker Copilot website, public beta and early-access services, including the current service boundaries.",
     "indexable": true,
     "socialType": "website"
   },
   "contact": {
     "path": "/contact",
     "title": "Contact | Job Seeker Copilot",
-    "description": "Contact Job Seeker Copilot through the company enquiry channel for product, accessibility, privacy or early-access questions.",
+    "description": "Contact Job Seeker Copilot through the public enquiry channel for product, accessibility, privacy or early-access questions.",
     "indexable": true,
     "socialType": "website"
   },
