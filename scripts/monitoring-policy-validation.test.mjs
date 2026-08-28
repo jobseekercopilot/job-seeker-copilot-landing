@@ -61,10 +61,12 @@ describe('privacy-focused monitoring policy', () => {
   });
 
   it('keeps the reviewed operational surface, privacy notice and owner guidance complete', () => {
-    assert.equal((template.match(/Type: AWS::CloudWatch::Alarm/g) ?? []).length, 31);
+    assert.equal((template.match(/Type: AWS::CloudWatch::Alarm/g) ?? []).length, 35);
     for (const required of [
       'Opt-in web analytics funnel', 'WaitlistAcceptedRequests', 'WaitlistConfirmed',
       'ContactAcceptedRequests', 'ContactSesDeliveries', 'AnalyticsLambdaErrorAlarm',
+      'FeedbackValidationVolumeAlarm', 'FeedbackThrottleVolumeAlarm',
+      'FeedbackStorageFailureAlarm', 'FeedbackLambdaErrorAlarm',
     ]) assert.match(template, new RegExp(required));
     assert.match(template, /WaitlistAcceptedRequests","Environment","\$\{EnvironmentName\}"/);
     assert.match(template, /ContactAcceptedRequests","Environment","\$\{EnvironmentName\}"/);

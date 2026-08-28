@@ -689,7 +689,7 @@ class EventAndSecurityTests(unittest.TestCase):
             "ContactApiThrottleMetricFilter",
         ):
             self.assertIn(f"  {route_filter}:\n", template)
-        self.assertEqual(template.count('$.status = "429"'), 4)
+        self.assertEqual(template.count('$.status = "429"'), 5)
         self.assertNotIn("MetricName: ThrottledRequests", template)
         self.assertEqual(template.count("MetricName: SystemErrors"), 11)
         self.assertIn("- {Name: Operation, Value: PutItem}", template)
@@ -1270,7 +1270,9 @@ class ContactTests(unittest.TestCase):
         )[0]
         self.assertIn("NoEcho: true", pepper_parameter)
         self.assertEqual(template.count("Path: /contact"), 2)
-        role = template.split("  ContactExecutionRole:", 1)[1].split("  WaitlistFunction:", 1)[0]
+        role = template.split("  ContactExecutionRole:", 1)[1].split(
+            "  FeedbackExecutionRole:", 1
+        )[0]
         self.assertIn("Action: ses:SendEmail", role)
         self.assertIn("identity/${SesDomainIdentity}", role)
         self.assertIn("identity/${ContactSenderEmail}", role)
@@ -1289,7 +1291,7 @@ class ContactTests(unittest.TestCase):
         self.assertIn("BillingMode: PAY_PER_REQUEST", table)
         self.assertIn("SSEEnabled: true", table)
         function = template.split("  ContactFunction:", 1)[1].split(
-            "  WaitlistPendingTtlConfiguration:", 1
+            "  FeedbackFunction:", 1
         )[0]
         self.assertIn("Handler: contact.handler", function)
         self.assertIn("CONTACT_RECIPIENT_EMAIL: !Ref ContactRecipientEmail", function)

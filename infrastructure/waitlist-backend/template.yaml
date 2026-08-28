@@ -86,6 +86,38 @@ Parameters:
     Default: 3000
     MinValue: 10
     MaxValue: 3000
+  EnableFeedbackSubmissions:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: Fail-closed switch for the separately deployed public-tester feedback route.
+  FeedbackClientOrigin:
+    Type: String
+    Default: ''
+    AllowedPattern: '^$|^https://[A-Za-z0-9.-]+$'
+    Description: Exact client origin allowed to call /feedback. Leave blank until owner-reviewed enablement.
+  FeedbackTableName:
+    Type: String
+    Default: JobSeekerCopilotPublicTesterFeedback
+    AllowedPattern: '^[A-Za-z0-9_.-]{3,255}$'
+  FeedbackDedupePepper:
+    Type: String
+    Default: ''
+    NoEcho: true
+    MinLength: 0
+    MaxLength: 256
+    AllowedPattern: '^$|^.{32,256}$'
+    Description: Separate random secret for non-reversible feedback duplicate fingerprints; required before enablement.
+  FeedbackRetentionSeconds:
+    Type: Number
+    Default: 7776000
+    MinValue: 86400
+    MaxValue: 31536000
+  FeedbackMinimumFormCompletionMs:
+    Type: Number
+    Default: 1200
+    MinValue: 250
+    MaxValue: 10000
   SesConfigurationSetName:
     Type: String
     Default: JobSeekerCopilotWaitlistEmails
@@ -256,6 +288,49 @@ Resources:
         - Key: DataClassification
           Value: pseudonymous-transient
 
+  FeedbackTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      TableName: !Ref FeedbackTableName
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: recordKey
+          AttributeType: S
+        - AttributeName: status
+          AttributeType: S
+        - AttributeName: submittedAt
+          AttributeType: S
+      KeySchema:
+        - AttributeName: recordKey
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: status-submittedAt-index
+          KeySchema:
+            - AttributeName: status
+              KeyType: HASH
+            - AttributeName: submittedAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+        SSEType: KMS
+      TimeToLiveSpecification:
+        AttributeName: deleteAfter
+        Enabled: true
+      DeletionProtectionEnabled: true
+      Tags:
+        - Key: Application
+          Value: JobSeekerCopilot
+        - Key: DataClassification
+          Value: support-sensitive
+        - Key: Purpose
+          Value: public-tester-feedback
+
   WaitlistEmailConfigurationSet:
     Type: AWS::SES::ConfigurationSet
     Properties:
@@ -348,6 +423,13 @@ Resources:
     UpdateReplacePolicy: Delete
     Properties:
       LogGroupName: /aws/lambda/JobSeekerCopilotContact
+      RetentionInDays: 30
+  FeedbackFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: /aws/lambda/JobSeekerCopilotPublicTesterFeedback
       RetentionInDays: 30
   AnalyticsFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -535,6 +617,27 @@ Resources:
                 Action: [logs:CreateLogStream, logs:PutLogEvents]
                 Resource: !GetAtt ContactFunctionLogGroup.Arn
 
+  FeedbackExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: Stores only validated public-tester feedback and content-free deduplication locks.
+      AssumeRolePolicyDocument: *LambdaTrust
+      Policies:
+        - PolicyName: StoreValidatedFeedback
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [dynamodb:GetItem, dynamodb:PutItem, dynamodb:TransactWriteItems]
+                Resource: !GetAtt FeedbackTable.Arn
+        - PolicyName: WriteFeedbackLogs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !GetAtt FeedbackFunctionLogGroup.Arn
+
   AnalyticsExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -699,6 +802,36 @@ Resources:
           Type: HttpApi
           Properties: {ApiId: !Ref WaitlistApi, Method: OPTIONS, Path: /contact, PayloadFormatVersion: '2.0'}
 
+  FeedbackFunction:
+    Type: AWS::Serverless::Function
+    DependsOn: FeedbackFunctionLogGroup
+    Properties:
+      FunctionName: JobSeekerCopilotPublicTesterFeedback
+      Description: Stores bounded anonymous tester feedback without email or external issue-tracker credentials.
+      CodeUri: function/
+      Handler: feedback.handler
+      Role: !GetAtt FeedbackExecutionRole.Arn
+      Environment:
+        Variables:
+          ENABLE_FEEDBACK_SUBMISSIONS: !Ref EnableFeedbackSubmissions
+          FEEDBACK_CLIENT_ORIGIN: !Ref FeedbackClientOrigin
+          FEEDBACK_TABLE_NAME: !Ref FeedbackTable
+          FEEDBACK_DEDUPE_PEPPER: !Ref FeedbackDedupePepper
+          FEEDBACK_RETENTION_SECONDS: !Ref FeedbackRetentionSeconds
+          FEEDBACK_MINIMUM_FORM_COMPLETION_MS: !Ref FeedbackMinimumFormCompletionMs
+      Events:
+        Feedback:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref WaitlistApi
+            Method: POST
+            Path: /feedback
+            PayloadFormatVersion: '2.0'
+            RouteSettings: {ThrottlingBurstLimit: 3, ThrottlingRateLimit: 1}
+        FeedbackOptions:
+          Type: HttpApi
+          Properties: {ApiId: !Ref WaitlistApi, Method: OPTIONS, Path: /feedback, PayloadFormatVersion: '2.0'}
+
   AnalyticsFunction:
     Type: AWS::Serverless::Function
     DependsOn: AnalyticsFunctionLogGroup
@@ -742,6 +875,17 @@ Resources:
       MetricTransformations:
         - MetricNamespace: JobSeekerCopilot/Contact
           MetricName: ContactThrottleResponses
+          MetricValue: '1'
+
+  FeedbackApiThrottleMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: WaitlistApi
+    Properties:
+      LogGroupName: !Ref WaitlistApiAccessLogGroup
+      FilterPattern: '{ $.routeKey = "POST /feedback" && $.status = "429" }'
+      MetricTransformations:
+        - MetricNamespace: JobSeekerCopilot/Feedback
+          MetricName: FeedbackThrottleResponses
           MetricValue: '1'
 
   WaitlistSubmitThrottleMetricFilter:
@@ -857,6 +1001,28 @@ Resources:
     Properties:
       <<: *ContactAbuseAlarm
       MetricName: ContactDedupeReleaseFailures
+      Threshold: 1
+  FeedbackValidationVolumeAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      <<: *ContactAbuseAlarm
+      AlarmDescription: Public-tester feedback signal; inspect only count/status and redacted correlation fields.
+      Namespace: JobSeekerCopilot/Feedback
+      MetricName: FeedbackValidationRejections
+      Threshold: 10
+  FeedbackThrottleVolumeAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      <<: *ContactAbuseAlarm
+      Namespace: JobSeekerCopilot/Feedback
+      MetricName: FeedbackThrottleResponses
+      Threshold: 5
+  FeedbackStorageFailureAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      <<: *ContactAbuseAlarm
+      Namespace: JobSeekerCopilot/Feedback
+      MetricName: FeedbackStorageFailures
       Threshold: 1
   ContactSesBounceAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -1224,6 +1390,12 @@ Resources:
       <<: *LambdaErrorAlarm
       Dimensions:
         - {Name: FunctionName, Value: !Ref ContactFunction}
+  FeedbackLambdaErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      <<: *LambdaErrorAlarm
+      Dimensions:
+        - {Name: FunctionName, Value: !Ref FeedbackFunction}
   AnalyticsLambdaErrorAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
@@ -1329,16 +1501,20 @@ Outputs:
     Value: !Sub https://${WaitlistApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/waitlist/resend
   ContactEndpoint:
     Value: !Sub https://${WaitlistApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/contact
+  FeedbackEndpoint:
+    Value: !Sub https://${WaitlistApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/feedback
   AnalyticsEndpoint:
     Value: !Sub https://${WaitlistApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/analytics
   SubscribeLambdaName: {Value: !Ref WaitlistFunction}
   ConfirmationLambdaName: {Value: !Ref ConfirmationFunction}
   ResendLambdaName: {Value: !Ref ResendFunction}
   ContactLambdaName: {Value: !Ref ContactFunction}
+  FeedbackLambdaName: {Value: !Ref FeedbackFunction}
   AnalyticsLambdaName: {Value: !Ref AnalyticsFunction}
   SesEventsLambdaName: {Value: !Ref SesEventsFunction}
   TokenTableName: {Value: !Ref TokenTable}
   ContactDedupeTableName: {Value: !Ref ContactDedupeTable}
+  FeedbackTableName: {Value: !Ref FeedbackTable}
   AlarmNotificationTopicArn: {Value: !Ref AlarmNotificationTopic}
   AlarmSubscriptionConfigured:
     Value: !If [HasAlarmNotificationEmail, 'true', 'false']

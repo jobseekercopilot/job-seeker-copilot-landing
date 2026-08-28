@@ -1,6 +1,6 @@
 # Waitlist and contact backend
 
-This isolated AWS SAM stack updates the existing `job-seeker-copilot-waitlist` stack in `eu-west-2`. It uses API Gateway HTTP API, Python Lambda, Amazon SES v2, EventBridge and DynamoDB for double opt in, plus contact delivery with content-free duplicate protection.
+This isolated AWS SAM stack updates the existing `job-seeker-copilot-waitlist` stack in `eu-west-2`. It uses API Gateway HTTP API, Python Lambda, Amazon SES v2, EventBridge and DynamoDB for double opt in, plus contact delivery with content-free duplicate protection. A separately disabled public-tester feedback route can store bounded anonymous reports for authenticated operator triage; it has no SES or GitHub access.
 
 ## Safety boundary
 
@@ -22,6 +22,17 @@ expiry and Lambda request owner—never the address, name, subject, message or I
 Its IAM policy can send only from the configured contact sender, only to the
 single configured company recipient, and only through the existing SES
 configuration set. Contact submission is independently disabled by default.
+
+The feedback Lambda and table are separate from waitlist subscribers and
+contact delivery. The route is disabled by default and its one allowed client
+origin is blank by default. When explicitly enabled, the Lambda may only
+`GetItem`, `PutItem` and `TransactWriteItems` against the feedback table. It has
+no SES, subscriber-table, GitHub or general outbound credential. Three
+conditional records make each accepted report, browser idempotency key and
+HMAC content fingerprint atomic, so retries and identical submissions return
+one reference. See
+[`public-tester-feedback.md`](../../docs/launch/public-tester-feedback.md) for
+the contract, retention and partner-triage procedure.
 
 ## Data and lifecycle
 
@@ -46,6 +57,9 @@ The old token is deleted when a resend rotates it. Confirmed records have no `pe
 - used-token tombstone: 7 days;
 - confirmed record: until unsubscribe, approved deletion, or end of purpose;
 - bounce/complaint suppression: only as long as operationally and legally necessary.
+- anonymous tester feedback and its content-free duplicate locks: 90 days by
+  default, then DynamoDB TTL deletion; PITR may retain deleted values for its
+  rolling recovery window.
 
 An existing `UNSUBSCRIBED` record is never silently reactivated. A future
 re-subscription feature must collect a fresh explicit request, issue a new
@@ -90,6 +104,7 @@ All JSON API calls use exact-origin CORS and return typed, public-safe responses
 | `POST` | `/waitlist/confirm` | Consume `{ "token": "..." }` once |
 | `POST` | `/waitlist/resend` | Accept `{ "email": "..." }` with neutral response |
 | `POST` | `/contact` | Validate and deliver one company enquiry when independently enabled |
+| `POST` | `/feedback` | Store one exact-schema anonymous tester report when independently enabled |
 | `POST` | `/analytics` | Accept only opted-in, bounded aggregate events when independently enabled |
 | `OPTIONS` | each route | Exact-origin preflight |
 
@@ -98,6 +113,12 @@ the canonical `https://www.jobseekercopilot.com` host. Production allows only
 the canonical `www` host. The apex redirects to `www` before the application
 runs. The deleted feature host and lookalike subdomains are denied. There is no
 wildcard origin and no public subscriber-list endpoint.
+
+`/feedback` is stricter: it accepts only the exact, separately configured
+`FeedbackClientOrigin`, and that setting is empty until an owner-reviewed
+client deployment is ready. It never allows credentials in CORS. Exact-origin
+CORS is a browser boundary, not caller authentication; route throttling,
+automation checks, idempotency and duplicate suppression remain necessary.
 
 Confirmation links have this format:
 
@@ -200,14 +221,25 @@ Lambda environment variables are generated from SAM parameters; no endpoint or A
 - `CONTACT_DEDUPE_PEPPER`
 - `CONTACT_DEDUPE_TTL_SECONDS`
 - `CONTACT_MINIMUM_FORM_COMPLETION_MS`
+- `ENABLE_FEEDBACK_SUBMISSIONS`
+- `FEEDBACK_CLIENT_ORIGIN`
+- `FEEDBACK_TABLE_NAME`
+- `FEEDBACK_DEDUPE_PEPPER`
+- `FEEDBACK_RETENTION_SECONDS`
+- `FEEDBACK_MINIMUM_FORM_COMPLETION_MS`
 
 Defaults are visible in `template.yaml` and can be changed through
-`--parameter-overrides`. `ContactRecipientEmail`, `ContactDedupePepper` and
-`AlarmNotificationEmail` are NoEcho CloudFormation parameters and are never
+`--parameter-overrides`. `ContactRecipientEmail`, `ContactDedupePepper`,
+`FeedbackDedupePepper` and `AlarmNotificationEmail` are NoEcho CloudFormation parameters and are never
 outputs or browser values. The recipient and pepper are required; the alarm
 endpoint is optional only until an approved notification path is configured.
 Generate the pepper in an approved deployment workflow; never commit, print or
 reuse it across environments.
+
+Feedback stays unavailable while `EnableFeedbackSubmissions=false`, even if a
+route URL is known. Before enabling, set a separate strong
+`FeedbackDedupePepper`, the one exact HTTPS `FeedbackClientOrigin`, reviewed
+retention, operator IAM and alarms. Do not reuse the contact pepper.
 
 ## Validate and create a reviewable change set
 
@@ -235,6 +267,9 @@ sam deploy \
     ProductionOrigin=https://www.jobseekercopilot.com \
     PublicSiteUrl=https://www.jobseekercopilot.com \
     EnableContactSubmissions=false \
+    EnableFeedbackSubmissions=false \
+    FeedbackClientOrigin='' \
+    FeedbackDedupePepper='' \
     EnableAnalyticsCollection=false \
     ContactSenderEmail=hello@jobseekercopilot.com \
     ContactRecipientEmail=<approved-private-company-inbox> \
@@ -258,12 +293,19 @@ WAITLIST_API_URL=<SubscribeEndpoint>
 WAITLIST_CONFIRMATION_API_URL=<ConfirmationEndpoint>
 WAITLIST_RESEND_API_URL=<ResendEndpoint>
 CONTACT_API_URL=<ContactEndpoint>
+PUBLIC_FEEDBACK_API_URL=<FeedbackEndpoint>
 ```
 
 Keep both Angular live submissions and `EnableContactSubmissions` disabled until
 permitted-recipient delivery, Reply-To, CORS and monitoring tests are complete.
 Publishing the contact URL while both switches remain false is safe: POST
 returns the controlled unavailable response and sends no email.
+
+Keep `PUBLIC_FEEDBACK_API_URL` unset in the client and
+`EnableFeedbackSubmissions=false` until the feedback change set, exact client
+origin, retention, partner IAM and end-to-end privacy checks are approved. The
+stack output is a public route URL, not a secret; no credential belongs in
+browser configuration.
 
 Analytics is a separate opt-in path. Keep both `ENABLE_ANALYTICS` and
 `EnableAnalyticsCollection` false during MONITORING-01. Its collector role can
